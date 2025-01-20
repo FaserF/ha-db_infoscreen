@@ -6,15 +6,29 @@ import aiohttp
 import async_timeout
 import logging
 
-from .const import DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, DEFAULT_NEXT_DEPARTURES
+from .const import DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, DEFAULT_NEXT_DEPARTURES, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES
 
 _LOGGER = logging.getLogger(__name__)
 
 class DBInfoScreenCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int):
+    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool):
         self.station = station
         self.next_departures = next_departures
-        self.api_url = f"https://dbf.finalrewind.org/{station}.json"
+        self.hide_low_delay = hide_low_delay
+        self.detailed = detailed
+        self.past_60_minutes = past_60_minutes
+        
+        # Construct the URL based on configuration
+        url = f"https://dbf.finalrewind.org/{station}.json"
+        if hide_low_delay:
+            url += "?hidelowdelay=1"
+        if detailed:
+            url += "&detailed=1"
+        if past_60_minutes:
+            url += "&?past=1"
+
+        self.api_url = url
+        
         super().__init__(
             hass,
             _LOGGER,
@@ -48,8 +62,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.Co
     station = config_entry.data[CONF_STATION]
     next_departures = config_entry.data.get(CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES)
     update_interval = config_entry.data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
+    hide_low_delay = config_entry.data.get(CONF_HIDE_LOW_DELAY, False)
+    detailed = config_entry.data.get(CONF_DETAILED, False)
+    past_60_minutes = config_entry.data.get(CONF_PAST_60_MINUTES, False)
 
-    coordinator = DBInfoScreenCoordinator(hass, station, next_departures, update_interval)
+    coordinator = DBInfoScreenCoordinator(hass, station, next_departures, update_interval, hide_low_delay, detailed, past_60_minutes)
     coordinator.update_interval = timedelta(minutes=update_interval)
     await coordinator.async_config_entry_first_refresh()
 

@@ -3,7 +3,8 @@ import voluptuous as vol
 
 from .const import (
     DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL,
-    DEFAULT_NEXT_DEPARTURES, DEFAULT_UPDATE_INTERVAL, MIN_UPDATE_INTERVAL, MAX_SENSORS
+    DEFAULT_NEXT_DEPARTURES, DEFAULT_UPDATE_INTERVAL, MIN_UPDATE_INTERVAL, MAX_SENSORS,
+    CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES
 )
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -21,6 +22,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_STATION): str,
             vol.Optional(CONF_NEXT_DEPARTURES, default=DEFAULT_NEXT_DEPARTURES): vol.All(vol.Coerce(int), vol.Range(min=1, max=10)),
             vol.Optional(CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL): vol.All(vol.Coerce(int), vol.Range(min=MIN_UPDATE_INTERVAL)),
+            vol.Optional(CONF_HIDE_LOW_DELAY, default=False): bool,
+            vol.Optional(CONF_DETAILED, default=False): bool,
+            vol.Optional(CONF_PAST_60_MINUTES, default=False): bool,
         })
 
         return self.async_show_form(step_id="user", data_schema=data_schema, errors=errors)
