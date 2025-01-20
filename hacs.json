@@ -1,0 +1,5 @@
+{
+    "name": "db-infoscreen",
+    "render_readme": true,
+    "country": ["DE", "AT", "CH", "LU", "IE"]
+}

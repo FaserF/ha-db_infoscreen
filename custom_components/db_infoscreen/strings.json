@@ -1,0 +1,34 @@
+{
+  "config": {
+    "flow_title": "Setup Station Departure Sensor",
+    "step": {
+      "user": {
+        "description": "Please configure the station and the update interval.",
+        "data": {
+          "station_label": "Station Name",
+          "next_departures": "Next Departures",
+          "update_interval": "Update Interval (in minutes)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This station is already configured"
+    },
+    "error": {
+      "error_max_sensors_reached": "Maximum number of sensors reached.",
+      "unknown": "Unknown error"
+    }
+  },
+  "options": {
+    "flow_title": "Modify Station Departure Sensor Options",
+    "step": {
+      "init": {
+        "description": "Modify station options.",
+        "data": {
+          "next_departures": "Next Departures",
+          "update_interval": "Update Interval (in minutes)"
+        }
+      }
+    }
+  }
+}

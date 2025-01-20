@@ -1,0 +1,34 @@
+{
+  "config": {
+    "flow_title": "Station Abfahrtsensor einrichten",
+    "step": {
+      "user": {
+        "description": "Bitte konfigurieren Sie die Station und das Aktualisierungsintervall.",
+        "data": {
+          "station_label": "Stationsname",
+          "next_departures": "Nächste Abfahrten",
+          "update_interval": "Aktualisierungsintervall (in Minuten)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Diese Station ist bereits konfiguriert"
+    },
+    "error": {
+      "error_max_sensors_reached": "Maximale Anzahl an Sensoren erreicht.",
+      "unknown": "Unbekannter Fehler"
+    }
+  },
+  "options": {
+    "flow_title": "Station Abfahrtsensor Optionen ändern",
+    "step": {
+      "init": {
+        "description": "Station Optionen ändern.",
+        "data": {
+          "next_departures": "Nächste Abfahrten",
+          "update_interval": "Aktualisierungsintervall (in Minuten)"
+        }
+      }
+    }
+  }
+}
