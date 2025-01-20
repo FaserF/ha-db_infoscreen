@@ -16,9 +16,9 @@ class DBInfoSensor(SensorEntity):
     @property
     def native_value(self):
         if self.coordinator.data:
-            destination = self.coordinator.data[0].get("destination", "Unknown")
-            _LOGGER.debug("Sensor state updated: %s", destination)
-            return destination
+            scheduledDeparture = self.coordinator.data[0].get("scheduledDeparture", "Unknown")
+            _LOGGER.debug("Sensor state updated: %s", scheduledDeparture)
+            return scheduledDeparture
         else:
             _LOGGER.warning("No data received for station: %s", self.station)
             return "No Data"
