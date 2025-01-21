@@ -60,6 +60,14 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 
 Note: You are limited to adding 30 sensors, if you are not using a custom_api_url.
 
+### Migrating from [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn)
+There is no direct way of migrating the ha-deutschebahn integration to ha-db_infoscreen due to the fact, that those are two completly different integrations with different API sources. The old ha-deutschebahn api provided a start and destination option, which is not (yet) available with this newer API backend. 
+To get a most similar option about this, I recommend starting playing around with the `platforms` option to only display one direction for your direction and afterwards filtering with a custom sensor to only display trains with a specific end station. 
+
+All other features of ha-deutschebahn are ported to this integration or will be ported soon. 
+
+[Discussion about this](https://github.com/FaserF/ha-db_infoscreen/issues/4)
+
 ## Accessing the data
 
 ### Automations
