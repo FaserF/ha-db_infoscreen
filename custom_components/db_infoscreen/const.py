@@ -1,5 +1,4 @@
 DOMAIN = "db_infoscreen"
-ATTRIBUTION = "Data provided by dbf.finalrewind.org api"
 
 CONF_STATION = "station"
 CONF_NEXT_DEPARTURES = "next_departures"

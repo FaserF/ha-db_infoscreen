@@ -1,5 +1,5 @@
 from homeassistant.components.sensor import SensorEntity
-from .const import DOMAIN
+from .const import DOMAIN, CONF_CUSTOM_API_URL
 import logging
 from datetime import datetime
 
@@ -27,10 +27,13 @@ class DBInfoSensor(SensorEntity):
 
     @property
     def extra_state_attributes(self):
+        custom_api_url = self.coordinator.config_entry.data.get(CONF_CUSTOM_API_URL, "")
+        attribution = f"Data provided by {custom_api_url}" if custom_api_url else "Data provided by dbf.finalrewind.org API"
         return {
             "next_departures": self.coordinator.data or [],
             "station": self.station,
             "last_updated": self.coordinator.last_update.isoformat() if self.coordinator.last_update else "Unknown",
+            "attribution": attribution,
         }
 
     @property
