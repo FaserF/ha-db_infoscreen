@@ -6,6 +6,8 @@ The backend has many datasources available with it's main source being IRIS-TTS 
 
 This is the superior to [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn).
 
+<img src="images/logo.png" alt="Logo" width="300px">
+
 <img src="images/sensor.png" alt="Station Sensor" width="300px">
 
 ## Installation
