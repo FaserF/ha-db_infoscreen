@@ -30,15 +30,23 @@ where `<config>` is your Home Assistant configuration directory.
 
 ## Configuration
 
-Go to Configuration -> Integrations and click on "add integration". Then search for "Deutsche Bahn".
+Go to Configuration -> Integrations and click on "add integration". Then search for "db-infoscreen".
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=db_infoscreen)
 
 ### Configuration Variables
 - **station**: The name of the station to be tracked.
-- **offset** (optional): Do not display departures leaving sooner than this number of seconds. Useful if you are a couple of minutes away from the stop. 
-- **products to ignore** (optional - default is empty): Filter train types, that should be excluded
-- **maximum connections** (optional - default is 2): Specify how many next connections should be fetched
+- **next_departures** (optional): The number of upcoming departures to display. Default is 4, but you can adjust it according to your preferences.
+- **update_interval** (optional): The time interval (in minutes) at which the integration will fetch updated departure data. Default is 3 minutes.
+- **hide_low_delay** (optional): If enabled, departures with a delay of less than 5 minutes will be hidden. Default is false.
+- **detailed** (optional): If enabled, additional details about the departures will be shown. Default is false.
+- **past_60_minutes** (optional): If enabled, shows departures from the past 60 minutes. Default is false.
+- **custom_api_url** (optional): If you wish to use a custom API URL instead of the default one, you can specify it here. The URL should contain only the base domain (e.g., `https://example.com`).
+- **data_source** (optional): Choose the data source for fetching departure information. The available options are:
+  - **IRIS-TTS** (default): Uses the default DB data source.
+  - **MVV**: Adds the `?efa=MVV` parameter to the URL to fetch data from the MVV system.
+  - **ÖBB**: Adds the `?hafas=ÖBB` parameter to the URL to fetch data from the ÖBB system.
+- **offset** (optional): Do not display departures leaving sooner than this number of seconds. You can specify the offset in "HH:MM" or "HH:MM:SS" format. Default is `00:00` (no offset).
 
 ## Accessing the data
 
