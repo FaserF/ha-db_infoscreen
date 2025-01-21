@@ -41,7 +41,7 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 - **station**: The name of the station to be tracked.
   - **IRIS-TTS** (default): Please check your station at [dbf.finalrewind.org](https://dbf.finalrewind.org/) if it is working.
 - **next_departures** (optional): The number of upcoming departures to display. Default is 4, but you can adjust it according to your preferences.
-- **update_interval** (optional): The time interval (in minutes) at which the integration will fetch updated departure data. Default is 3 minutes.
+- **update_interval** (optional): The time interval (in minutes) at which the integration will fetch updated departure data. Default is 3 minutes, minimum is 1 minute (data wont be refreshed more often in the backend).
 - **hide_low_delay** (optional): If enabled, departures with a delay of less than 5 minutes will be hidden. Default is false.
 - **detailed** (optional): If enabled, additional details about the departures will be shown. Default is false.
 - **past_60_minutes** (optional): If enabled, shows departures from the past 60 minutes. Default is false.
@@ -57,6 +57,8 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
   - **departure**: Only shows departure times.
 - **platforms** (optional): If your station has multiple platforms and you want to filter by a specific platform, you can use this setting. Enter the platform(s) as a comma-separated list (e.g., `1, 2, 3`). This will ensure that the integration fetches data only for the specified platforms. If left empty, data for all platforms will be shown.
 
+
+Note: You are limited to adding 30 sensors, if you are not using a custom_api_url.
 
 ## Accessing the data
 

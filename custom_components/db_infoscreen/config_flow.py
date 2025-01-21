@@ -24,14 +24,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            existing_entries = self.hass.config_entries.async_entries(DOMAIN)
-            if len(existing_entries) >= MAX_SENSORS:
-                errors["base"] = "max_sensors_reached"
-                return self.async_show_form(
-                    step_id="user",
-                    data_schema=self.data_schema(),
-                    errors=errors
-                )
+            # Check if CONF_CUSTOM_API_URL is empty before checking MAX_SENSORS
+            custom_api_url = user_input.get(CONF_CUSTOM_API_URL, "")
+            if not custom_api_url:
+                existing_entries = self.hass.config_entries.async_entries(DOMAIN)
+                if len(existing_entries) >= MAX_SENSORS:
+                    errors["base"] = "max_sensors_reached"
+                    return self.async_show_form(
+                        step_id="user",
+                        data_schema=self.data_schema(),
+                        errors=errors
+                    )
 
             unique_id = user_input[CONF_STATION]
             await self.async_set_unique_id(unique_id)
