@@ -1,10 +1,11 @@
-from homeassistant import config_entries
 import voluptuous as vol
+from datetime import timedelta
+from homeassistant import config_entries
 
 from .const import (
     DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL,
-    DEFAULT_NEXT_DEPARTURES, DEFAULT_UPDATE_INTERVAL, MIN_UPDATE_INTERVAL, MAX_SENSORS,
-    CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, CONF_DATA_SOURCE
+    DEFAULT_NEXT_DEPARTURES, DEFAULT_UPDATE_INTERVAL, DEFAULT_OFFSET, MIN_UPDATE_INTERVAL, MAX_SENSORS,
+    CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET
 )
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -27,6 +28,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Optional(CONF_PAST_60_MINUTES, default=False): bool,
             vol.Optional(CONF_CUSTOM_API_URL, default=""): str,
             vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(["IRIS-TTS", "MVV", "ÖBB"]),
+            vol.Optional(CONF_OFFSET, default=DEFAULT_OFFSET): str
         })
 
         return self.async_show_form(step_id="user", data_schema=data_schema, errors=errors)
