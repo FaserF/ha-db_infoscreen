@@ -16,7 +16,8 @@
           "data_source": "Datenquelle",
           "offset": "Offset-Zeit",
           "admode": "Bevorzugte Zeitdarstellung (Abfahrt / Ankunft)",
-          "platforms": "Gleise"
+          "platforms": "Gleise",
+          "ignored_products": "Zugarten ignorieren"
         }
       }
     },
@@ -44,7 +45,8 @@
           "data_source": "Datenquelle",
           "offset": "Offset-Zeit",
           "admode": "Bevorzugte Zeitdarstellung (Abfahrt / Ankunft)",
-          "platforms": "Gleise"
+          "platforms": "Gleise",
+          "ignored_products": "Zugarten ignorieren"
         }
       }
     }

@@ -16,7 +16,8 @@
           "data_source": "Data Source",
           "offset": "Offset Time",
           "admode": "Display Mode",
-          "platforms": "Platforms"
+          "platforms": "Platforms",
+          "ignored_products": "Ignored train types"
         }
       }
     },
@@ -44,7 +45,8 @@
           "data_source": "Data Source",
           "offset": "Offset Time",
           "admode": "Display Mode",
-          "platforms": "Platforms"
+          "platforms": "Platforms",
+          "ignored_products": "Ignored train types"
         }
       }
     }

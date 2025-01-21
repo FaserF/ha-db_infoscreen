@@ -17,3 +17,16 @@ CONF_OFFSET = "offset"
 DEFAULT_OFFSET = "00:00"
 CONF_PLATFORMS = "platforms"
 CONF_ADMODE = "admode"
+
+CONF_IGNORED_PRODUCTS = "ignored_products"
+CONF_IGNORED_PRODUCTS_OPTIONS = {
+    "BUS": "Busverkehr (BUS)",
+    "STR": "Straßenbahn (STR)",
+    "S": "Stadtbahn (S-Bahn)",
+    "RE": "Regional Express (RE)",
+    "RB": "Regional Bahn (RB)",
+    "EC": "EuroCity (EC)",
+    "IC": "Intercity (IC)",
+    "ICE": "Intercity Express (ICE)",
+    "BRB": "Bayrische Regionalbahn"
+}
