@@ -1,6 +1,7 @@
 from homeassistant.components.sensor import SensorEntity
 from .const import DOMAIN
 import logging
+from datetime import datetime
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class DBInfoSensor(SensorEntity):
         return {
             "next_departures": self.coordinator.data or [],
             "station": self.station,
+            "last_updated": self.coordinator.last_update.isoformat() if self.coordinator.last_update else "Unknown",
         }
 
     @property
