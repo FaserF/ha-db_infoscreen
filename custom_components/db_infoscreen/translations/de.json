@@ -25,7 +25,8 @@
     },
     "error": {
       "max_sensors_reached": "Maximale Anzahl von Sensoren erreicht.",
-      "unknown": "Ein unbekannter Fehler ist aufgetreten."
+      "unknown": "Ein unbekannter Fehler ist aufgetreten.",
+      "server_unavailable": "Der Server ist nicht erreichbar oder meldet eine ungültige Antwort."
     }
   },
   "options": {
