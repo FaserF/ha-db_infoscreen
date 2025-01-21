@@ -1,5 +1,6 @@
 import logging
 import voluptuous as vol
+import aiohttp
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
@@ -12,6 +13,12 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+def validate_url(url: str) -> str:
+    """Validate that the URL contains at least one dot."""
+    if "." not in url:
+        raise vol.Invalid("Invalid URL: Must contain at least one dot.")
+    return url
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow"""
@@ -27,27 +34,64 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             existing_entries = self.hass.config_entries.async_entries(DOMAIN)
             if len(existing_entries) >= MAX_SENSORS:
                 errors["base"] = "max_sensors_reached"
-                return self.async_show_form(
-                    step_id="user",
-                    data_schema=self.data_schema(),
-                    errors=errors
+            else:
+                # Validate custom API URL
+                custom_api_url = user_input.get(CONF_CUSTOM_API_URL, "")
+                if custom_api_url:
+                    try:
+                        validate_url(custom_api_url)
+                        is_available = await self._check_server_availability(custom_api_url)
+                        if not is_available:
+                            errors[CONF_CUSTOM_API_URL] = "server_unavailable"
+                    except vol.Invalid as err:
+                        errors[CONF_CUSTOM_API_URL] = f"Invalid URL: {err}"
+                    except Exception as e:
+                        _LOGGER.error("Unexpected error during server check: %s", e)
+                        errors["base"] = f"unknown_error_{str(e)}"
+
+            # If no errors, proceed with creating the entry
+            if not errors:
+                unique_id = user_input[CONF_STATION]
+                await self.async_set_unique_id(unique_id)
+                self._abort_if_unique_id_configured()
+                _LOGGER.debug("Initialized new sensor with station: %s", unique_id)
+
+                return self.async_create_entry(
+                    title=user_input[CONF_STATION], 
+                    data=user_input
                 )
-
-            unique_id = user_input[CONF_STATION]
-            await self.async_set_unique_id(unique_id)
-            self._abort_if_unique_id_configured()
-            _LOGGER.debug("Initialized new sensor with station: %s", unique_id)
-
-            return self.async_create_entry(
-                title=user_input[CONF_STATION], 
-                data=user_input
-            )
 
         return self.async_show_form(
             step_id="user",
             data_schema=self.data_schema(),
             errors=errors,
         )
+
+    async def _check_server_availability(self, url: str) -> bool:
+        """Check if the server at the custom URL is available."""
+        test_url = f"{url.rstrip('/')}/test.json"
+        _LOGGER.debug("Checking server availability: %s", test_url)
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(test_url, timeout=10) as response:
+                    if response.status == 200:
+                        json_data = await response.json()
+                        # Ensure response contains the expected fields
+                        if "api_version" in json_data and "error" in json_data:
+                            _LOGGER.debug("Server response is valid: %s", json_data)
+                            return True
+                        else:
+                            _LOGGER.warning("Invalid server response: %s", json_data)
+                            return False
+        except aiohttp.ClientError as e:
+            _LOGGER.error("HTTP error during server check for %s: %s", test_url, e)
+        except aiohttp.ClientConnectionError as e:
+            _LOGGER.error("Connection error during server check for %s: %s", test_url, e)
+        except aiohttp.ClientPayloadError as e:
+            _LOGGER.error("Payload error during server check for %s: %s", test_url, e)
+        except Exception as e:
+            _LOGGER.error("Unexpected error during server check for %s: %s", test_url, e)
+        return False
 
     def data_schema(self):
         return vol.Schema(
@@ -58,7 +102,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_HIDE_LOW_DELAY, default=False): cv.boolean,
                 vol.Optional(CONF_DETAILED, default=False): cv.boolean,
                 vol.Optional(CONF_PAST_60_MINUTES, default=False): cv.boolean,
-                vol.Optional(CONF_CUSTOM_API_URL, default=""): cv.string,
+                vol.Optional(CONF_CUSTOM_API_URL, default=""): vol.All(cv.string, validate_url),
                 vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(["IRIS-TTS", "MVV", "ÖBB"]),
                 vol.Optional(CONF_OFFSET, default=DEFAULT_OFFSET): cv.string,
                 vol.Optional(CONF_PLATFORMS, default=""): cv.string,
@@ -99,7 +143,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(CONF_HIDE_LOW_DELAY, default=current_options.get(CONF_HIDE_LOW_DELAY, False)): cv.boolean,
                     vol.Optional(CONF_DETAILED, default=current_options.get(CONF_DETAILED, False)): cv.boolean,
                     vol.Optional(CONF_PAST_60_MINUTES, default=current_options.get(CONF_PAST_60_MINUTES, False)): cv.boolean,
-                    vol.Optional(CONF_CUSTOM_API_URL, default=current_options.get(CONF_CUSTOM_API_URL, "")): cv.string,
+                    vol.Optional(CONF_CUSTOM_API_URL, default=current_options.get(CONF_CUSTOM_API_URL, "")): vol.All(cv.string, validate_url),
                     vol.Optional(CONF_DATA_SOURCE, default=current_options.get(CONF_DATA_SOURCE, "IRIS-TTS")): vol.In(["IRIS-TTS", "MVV", "ÖBB"]),
                     vol.Optional(CONF_OFFSET, default=current_options.get(CONF_OFFSET, DEFAULT_OFFSET)): cv.string,
                     vol.Optional(CONF_PLATFORMS, default=current_options.get(CONF_PLATFORMS, "")): cv.string,
