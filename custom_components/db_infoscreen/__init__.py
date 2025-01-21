@@ -6,25 +6,31 @@ import aiohttp
 import async_timeout
 import logging
 
-from .const import DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, DEFAULT_NEXT_DEPARTURES, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL
+from .const import DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, DEFAULT_NEXT_DEPARTURES, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, CONF_DATA_SOURCE
 
 _LOGGER = logging.getLogger(__name__)
 
 class DBInfoScreenCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str):
+    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str, data_source: str):
         self.station = station
         self.next_departures = next_departures
         self.hide_low_delay = hide_low_delay
         self.detailed = detailed
         self.past_60_minutes = past_60_minutes
+        self.data_source = data_source
         
         if custom_api_url:
             url = f"{custom_api_url}/{station}.json"
         else:
             url = f"https://dbf.finalrewind.org/{station}.json"
-        
+
+        if data_source == "MVV":
+            url += f"?efa=MVV" if "?" not in url else "&efa=MVV"
+        elif data_source == "ÖBB":
+            url += f"?hafas=ÖBB" if "?" not in url else "?hafas=ÖBB"
+
         if hide_low_delay:
-            url += "?hidelowdelay=1"
+            url += "?hidelowdelay=1" if "?" not in url else "&hidelowdelay=1"
         if detailed:
             url += "&detailed=1" if "?" in url else "?detailed=1"
         if past_60_minutes:
@@ -69,8 +75,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.Co
     detailed = config_entry.data.get(CONF_DETAILED, False)
     past_60_minutes = config_entry.data.get(CONF_PAST_60_MINUTES, False)
     custom_api_url = config_entry.data.get(CONF_CUSTOM_API_URL, "")
+    data_source = config_entry.data.get(CONF_DATA_SOURCE, "IRIS-TTS")
 
-    coordinator = DBInfoScreenCoordinator(hass, station, next_departures, update_interval, hide_low_delay, detailed, past_60_minutes, custom_api_url)
+    coordinator = DBInfoScreenCoordinator(
+        hass, station, next_departures, update_interval, hide_low_delay,
+        detailed, past_60_minutes, custom_api_url, data_source
+    )
     coordinator.update_interval = timedelta(minutes=update_interval)
     await coordinator.async_config_entry_first_refresh()
 
