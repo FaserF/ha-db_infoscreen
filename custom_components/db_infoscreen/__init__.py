@@ -6,7 +6,7 @@ import aiohttp
 import async_timeout
 import logging
 
-from .const import DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE
+from .const import DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, MIN_UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,12 +49,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.api_url = url
         
         # Ensure update_interval is passed correctly
-        update_interval = timedelta(minutes=update_interval)  # Make sure it is passed as a timedelta
+        update_interval = max(update_interval, MIN_UPDATE_INTERVAL)
         super().__init__(
             hass,
             _LOGGER,
-            name=f"DB Info Screen {station}",
-            update_interval=update_interval,
+            name=f"DB Info {station}",
+            update_interval=timedelta(minutes=update_interval),
         )
         _LOGGER.debug(
             "Coordinator initialized for station %s with update interval %d minutes",
@@ -124,7 +124,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.Co
     hass.data.setdefault(DOMAIN, {})
     station = config_entry.data[CONF_STATION]
     next_departures = config_entry.data.get(CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES)
-    update_interval = config_entry.data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
+    update_interval = max(config_entry.data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL), MIN_UPDATE_INTERVAL)
     hide_low_delay = config_entry.data.get(CONF_HIDE_LOW_DELAY, False)
     detailed = config_entry.data.get(CONF_DETAILED, False)
     past_60_minutes = config_entry.data.get(CONF_PAST_60_MINUTES, False)
@@ -138,8 +138,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.Co
         hass, station, next_departures, update_interval, hide_low_delay,
         detailed, past_60_minutes, custom_api_url, data_source, offset, platforms, admode
     )
-    # Ensuring that the update_interval is passed correctly from the configuration
-    coordinator.update_interval = timedelta(minutes=update_interval)
     await coordinator.async_config_entry_first_refresh()
 
     hass.data[DOMAIN][config_entry.entry_id] = coordinator

@@ -38,8 +38,7 @@ class DBInfoSensor(SensorEntity):
         return self.coordinator.last_update_success if hasattr(self.coordinator, "last_update_success") else False
 
     async def async_update(self):
-        _LOGGER.debug("Requesting data refresh for station: %s", self.station)
-        await self.coordinator.async_request_refresh()
+        _LOGGER.debug("Sensor update triggered but not forcing refresh.")
 
     async def async_added_to_hass(self):
         _LOGGER.debug("Sensor added to Home Assistant for station: %s", self.station)
