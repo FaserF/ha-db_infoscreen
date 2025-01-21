@@ -47,9 +47,9 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 - **past_60_minutes** (optional): If enabled, shows departures from the past 60 minutes. Default is false.
 - **custom_api_url** (optional): If you wish to use a custom API URL (f.e. [your self hosted server](https://github.com/derf/db-fakedisplay/blob/master/README.md)) instead of the default one, you can specify it here. The URL should contain only the base domain (e.g., `https://example.com`).
 - **data_source** (optional): Choose the data source for fetching departure information. The available options are:
-  - **IRIS-TTS** (default): Uses the default DB data source.
-  - **MVV**: Adds the `?efa=MVV` parameter to the URL to fetch data from the MVV system.
-  - **ÖBB**: Adds the `?hafas=ÖBB` parameter to the URL to fetch data from the ÖBB system.
+  - The integration supports fetching departure data from various data sources, including:
+  ["IRIS-TTS", "MVV", "ÖBB", "BSVG", "DING", "KVV", "LinzAG", "NVBW", "NWL", "VGN", "VMV", "VRN", "VRR", "VRR2", "VRR3", "VVO", "VVS", "bwegt", "AVV", "BART", "BLS", "BVG", "CMTA", "DSB", "IE", "KVB", "NAHSH", "NASA", "NVV", "RMV", "RSAG", "Resrobot", "STV", "SaarVV", "TPG", "VBB", "VBN", "VMT", "VOS", "VRN", "ZVV", "mobiliteit"]
+  - For the default configuration, the `IRIS-TTS` data source is used. Other data sources can be selected by specifying the `data_source` configuration option.
 - **offset** (optional): Do not display departures leaving sooner than this number of seconds. You can specify the offset in "HH:MM" or "HH:MM:SS" format. Default is `00:00` (no offset).
 - **admode** (optional): Defines whether to display departure times, arrival times, or the default behavior (departure preferred). Available options:
   - **departure prefered** (default): Displays the preferred time based on the system's default behavior (usually departures).

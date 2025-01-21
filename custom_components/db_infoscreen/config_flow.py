@@ -8,7 +8,7 @@ from .const import (
     DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL,
     DEFAULT_NEXT_DEPARTURES, DEFAULT_UPDATE_INTERVAL, DEFAULT_OFFSET, MAX_SENSORS,
     CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, 
-    CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE
+    CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, DATA_SOURCE_OPTIONS
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_DETAILED, default=False): cv.boolean,
                 vol.Optional(CONF_PAST_60_MINUTES, default=False): cv.boolean,
                 vol.Optional(CONF_CUSTOM_API_URL, default=""): cv.string,
-                vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(["IRIS-TTS", "MVV", "ÖBB"]),
+                vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(DATA_SOURCE_OPTIONS),
                 vol.Optional(CONF_OFFSET, default=DEFAULT_OFFSET): cv.string,
                 vol.Optional(CONF_PLATFORMS, default=""): cv.string,
                 vol.Optional(CONF_ADMODE, default="preferred departure"): vol.In(["preferred departure", "arrival", "departure"]),
@@ -103,7 +103,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(CONF_DETAILED, default=current_options.get(CONF_DETAILED, False)): cv.boolean,
                     vol.Optional(CONF_PAST_60_MINUTES, default=current_options.get(CONF_PAST_60_MINUTES, False)): cv.boolean,
                     vol.Optional(CONF_CUSTOM_API_URL, default=current_options.get(CONF_CUSTOM_API_URL, "")): cv.string,
-                    vol.Optional(CONF_DATA_SOURCE, default=current_options.get(CONF_DATA_SOURCE, "IRIS-TTS")): vol.In(["IRIS-TTS", "MVV", "ÖBB"]),
+                    vol.Optional(CONF_DATA_SOURCE, default=current_options.get(CONF_DATA_SOURCE, "IRIS-TTS")): vol.In(DATA_SOURCE_OPTIONS),
                     vol.Optional(CONF_OFFSET, default=current_options.get(CONF_OFFSET, DEFAULT_OFFSET)): cv.string,
                     vol.Optional(CONF_PLATFORMS, default=current_options.get(CONF_PLATFORMS, "")): cv.string,
                     vol.Optional(CONF_ADMODE, default="preferred departure"): vol.In(["preferred departure", "arrival", "departure"]),

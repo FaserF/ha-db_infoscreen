@@ -36,8 +36,86 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
         if data_source == "MVV":
             url += f"?efa=MVV" if "?" not in url else "&efa=MVV"
-        elif data_source == "ÖBB":
-            url += f"?hafas=ÖBB" if "?" not in url else "&hafas=ÖBB"
+        elif data_source == "\u00d6BB":
+            url += f"?hafas=\u00d6BB" if "?" not in url else "&hafas=\u00d6BB"
+        elif data_source == "BSVG":
+            url += f"?efa=BSVG" if "?" not in url else "&efa=BSVG"
+        elif data_source == "DING":
+            url += f"?efa=DING" if "?" not in url else "&efa=DING"
+        elif data_source == "KVV":
+            url += f"?efa=KVV" if "?" not in url else "&efa=KVV"
+        elif data_source == "LinzAG":
+            url += f"?efa=LinzAG" if "?" not in url else "&efa=LinzAG"
+        elif data_source == "NVBW":
+            url += f"?efa=NVBW" if "?" not in url else "&efa=NVBW"
+        elif data_source == "NWL":
+            url += f"?efa=NWL" if "?" not in url else "&efa=NWL"
+        elif data_source == "VAG":
+            url += f"?efa=VAG" if "?" not in url else "&efa=VAG"
+        elif data_source == "VGN":
+            url += f"?efa=VGN" if "?" not in url else "&efa=VGN"
+        elif data_source == "VMV":
+            url += f"?efa=VMV" if "?" not in url else "&efa=VMV"
+        elif data_source == "VRN":
+            url += f"?efa=VRN" if "?" not in url else "&efa=VRN"
+        elif data_source == "VRR":
+            url += f"?efa=VRR" if "?" not in url else "&efa=VRR"
+        elif data_source == "VRR2":
+            url += f"?efa=VRR2" if "?" not in url else "&efa=VRR2"
+        elif data_source == "VRR3":
+            url += f"?efa=VRR3" if "?" not in url else "&efa=VRR3"
+        elif data_source == "VVO":
+            url += f"?efa=VVO" if "?" not in url else "&efa=VVO"
+        elif data_source == "VVS":
+            url += f"?efa=VVS" if "?" not in url else "&efa=VVS"
+        elif data_source == "bwegt":
+            url += f"?efa=bwegt" if "?" not in url else "&efa=bwegt"
+        elif data_source == "AVV":
+            url += f"?hafas=AVV" if "?" not in url else "&hafas=AVV"
+        elif data_source == "BART":
+            url += f"?hafas=BART" if "?" not in url else "&hafas=BART"
+        elif data_source == "BLS":
+            url += f"?hafas=BLS" if "?" not in url else "&hafas=BLS"
+        elif data_source == "BVG":
+            url += f"?hafas=BVG" if "?" not in url else "&hafas=BVG"
+        elif data_source == "CMTA":
+            url += f"?hafas=CMTA" if "?" not in url else "&hafas=CMTA"
+        elif data_source == "DSB":
+            url += f"?hafas=DSB" if "?" not in url else "&hafas=DSB"
+        elif data_source == "IE":
+            url += f"?hafas=IE" if "?" not in url else "&hafas=IE"
+        elif data_source == "KVB":
+            url += f"?hafas=KVB" if "?" not in url else "&hafas=KVB"
+        elif data_source == "NAHSH":
+            url += f"?hafas=NAHSH" if "?" not in url else "&hafas=NAHSH"
+        elif data_source == "NVV":
+            url += f"?hafas=NVV" if "?" not in url else "&hafas=NVV"
+        elif data_source == "RMV":
+            url += f"?hafas=RMV" if "?" not in url else "&hafas=RMV"
+        elif data_source == "RSAG":
+            url += f"?hafas=RSAG" if "?" not in url else "&hafas=RSAG"
+        elif data_source == "Resrobot":
+            url += f"?hafas=Resrobot" if "?" not in url else "&hafas=Resrobot"
+        elif data_source == "STV":
+            url += f"?hafas=STV" if "?" not in url else "&hafas=STV"
+        elif data_source == "SaarVV":
+            url += f"?hafas=SaarVV" if "?" not in url else "&hafas=SaarVV"
+        elif data_source == "TPG":
+            url += f"?hafas=TPG" if "?" not in url else "&hafas=TPG"
+        elif data_source == "VBB":
+            url += f"?hafas=VBB" if "?" not in url else "&hafas=VBB"
+        elif data_source == "VBN":
+            url += f"?hafas=VBN" if "?" not in url else "&hafas=VBN"
+        elif data_source == "VMT":
+            url += f"?hafas=VMT" if "?" not in url else "&hafas=VMT"
+        elif data_source == "VOS":
+            url += f"?hafas=VOS" if "?" not in url else "&hafas=VOS"
+        elif data_source == "VRN":
+            url += f"?hafas=VRN" if "?" not in url else "&hafas=VRN"
+        elif data_source == "ZVV":
+            url += f"?hafas=ZVV" if "?" not in url else "&hafas=ZVV"
+        elif data_source == "mobiliteit":
+            url += f"?hafas=mobiliteit" if "?" not in url else "&hafas=mobiliteit"
 
         if hide_low_delay:
             url += "?hidelowdelay=1" if "?" not in url else "&hidelowdelay=1"
