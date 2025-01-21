@@ -11,6 +11,7 @@ class DBInfoSensor(SensorEntity):
         self.station = station
         self._attr_name = f"{station} Departures"
         self._attr_unique_id = f"departures_{station}"
+        self._attr_icon = "mdi:train"
 
         _LOGGER.debug("DBInfoSensor initialized for station: %s", station)
 
