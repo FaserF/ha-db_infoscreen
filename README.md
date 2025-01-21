@@ -1,7 +1,8 @@
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-CUSTOM-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
 # db-infoscreen Homeassistant Sensor
 The `db-infoscreen` sensor will give you the departure time of the next trains for the given station, containing many more attribute informations. It aims to aggregate departure and train data from different sources and combine them in a useful (and user-friendly) manner. It is intended both for a quick glance at the departure board and for public transportation geeks looking for details about specific trains. 
+The backend has many datasources available with it's main source being IRIS-TTS – Deutsche Bahn.
 
 This is the superior to [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn).
 
@@ -41,7 +42,7 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 - **hide_low_delay** (optional): If enabled, departures with a delay of less than 5 minutes will be hidden. Default is false.
 - **detailed** (optional): If enabled, additional details about the departures will be shown. Default is false.
 - **past_60_minutes** (optional): If enabled, shows departures from the past 60 minutes. Default is false.
-- **custom_api_url** (optional): If you wish to use a custom API URL instead of the default one, you can specify it here. The URL should contain only the base domain (e.g., `https://example.com`).
+- **custom_api_url** (optional): If you wish to use a custom API URL (f.e. [your self hosted server](https://github.com/derf/db-fakedisplay/blob/master/README.md)) instead of the default one, you can specify it here. The URL should contain only the base domain (e.g., `https://example.com`).
 - **data_source** (optional): Choose the data source for fetching departure information. The available options are:
   - **IRIS-TTS** (default): Uses the default DB data source.
   - **MVV**: Adds the `?efa=MVV` parameter to the URL to fetch data from the MVV system.
@@ -53,6 +54,19 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 ### Automations
 ```yaml
 automation:
+  - alias: Notify Train Delay
+    description: "Notify when the next train is delayed by more than 10 minutes."
+    trigger:
+      - platform: template
+        value_template: "{{ state_attr('sensor.station_departures', 'next_departures')[0]['delayArrival'] | int > 10 }}"
+    action:
+      - service: notify.notify
+        data:
+          message: >
+            The next train to {{ state_attr('sensor.station_departures', 'next_departures')[0]['destination'] }} 
+            is delayed by {{ state_attr('sensor.station_departures', 'next_departures')[0]['delayArrival'] }} minutes.
+    mode: single
+
 ```
 
 ### Custom sensor
@@ -64,8 +78,31 @@ sensor:
     sensors:
       next_train_departure:
         friendly_name: "Next Train Departure"
-        value_template: "{{ state_attr('sensor.station_departures', 'Next departures')[0].scheduledArrival }}"
+        value_template: >
+          {{ state_attr('sensor.station_departures', 'next_departures')[0]['scheduledArrival'] }}
         icon_template: mdi:train
+```
+
+### JSON Format
+The API returns data in the following json format:
+
+```json
+{
+  "departures": [
+    {
+      "scheduledArrival": "08:08",
+      "destination": "München-Pasing",
+      "train": "S 4",
+      "platform": "4",
+      "delayArrival": 18,
+      "messages": {
+        "delay": [
+          {"text": "delay of a train ahead", "timestamp": "2025-01-21T07:53:00"}
+        ]
+      }
+    }
+  ]
+}
 ```
 
 ## Bug reporting
@@ -82,4 +119,5 @@ logger:
 You can then find the log in the HA settings -> System -> Logs -> Enter "db-infoscreen" in the search bar -> "Load full logs"
 
 ## Thanks to
-The data is coming from the [dbf.finalrewind.org](https://dbf.finalrewind.org/) website.
+The data is coming from the [dbf.finalrewind.org](https://dbf.finalrewind.org/) website (if no custom API Server is specified).
+The backend data is coming from [a db-infoscreen - (formerly db-fakedisplay) server](https://github.com/derf/db-fakedisplay/tree/main) - with a huge thanks to [derf](https://github.com/derf) for this great project!

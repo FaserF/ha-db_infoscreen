@@ -3,11 +3,18 @@
     "flow_title": "Setup Station Departure Sensor",
     "step": {
       "user": {
-        "description": "Please configure the station and the update interval.",
+        "title": "Configure Station",
+        "description": "Set up the departure sensor with the desired station and options.",
         "data": {
-          "station_label": "Station Name",
-          "next_departures": "Next Departures",
-          "update_interval": "Update Interval (in minutes)"
+          "station": "Station Name",
+          "next_departures": "Number of Upcoming Departures",
+          "update_interval": "Update Interval (minutes)",
+          "hidelowdelay": "Hide Low Delay",
+          "detailed": "Detailed Information",
+          "past_60_minutes": "Include Past 60 Minutes",
+          "custom_api_url": "Custom API URL",
+          "data_source": "Data Source",
+          "offset": "Offset Time"
         }
       }
     },
@@ -15,18 +22,25 @@
       "already_configured": "This station is already configured"
     },
     "error": {
-      "error_max_sensors_reached": "Maximum number of sensors reached.",
-      "unknown": "Unknown error"
+      "max_sensors_reached": "Maximum number of sensors reached.",
+      "unknown": "An unknown error occurred."
     }
   },
   "options": {
     "flow_title": "Modify Station Departure Sensor Options",
     "step": {
       "init": {
-        "description": "Modify station options.",
+        "title": "Modify Options",
+        "description": "Adjust the sensor's settings as needed.",
         "data": {
-          "next_departures": "Next Departures",
-          "update_interval": "Update Interval (in minutes)"
+          "next_departures": "Number of Upcoming Departures",
+          "update_interval": "Update Interval (minutes)",
+          "hidelowdelay": "Hide Low Delay",
+          "detailed": "Detailed Information",
+          "past_60_minutes": "Include Past 60 Minutes",
+          "custom_api_url": "Custom API URL",
+          "data_source": "Data Source",
+          "offset": "Offset Time"
         }
       }
     }

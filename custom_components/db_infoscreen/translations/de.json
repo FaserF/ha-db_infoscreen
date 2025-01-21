@@ -1,32 +1,46 @@
 {
   "config": {
-    "flow_title": "Station Abfahrtsensor einrichten",
+    "flow_title": "Setup Station Departure Sensor",
     "step": {
       "user": {
-        "description": "Bitte konfigurieren Sie die Station und das Aktualisierungsintervall.",
+        "title": "Configure Station",
+        "description": "Set up the departure sensor with the desired station and options.",
         "data": {
-          "station_label": "Stationsname",
-          "next_departures": "Nächste Abfahrten",
-          "update_interval": "Aktualisierungsintervall (in Minuten)"
+          "station": "Station Name",
+          "next_departures": "Number of Upcoming Departures",
+          "update_interval": "Update Interval (minutes)",
+          "hidelowdelay": "Hide Low Delay",
+          "detailed": "Detailed Information",
+          "past_60_minutes": "Include Past 60 Minutes",
+          "custom_api_url": "Custom API URL",
+          "data_source": "Data Source",
+          "offset": "Offset Time"
         }
       }
     },
     "abort": {
-      "already_configured": "Diese Station ist bereits konfiguriert"
+      "already_configured": "This station is already configured"
     },
     "error": {
-      "error_max_sensors_reached": "Maximale Anzahl an Sensoren erreicht.",
-      "unknown": "Unbekannter Fehler"
+      "max_sensors_reached": "Maximum number of sensors reached.",
+      "unknown": "An unknown error occurred."
     }
   },
   "options": {
-    "flow_title": "Station Abfahrtsensor Optionen ändern",
+    "flow_title": "Modify Station Departure Sensor Options",
     "step": {
       "init": {
-        "description": "Station Optionen ändern.",
+        "title": "Modify Options",
+        "description": "Adjust the sensor's settings as needed.",
         "data": {
-          "next_departures": "Nächste Abfahrten",
-          "update_interval": "Aktualisierungsintervall (in Minuten)"
+          "next_departures": "Number of Upcoming Departures",
+          "update_interval": "Update Interval (minutes)",
+          "hidelowdelay": "Hide Low Delay",
+          "detailed": "Detailed Information",
+          "past_60_minutes": "Include Past 60 Minutes",
+          "custom_api_url": "Custom API URL",
+          "data_source": "Data Source",
+          "offset": "Offset Time"
         }
       }
     }

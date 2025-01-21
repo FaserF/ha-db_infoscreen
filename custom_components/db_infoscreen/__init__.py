@@ -76,6 +76,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     data = await response.json()
                     _LOGGER.debug("Data fetched successfully: %s", str(data)[:400] + ("..." if len(str(data)) > 400 else ""))
 
+                    # Set last_update timestamp
+                    self.last_update = datetime.now()
+
                     # Filter departures based on the offset
                     filtered_departures = []
                     for departure in data.get("departures", []):

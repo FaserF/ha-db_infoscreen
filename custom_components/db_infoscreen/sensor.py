@@ -34,7 +34,7 @@ class DBInfoSensor(SensorEntity):
 
     @property
     def available(self):
-        return self.coordinator.last_update_success
+        return self.coordinator.last_update_success if hasattr(self.coordinator, "last_update_success") else False
 
     async def async_update(self):
         _LOGGER.debug("Requesting data refresh for station: %s", self.station)
