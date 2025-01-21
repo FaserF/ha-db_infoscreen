@@ -1,46 +1,50 @@
 {
   "config": {
-    "flow_title": "Setup Station Departure Sensor",
+    "flow_title": "Station Abfahrtssensor einrichten",
     "step": {
       "user": {
-        "title": "Configure Station",
-        "description": "Set up the departure sensor with the desired station and options.",
+        "title": "Station konfigurieren",
+        "description": "Richten Sie den Abfahrtssensor mit der gewünschten Station und den Optionen ein.",
         "data": {
-          "station": "Station Name",
-          "next_departures": "Number of Upcoming Departures",
-          "update_interval": "Update Interval (minutes)",
-          "hidelowdelay": "Hide Low Delay",
-          "detailed": "Detailed Information",
-          "past_60_minutes": "Include Past 60 Minutes",
-          "custom_api_url": "Custom API URL",
-          "data_source": "Data Source",
-          "offset": "Offset Time"
+          "station": "Stationsname",
+          "next_departures": "Anzahl der nächsten Abfahrten",
+          "update_interval": "Update-Intervall (Minuten)",
+          "hidelowdelay": "Verzögerungen unterdrücken",
+          "detailed": "Detaillierte Informationen",
+          "past_60_minutes": "Abfahrten der letzten 60 Minuten einbeziehen",
+          "custom_api_url": "Benutzerdefinierte API-URL",
+          "data_source": "Datenquelle",
+          "offset": "Offset-Zeit",
+          "admode": "Bevorzugte Zeitdarstellung (Abfahrt / Ankunft)",
+          "platforms": "Gleise"
         }
       }
     },
     "abort": {
-      "already_configured": "This station is already configured"
+      "already_configured": "Diese Station ist bereits konfiguriert"
     },
     "error": {
-      "max_sensors_reached": "Maximum number of sensors reached.",
-      "unknown": "An unknown error occurred."
+      "max_sensors_reached": "Maximale Anzahl von Sensoren erreicht.",
+      "unknown": "Ein unbekannter Fehler ist aufgetreten."
     }
   },
   "options": {
-    "flow_title": "Modify Station Departure Sensor Options",
+    "flow_title": "Station Abfahrtssensor Optionen ändern",
     "step": {
       "init": {
-        "title": "Modify Options",
-        "description": "Adjust the sensor's settings as needed.",
+        "title": "Optionen ändern",
+        "description": "Passen Sie die Einstellungen des Sensors nach Bedarf an.",
         "data": {
-          "next_departures": "Number of Upcoming Departures",
-          "update_interval": "Update Interval (minutes)",
-          "hidelowdelay": "Hide Low Delay",
-          "detailed": "Detailed Information",
-          "past_60_minutes": "Include Past 60 Minutes",
-          "custom_api_url": "Custom API URL",
-          "data_source": "Data Source",
-          "offset": "Offset Time"
+          "next_departures": "Anzahl der nächsten Abfahrten",
+          "update_interval": "Update-Intervall (Minuten)",
+          "hidelowdelay": "Verzögerungen unterdrücken",
+          "detailed": "Detaillierte Informationen",
+          "past_60_minutes": "Abfahrten der letzten 60 Minuten einbeziehen",
+          "custom_api_url": "Benutzerdefinierte API-URL",
+          "data_source": "Datenquelle",
+          "offset": "Offset-Zeit",
+          "admode": "Bevorzugte Zeitdarstellung (Abfahrt / Ankunft)",
+          "platforms": "Gleise"
         }
       }
     }

@@ -14,7 +14,9 @@
           "past_60_minutes": "Include Past 60 Minutes",
           "custom_api_url": "Custom API URL",
           "data_source": "Data Source",
-          "offset": "Offset Time"
+          "offset": "Offset Time",
+          "admode": "Display Mode",
+          "platforms": "Platforms"
         }
       }
     },
@@ -40,7 +42,9 @@
           "past_60_minutes": "Include Past 60 Minutes",
           "custom_api_url": "Custom API URL",
           "data_source": "Data Source",
-          "offset": "Offset Time"
+          "offset": "Offset Time",
+          "admode": "Display Mode",
+          "platforms": "Platforms"
         }
       }
     }

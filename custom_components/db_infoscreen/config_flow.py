@@ -7,7 +7,8 @@ import homeassistant.helpers.config_validation as cv
 from .const import (
     DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL,
     DEFAULT_NEXT_DEPARTURES, DEFAULT_UPDATE_INTERVAL, DEFAULT_OFFSET, MAX_SENSORS,
-    CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET
+    CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, 
+    CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -23,7 +24,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            # Ensure unique_id is set and check if it's already configured
+            existing_entries = self.hass.config_entries.async_entries(DOMAIN)
+            if len(existing_entries) >= MAX_SENSORS:
+                errors["base"] = "max_sensors_reached"
+                return self.async_show_form(
+                    step_id="user",
+                    data_schema=self.data_schema(),
+                    errors=errors
+                )
+
             unique_id = user_input[CONF_STATION]
             await self.async_set_unique_id(unique_id)
             self._abort_if_unique_id_configured()
@@ -34,7 +43,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data=user_input
             )
 
-        data_schema = vol.Schema(
+        return self.async_show_form(
+            step_id="user",
+            data_schema=self.data_schema(),
+            errors=errors,
+        )
+
+    def data_schema(self):
+        return vol.Schema(
             {
                 vol.Required(CONF_STATION): cv.string,
                 vol.Optional(CONF_NEXT_DEPARTURES, default=DEFAULT_NEXT_DEPARTURES): cv.positive_int,
@@ -45,13 +61,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_CUSTOM_API_URL, default=""): cv.string,
                 vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(["IRIS-TTS", "MVV", "ÖBB"]),
                 vol.Optional(CONF_OFFSET, default=DEFAULT_OFFSET): cv.string,
+                vol.Optional(CONF_PLATFORMS, default=""): cv.string,
+                vol.Optional(CONF_ADMODE, default="preferred departure"): vol.In(["preferred departure", "arrival", "departure"]),
             }
-        )
-
-        return self.async_show_form(
-            step_id="user",
-            data_schema=data_schema,
-            errors=errors,
         )
 
     @staticmethod
@@ -60,27 +72,22 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Create the options flow."""
-        return OptionsFlowHandler(config_entry)
+        return OptionsFlowHandler(config_entry.entry_id)
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle an options flow"""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+    def __init__(self, config_entry_id: str) -> None:
         """Initialize options flow."""
-        # Do not store the config_entry directly in the constructor anymore
-        self.config_entry = None
-        self._config_entry_id = config_entry.entry_id
+        self.config_entry_id = config_entry_id
 
-    async def async_step_init(
-        self, user_input=None,
-    ) -> FlowResult:
+    async def async_step_init(self, user_input=None) -> FlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(data=user_input)
 
-        # Retrieve current options values from config_entry.data or config_entry.options
-        config_entry = self.hass.config_entries.async_get_entry(self._config_entry_id)  # Retrieve config entry by id
+        config_entry = self.hass.config_entries.async_get_entry(self.config_entry_id)
         current_options = config_entry.options or config_entry.data
 
         return self.async_show_form(
@@ -95,6 +102,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(CONF_CUSTOM_API_URL, default=current_options.get(CONF_CUSTOM_API_URL, "")): cv.string,
                     vol.Optional(CONF_DATA_SOURCE, default=current_options.get(CONF_DATA_SOURCE, "IRIS-TTS")): vol.In(["IRIS-TTS", "MVV", "ÖBB"]),
                     vol.Optional(CONF_OFFSET, default=current_options.get(CONF_OFFSET, DEFAULT_OFFSET)): cv.string,
+                    vol.Optional(CONF_PLATFORMS, default=current_options.get(CONF_PLATFORMS, "")): cv.string,
+                    vol.Optional(CONF_ADMODE, default="preferred departure"): vol.In(["preferred departure", "arrival", "departure"]),
                 }
             ),
         )

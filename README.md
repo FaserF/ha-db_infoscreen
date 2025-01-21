@@ -37,6 +37,7 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 
 ### Configuration Variables
 - **station**: The name of the station to be tracked.
+  - **IRIS-TTS** (default): Please check your station at [dbf.finalrewind.org](https://dbf.finalrewind.org/) if it is working.
 - **next_departures** (optional): The number of upcoming departures to display. Default is 4, but you can adjust it according to your preferences.
 - **update_interval** (optional): The time interval (in minutes) at which the integration will fetch updated departure data. Default is 3 minutes.
 - **hide_low_delay** (optional): If enabled, departures with a delay of less than 5 minutes will be hidden. Default is false.
@@ -48,6 +49,12 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
   - **MVV**: Adds the `?efa=MVV` parameter to the URL to fetch data from the MVV system.
   - **ÖBB**: Adds the `?hafas=ÖBB` parameter to the URL to fetch data from the ÖBB system.
 - **offset** (optional): Do not display departures leaving sooner than this number of seconds. You can specify the offset in "HH:MM" or "HH:MM:SS" format. Default is `00:00` (no offset).
+- **admode** (optional): Defines whether to display departure times, arrival times, or the default behavior (departure preferred). Available options:
+  - **departure prefered** (default): Displays the preferred time based on the system's default behavior (usually departures).
+  - **arrival**: Only shows arrival times.
+  - **departure**: Only shows departure times.
+- **platforms** (optional): If your station has multiple platforms and you want to filter by a specific platform, you can use this setting. Enter the platform(s) as a comma-separated list (e.g., `1, 2, 3`). This will ensure that the integration fetches data only for the specified platforms. If left empty, data for all platforms will be shown.
+
 
 ## Accessing the data
 

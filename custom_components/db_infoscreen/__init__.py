@@ -6,12 +6,12 @@ import aiohttp
 import async_timeout
 import logging
 
-from .const import DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET
+from .const import DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE
 
 _LOGGER = logging.getLogger(__name__)
 
 class DBInfoScreenCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str, data_source: str, offset: str):
+    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str, data_source: str, offset: str, platforms: str, admode: str):
         self.station = station
         self.next_departures = next_departures
         self.hide_low_delay = hide_low_delay
@@ -25,17 +25,25 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         else:
             url = f"https://dbf.finalrewind.org/{station}.json"
 
+        if platforms:
+            url += f"?platforms={platforms}" if "?" not in url else f"&platforms={platforms}"
+
+        if admode == "arrival":
+            url += "?admode=arr" if "?" not in url else "&admode=arr"
+        elif admode == "departure":
+            url += "?admode=dep" if "?" not in url else "&admode=dep"
+
         if data_source == "MVV":
             url += f"?efa=MVV" if "?" not in url else "&efa=MVV"
         elif data_source == "ÖBB":
-            url += f"?hafas=ÖBB" if "?" not in url else "?hafas=ÖBB"
+            url += f"?hafas=ÖBB" if "?" not in url else "&hafas=ÖBB"
 
         if hide_low_delay:
             url += "?hidelowdelay=1" if "?" not in url else "&hidelowdelay=1"
         if detailed:
-            url += "&detailed=1" if "?" in url else "?detailed=1"
+            url += "?detailed=1" if "?" not in url else "&detailed=1"
         if past_60_minutes:
-            url += "&past_60_minutes=1" if "?" in url else "?past_60_minutes=1"
+            url += "?past_60_minutes=1" if "?" not in url else "&past_60_minutes=1"
 
         self.api_url = url
         
@@ -120,10 +128,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.Co
     custom_api_url = config_entry.data.get(CONF_CUSTOM_API_URL, "")
     data_source = config_entry.data.get(CONF_DATA_SOURCE, "IRIS-TTS")
     offset = config_entry.data.get(CONF_OFFSET, DEFAULT_OFFSET)
+    platforms = config_entry.data.get(CONF_PLATFORMS, "")
+    admode = config_entry.data.get(CONF_ADMODE, "")
 
     coordinator = DBInfoScreenCoordinator(
         hass, station, next_departures, update_interval, hide_low_delay,
-        detailed, past_60_minutes, custom_api_url, data_source, offset
+        detailed, past_60_minutes, custom_api_url, data_source, offset, platforms, admode
     )
     coordinator.update_interval = timedelta(minutes=update_interval)
     await coordinator.async_config_entry_first_refresh()
