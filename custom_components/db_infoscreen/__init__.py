@@ -20,6 +20,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.data_source = data_source
         self.offset = self.convert_offset_to_seconds(offset)
         
+        # Build the API URL
         if custom_api_url:
             url = f"{custom_api_url}/{station}.json"
         else:
@@ -47,11 +48,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
         self.api_url = url
         
+        # Ensure update_interval is passed correctly
+        update_interval = timedelta(minutes=update_interval)  # Make sure it is passed as a timedelta
         super().__init__(
             hass,
             _LOGGER,
             name=f"DB Info Screen {station}",
-            update_interval=timedelta(minutes=update_interval),
+            update_interval=update_interval,
         )
         _LOGGER.debug(
             "Coordinator initialized for station %s with update interval %d minutes",
@@ -135,6 +138,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.Co
         hass, station, next_departures, update_interval, hide_low_delay,
         detailed, past_60_minutes, custom_api_url, data_source, offset, platforms, admode
     )
+    # Ensuring that the update_interval is passed correctly from the configuration
     coordinator.update_interval = timedelta(minutes=update_interval)
     await coordinator.async_config_entry_first_refresh()
 
