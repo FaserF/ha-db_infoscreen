@@ -27,8 +27,8 @@ class DBInfoSensor(SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        custom_api_url = self.coordinator.config_entry.data.get(CONF_CUSTOM_API_URL, "")
-        attribution = f"Data provided by {custom_api_url}" if custom_api_url else "Data provided by dbf.finalrewind.org API"
+        full_api_url = getattr(self.coordinator, "api_url", "dbf.finalrewind.org")
+        attribution = f"Data provided by API {full_api_url}"
         return {
             "next_departures": self.coordinator.data or [],
             "station": self.station,
