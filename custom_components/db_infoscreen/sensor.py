@@ -18,9 +18,16 @@ class DBInfoSensor(SensorEntity):
     @property
     def native_value(self):
         if self.coordinator.data:
-            scheduledDeparture = self.coordinator.data[0].get("scheduledDeparture", "Unknown")
-            _LOGGER.debug("Sensor state updated: %s", scheduledDeparture)
-            return scheduledDeparture
+            departure_time = (
+                self.coordinator.data[0].get("scheduledDeparture") 
+                or self.coordinator.data[0].get("scheduledTime") 
+                or "Unknown"
+            )
+            # Convert the time to a datetime object
+            if isinstance(departure_time, int):  # Unix timestamp case
+                departure_time = datetime.fromtimestamp(departure_time)
+            _LOGGER.debug("Sensor state updated: %s", departure_time)
+            return departure_time
         else:
             _LOGGER.warning("No data received for station: %s", self.station)
             return "No Data"

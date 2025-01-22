@@ -181,8 +181,20 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     # Filter departures based on the offset
                     filtered_departures = []
                     for departure in data.get("departures", []):
-                        departure_time = departure.get("scheduledDeparture")
-                        if departure_time:
+                        # Handle different API response formats
+                        scheduled_departure = departure.get("scheduledDeparture")
+                        scheduled_time = departure.get("scheduledTime")
+                        
+                        # Use the first available time field
+                        departure_time = scheduled_departure or scheduled_time
+                        if not departure_time:
+                            _LOGGER.warning("No valid departure time found for entry: %s", departure)
+                            continue
+                        
+                        # Convert the time to a datetime object
+                        if isinstance(departure_time, int):  # Unix timestamp case
+                            departure_time = datetime.fromtimestamp(departure_time)
+                        else:  # Assume ISO 8601 string
                             try:
                                 departure_time = datetime.strptime(departure_time, "%Y-%m-%dT%H:%M:%S")
                             except ValueError:
@@ -196,9 +208,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     _LOGGER.error("Invalid time format: %s", departure_time)
                                     continue
 
-                            departure_seconds = (departure_time - datetime.now()).total_seconds()
-                            if departure_seconds >= self.offset:  # Only show departures after the offset
-                                filtered_departures.append(departure)
+                        # Calculate time offset
+                        departure_seconds = (departure_time - datetime.now()).total_seconds()
+                        if departure_seconds >= self.offset:  # Only show departures after the offset
+                            filtered_departures.append(departure)
                     
                     return filtered_departures[:self.next_departures]
             except Exception as e:
