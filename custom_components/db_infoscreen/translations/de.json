@@ -16,7 +16,8 @@
           "data_source": "Datenquelle",
           "offset": "Offset-Zeit",
           "admode": "Bevorzugte Zeitdarstellung (Abfahrt / Ankunft)",
-          "platforms": "Gleise"
+          "platforms": "Gleise",
+          "via_stations": "Zeige nur Abfahrten über"
         }
       }
     },
@@ -44,7 +45,8 @@
           "data_source": "Datenquelle",
           "offset": "Offset-Zeit",
           "admode": "Bevorzugte Zeitdarstellung (Abfahrt / Ankunft)",
-          "platforms": "Gleise"
+          "platforms": "Gleise",
+          "via_stations": "Zeige nur Abfahrten über"
         }
       }
     }

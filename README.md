@@ -2,7 +2,7 @@
 
 # db-infoscreen Homeassistant Sensor
 The `db-infoscreen` sensor will give you the departure time of the next trains for the given station, containing many more attribute informations. It aims to aggregate departure and train data from different sources and combine them in a useful (and user-friendly) manner. It is intended both for a quick glance at the departure board and for public transportation geeks looking for details about specific trains. 
-The backend has many datasources available with it's main source being IRIS-TTS – Deutsche Bahn.
+The backend has many datasources available with it's main source being IRIS-TTS - Deutsche Bahn.
 
 This is the superior to [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn).
 
@@ -13,7 +13,7 @@ This is the superior to [ha-deutschebahn](https://github.com/FaserF/ha-deutscheb
 ## Installation
 ### 1. Using HACS (recommended way)
 
-This integration NO official HACS Integration right now.
+This integration is NO official HACS Integration right now.
 
 Open HACS then install the "db-infoscreen" integration or use the link below.
 
@@ -39,7 +39,7 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 
 ### Configuration Variables
 - **station**: The name of the station to be tracked.
-  - **IRIS-TTS** (default): Please check your station at [dbf.finalrewind.org](https://dbf.finalrewind.org/) if it is working.
+  - Please check your station at [dbf.finalrewind.org](https://dbf.finalrewind.org/) if it is working.
 - **next_departures** (optional): The number of upcoming departures to display. Default is 4, but you can adjust it according to your preferences.
 - **update_interval** (optional): The time interval (in minutes) at which the integration will fetch updated departure data. Default is 3 minutes, minimum is 1 minute (data wont be refreshed more often in the backend).
 - **hide_low_delay** (optional): If enabled, departures with a delay of less than 5 minutes will be hidden. Default is false.
@@ -56,6 +56,7 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
   - **arrival**: Only shows arrival times.
   - **departure**: Only shows departure times.
 - **platforms** (optional): If your station has multiple platforms and you want to filter by a specific platform, you can use this setting. Enter the platform(s) as a comma-separated list (e.g., `1, 2, 3`). This will ensure that the integration fetches data only for the specified platforms. If left empty, data for all platforms will be shown.
+- **via_stations** (optional): You can filter one or more stations where the Train has to go through. Enter the platform(s) as a comma-separated list (e.g., `München-Pasing,München-Ost`). This will ensure that the integration fetches data only when the Train has a stop at those stations.
 
 
 Note: You are limited to adding 30 sensors, if you are not using a custom_api_url.

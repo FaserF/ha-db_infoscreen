@@ -8,7 +8,8 @@ from .const import (
     DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL,
     DEFAULT_NEXT_DEPARTURES, DEFAULT_UPDATE_INTERVAL, DEFAULT_OFFSET, MAX_SENSORS,
     CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, 
-    CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, DATA_SOURCE_OPTIONS
+    CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, DATA_SOURCE_OPTIONS,
+    CONF_VIA_STATIONS 
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,6 +36,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         data_schema=self.data_schema(),
                         errors=errors
                     )
+                
+            try:
+                # Process `via_stations` input into a list
+                via_stations_input = user_input.get(CONF_VIA_STATIONS, "")
+                user_input[CONF_VIA_STATIONS] = [
+                    station.strip() for station in via_stations_input.split(",") if station.strip()
+                ]
+
+            except Exception as e:
+                _LOGGER.error("Error processing input: %s", e)
+                errors["base"] = "unknown"
 
             unique_id = user_input[CONF_STATION]
             await self.async_set_unique_id(unique_id)
@@ -66,6 +78,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_OFFSET, default=DEFAULT_OFFSET): cv.string,
                 vol.Optional(CONF_PLATFORMS, default=""): cv.string,
                 vol.Optional(CONF_ADMODE, default="preferred departure"): vol.In(["preferred departure", "arrival", "departure"]),
+                vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
             }
         )
 
@@ -88,6 +101,17 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None) -> FlowResult:
         """Manage the options."""
         if user_input is not None:
+            # Process `via_stations` input into a list
+            via_stations_input = user_input.get(CONF_VIA_STATIONS, "")
+            user_input[CONF_VIA_STATIONS] = [
+                station.strip() for station in via_stations_input.split(",") if station.strip()
+            ]
+
+            _LOGGER.debug(
+                "Updating options for via stations: %s",
+                user_input[CONF_VIA_STATIONS],
+            )
+
             return self.async_create_entry(data=user_input)
 
         config_entry = self.hass.config_entries.async_get_entry(self.config_entry_id)
@@ -107,6 +131,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(CONF_OFFSET, default=current_options.get(CONF_OFFSET, DEFAULT_OFFSET)): cv.string,
                     vol.Optional(CONF_PLATFORMS, default=current_options.get(CONF_PLATFORMS, "")): cv.string,
                     vol.Optional(CONF_ADMODE, default="preferred departure"): vol.In(["preferred departure", "arrival", "departure"]),
+                    vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
                 }
             ),
         )

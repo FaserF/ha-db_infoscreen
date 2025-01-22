@@ -6,12 +6,12 @@ import aiohttp
 import async_timeout
 import logging
 
-from .const import DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, MIN_UPDATE_INTERVAL
+from .const import DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, MIN_UPDATE_INTERVAL, CONF_VIA_STATIONS
 
 _LOGGER = logging.getLogger(__name__)
 
 class DBInfoScreenCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str, data_source: str, offset: str, platforms: str, admode: str):
+    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str, data_source: str, offset: str, platforms: str, admode: str, via_stations: list):
         self.station = station
         self.next_departures = next_departures
         self.hide_low_delay = hide_low_delay
@@ -19,6 +19,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.past_60_minutes = past_60_minutes
         self.data_source = data_source
         self.offset = self.convert_offset_to_seconds(offset)
+        self.via_stations = via_stations
         
         # Build the API URL
         if custom_api_url:
@@ -123,6 +124,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             url += "?detailed=1" if "?" not in url else "&detailed=1"
         if past_60_minutes:
             url += "?past_60_minutes=1" if "?" not in url else "&past_60_minutes=1"
+        
+        if via_stations:
+            via_param = ",".join(via_stations)
+            url += f"?via={via_param}" if "?" not in url else f"&via={via_param}"
 
         self.api_url = url
         
@@ -211,10 +216,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.Co
     offset = config_entry.data.get(CONF_OFFSET, DEFAULT_OFFSET)
     platforms = config_entry.data.get(CONF_PLATFORMS, "")
     admode = config_entry.data.get(CONF_ADMODE, "")
+    via_stations = config_entry.data.get(CONF_VIA_STATIONS, [])
 
     coordinator = DBInfoScreenCoordinator(
         hass, station, next_departures, update_interval, hide_low_delay,
-        detailed, past_60_minutes, custom_api_url, data_source, offset, platforms, admode
+        detailed, past_60_minutes, custom_api_url, data_source, offset, 
+        platforms, admode, via_stations
     )
     await coordinator.async_config_entry_first_refresh()
 

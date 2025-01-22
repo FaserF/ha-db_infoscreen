@@ -16,7 +16,8 @@
           "data_source": "Data Source",
           "offset": "Offset Time",
           "admode": "Display Mode",
-          "platforms": "Platforms"
+          "platforms": "Platforms",
+          "via_stations": "Only show departures via"
         }
       }
     },
@@ -44,7 +45,8 @@
           "data_source": "Data Source",
           "offset": "Offset Time",
           "admode": "Display Mode",
-          "platforms": "Platforms"
+          "platforms": "Platforms",
+          "via_stations": "Only show departures via"
         }
       }
     }
