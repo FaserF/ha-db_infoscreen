@@ -5,6 +5,7 @@ from datetime import timedelta, datetime
 import aiohttp
 import async_timeout
 import logging
+from urllib.parse import quote
 
 from .const import DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, MIN_UPDATE_INTERVAL, CONF_VIA_STATIONS
 
@@ -20,12 +21,14 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.data_source = data_source
         self.offset = self.convert_offset_to_seconds(offset)
         self.via_stations = via_stations
+
+        encoded_station = quote(station, safe=", -")
         
         # Build the API URL
         if custom_api_url:
-            url = f"{custom_api_url}/{station}.json"
+            url = f"{custom_api_url}/{encoded_station}.json"
         else:
-            url = f"https://dbf.finalrewind.org/{station}.json"
+            url = f"https://dbf.finalrewind.org/{encoded_station}.json"
 
         if platforms:
             url += f"?platforms={platforms}" if "?" not in url else f"&platforms={platforms}"
