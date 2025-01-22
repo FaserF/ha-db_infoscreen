@@ -22,7 +22,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.offset = self.convert_offset_to_seconds(offset)
         self.via_stations = via_stations
 
-        encoded_station = quote(station, safe=", -")
+        station_cleaned = " ".join(station.split())
+        encoded_station = quote(station_cleaned, safe=",-")
+        encoded_station = encoded_station.replace(" ", "%20")
         
         # Build the API URL
         if custom_api_url:
