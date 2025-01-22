@@ -49,6 +49,7 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 - **data_source** (optional): Choose the data source for fetching departure information. The available options are:
   - The integration supports fetching departure data from various data sources, including:
   ["IRIS-TTS", "MVV", "ÖBB", "BSVG", "DING", "KVV", "LinzAG", "NVBW", "NWL", "VGN", "VMV", "VRN", "VRR", "VRR2", "VRR3", "VVO", "VVS", "bwegt", "AVV", "BART", "BLS", "BVG", "CMTA", "DSB", "IE", "KVB", "NAHSH", "NASA", "NVV", "RMV", "RSAG", "Resrobot", "STV", "SaarVV", "TPG", "VBB", "VBN", "VMT", "VOS", "VRN", "ZVV", "mobiliteit"]
+  - Some stations can be searched via "IRIS-TTS" but need hafas=1 for data retrival, f.e. "Frankenforst Kippekausen, Bergisch Gladbach", choose `hafas=1` in the list to archive this. [GitHub issue about this](https://github.com/FaserF/ha-db_infoscreen/issues/8)
   - For the default configuration, the `IRIS-TTS` data source is used. Other data sources can be selected by specifying the `data_source` configuration option.
 - **offset** (optional): Do not display departures leaving sooner than this number of seconds. You can specify the offset in "HH:MM" or "HH:MM:SS" format. Default is `00:00` (no offset).
 - **admode** (optional): Defines whether to display departure times, arrival times, or the default behavior (departure preferred). Available options:

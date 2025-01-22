@@ -117,6 +117,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             url += f"?hafas=ZVV" if "?" not in url else "&hafas=ZVV"
         elif data_source == "mobiliteit":
             url += f"?hafas=mobiliteit" if "?" not in url else "&hafas=mobiliteit"
+        elif data_source == "hafas=1":
+            url += f"?hafas=1" if "?" not in url else "&hafas=1"
 
         if hide_low_delay:
             url += "?hidelowdelay=1" if "?" not in url else "&hidelowdelay=1"
