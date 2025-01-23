@@ -5,15 +5,28 @@ from datetime import datetime
 
 _LOGGER = logging.getLogger(__name__)
 
+MAX_LENGTH = 70
+
 class DBInfoSensor(SensorEntity):
     def __init__(self, coordinator, station, via_stations):
         self.coordinator = coordinator
         self.station = station
         self.via_stations = via_stations
 
-        via_suffix = f" via {' '.join(via_stations)}" if via_stations else ""
-        self._attr_name = f"{station} Departures{via_suffix}"
-        self._attr_unique_id = f"departures_{station}{via_suffix}".lower().replace(" ", "_")
+        via_suffix_name = f" via {' '.join(via_stations)}" if via_stations else ""
+        self._attr_name = f"{station} Departures{via_suffix_name}"
+
+        if len(self._attr_name) > MAX_LENGTH:
+            self._attr_name = self._attr_name[:MAX_LENGTH]
+
+        via_suffix_id = (
+            f"_via_{'_'.join([station[:4] for station in via_stations])}" if via_stations else ""
+        )
+        self._attr_unique_id = f"departures_{station}{via_suffix_id}".lower().replace(" ", "_")
+
+        if len(self._attr_unique_id) > MAX_LENGTH:
+            self._attr_unique_id = self._attr_unique_id[:MAX_LENGTH]
+
         self._attr_icon = "mdi:train"
 
         _LOGGER.debug(
