@@ -130,7 +130,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         if detailed:
             url += "?detailed=1" if "?" not in url else "&detailed=1"
         if past_60_minutes:
-            url += "?past_60_minutes=1" if "?" not in url else "&past_60_minutes=1"
+            url += "?past=1" if "?" not in url else "&past=1"
         
         if via_stations:
             via_param = ",".join(via_stations)
