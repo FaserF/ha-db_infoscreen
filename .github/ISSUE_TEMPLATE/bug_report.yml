@@ -66,7 +66,7 @@ body:
       placeholder: 
       description: >
         If you dont want to share this due to data privacy, please leave this field empty. You can also provide another station name where you can reproduce the issue.
-  - type: input
+  - type: dropdown
     id: data_source
     validations:
       required: true
