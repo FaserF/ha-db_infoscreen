@@ -6,7 +6,7 @@
         "title": "Configure Station",
         "description": "Set up the departure sensor with the desired station and options.",
         "data": {
-          "station": "Station Name",
+          "station": "Station Name or Trip number",
           "next_departures": "Number of Upcoming Departures",
           "update_interval": "Update Interval (minutes)",
           "hidelowdelay": "Hide Low Delay",

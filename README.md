@@ -38,7 +38,7 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=db_infoscreen)
 
 ### Configuration Variables
-- **station**: The name of the station to be tracked.
+- **station**: The name of the station or Trip number to be tracked.
   - Please check your station at [dbf.finalrewind.org](https://dbf.finalrewind.org/) if it is working.
 - **next_departures** (optional): The number of upcoming departures to display. Default is 4, but you can adjust it according to your preferences.
 - **update_interval** (optional): The time interval (in minutes) at which the integration will fetch updated departure data. Default is 3 minutes, minimum is 1 minute (data wont be refreshed more often in the backend).
@@ -87,7 +87,6 @@ automation:
             The next train to {{ state_attr('sensor.station_departures', 'next_departures')[0]['destination'] }} 
             is delayed by {{ state_attr('sensor.station_departures', 'next_departures')[0]['delayArrival'] }} minutes.
     mode: single
-
 ```
 
 ### Custom sensor
@@ -104,8 +103,43 @@ sensor:
         icon_template: mdi:train
 ```
 
+#### Community submit by [kRew94](https://github.com/kRew94)
+This is a template sensor which gives the information for a destination in the format "HH:MM +DELAY":
+
+```yaml
+{% set departures = state_attr('sensor.train_departures','next_departures') %} {% if departures %} 
+  {% set <destination> = departures  | selectattr('destination','search','<destination>')  | list  | first %} 
+    {% if <destination> %} {{ <destination>.scheduledDeparture ~ ' +' ~ (<destination>.delayDeparture|int) }} 
+  {% else %} No departure information {% endif %} 
+{% else %} No data {% endif %}
+```
+
+### YAML Snippets
+There are some examples that can be used within automations or custom sensors.
+
+#### Community submit by [Kanecaine](https://github.com/Kanecaine)
+I have a sensor for Berlin Central Station and would now like to know which connections there are to Leipzig and should give you the following output:
+IC 495 um 22:28 +1. 
+
+[More informations](https://github.com/FaserF/ha-db_infoscreen/issues/4#issuecomment-2605743834).
+
+```yaml
+{%- set target = "Leipzig Hbf" -%}
+{%- set number = 0 -%}
+{%- set connections = state_attr('sensor.berlin_hbf_departures', 'next_departures') | selectattr('destination', 'equalto', target) | list -%}
+{% if connections is not none and connections | length > number %}
+  {% set connection = connections[number] %}
+  {% set product = connection.train %}
+  {% set departure = connection.scheduledDeparture %}
+  {% set delay = connection.delayDeparture | int %}
+  {{ product }} um {{ departure }}{% if delay > 0 %} +{{ delay }}{% endif %}
+{% else %}
+  --
+{% endif %}
+```
+
 ### JSON Format
-The API returns data in the following json format:
+The API returns data in the following json format usually:
 
 ```json
 {
@@ -121,6 +155,29 @@ The API returns data in the following json format:
           {"text": "delay of a train ahead", "timestamp": "2025-01-21T07:53:00"}
         ]
       }
+    }
+  ]
+}
+```
+
+There are some differences depending on the stations, for example: 
+```json
+{
+  "departures": [
+    {
+      "delay": 0,
+      "destination": "Bensberg, Bergisch Gladbach",
+      "direction": "Bensberg, Bergisch Gladbach",
+      "isCancelled": null,
+      "messages": [],
+      "platform": null,
+      "route": [],
+      "scheduledPlatform": null,
+      "scheduledTime": 1737619740,
+      "time": 1737619740,
+      "train": "STR 1",
+      "trainNumber": "54726",
+      "via": []
     }
   ]
 }
