@@ -1,7 +1,7 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-CUSTOM-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
 # db-infoscreen Homeassistant Sensor
-The `db-infoscreen` sensor will give you the departure time of the next trains for the given station, containing many more attribute informations. It aims to aggregate departure and train data from different sources and combine them in a useful (and user-friendly) manner. It is intended both for a quick glance at the departure board and for public transportation geeks looking for details about specific trains. 
+The `db-infoscreen` sensor will give you the departure time of the next trains for the given station, containing many more attribute informations. It aims to aggregate departure and train data from different sources and combine them in a useful (and user-friendly) manner. It is intended both for a quick glance at the departure board and for public transportation geeks looking for details about specific trains.
 The backend has many datasources available with it's main source being IRIS-TTS - Deutsche Bahn.
 
 This is the superior to [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn).
@@ -37,6 +37,8 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=db_infoscreen)
 
+You can set up one sensor per station, except using different `via_stations` configurations.
+
 ### Configuration Variables
 - **station**: The name of the station or Trip number to be tracked.
   - Please check your station at [dbf.finalrewind.org](https://dbf.finalrewind.org/) if it is working.
@@ -63,10 +65,10 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 Note: You are limited to adding 30 sensors, if you are not using a custom_api_url.
 
 ### Migrating from [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn)
-There is no direct way of migrating the ha-deutschebahn integration to ha-db_infoscreen due to the fact, that those are two completly different integrations with different API sources. The old ha-deutschebahn api provided a start and destination option, which is not (yet) available with this newer API backend. 
-To get a most similar option about this, I recommend starting playing around with the `platforms` option to only display one direction for your direction and afterwards filtering with a custom sensor to only display trains with a specific end station. 
+There is no direct way of migrating the ha-deutschebahn integration to ha-db_infoscreen due to the fact, that those are two completly different integrations with different API sources. The old ha-deutschebahn api provided a start and destination option, which is not (yet) available with this newer API backend.
+To get a most similar option about this, I recommend starting playing around with the `platforms` option to only display one direction for your direction and afterwards filtering with a custom sensor to only display trains with a specific end station or using for example two sensors for the same station but choosing different `via_stations` to only display "one direction".
 
-All other features of ha-deutschebahn are ported to this integration or will be ported soon. 
+All other features of ha-deutschebahn are ported to this integration or will be ported soon.
 
 [Discussion about this](https://github.com/FaserF/ha-db_infoscreen/issues/4)
 
@@ -84,7 +86,7 @@ automation:
       - service: notify.notify
         data:
           message: >
-            The next train to {{ state_attr('sensor.station_departures', 'next_departures')[0]['destination'] }} 
+            The next train to {{ state_attr('sensor.station_departures', 'next_departures')[0]['destination'] }}
             is delayed by {{ state_attr('sensor.station_departures', 'next_departures')[0]['delayArrival'] }} minutes.
     mode: single
 ```
@@ -107,10 +109,10 @@ sensor:
 This is a template sensor which gives the information for a destination in the format "HH:MM +DELAY":
 
 ```yaml
-{% set departures = state_attr('sensor.train_departures','next_departures') %} {% if departures %} 
-  {% set <destination> = departures  | selectattr('destination','search','<destination>')  | list  | first %} 
-    {% if <destination> %} {{ <destination>.scheduledDeparture ~ ' +' ~ (<destination>.delayDeparture|int) }} 
-  {% else %} No departure information {% endif %} 
+{% set departures = state_attr('sensor.train_departures','next_departures') %} {% if departures %}
+  {% set <destination> = departures  | selectattr('destination','search','<destination>')  | list  | first %}
+    {% if <destination> %} {{ <destination>.scheduledDeparture ~ ' +' ~ (<destination>.delayDeparture|int) }}
+  {% else %} No departure information {% endif %}
 {% else %} No data {% endif %}
 ```
 
@@ -119,7 +121,7 @@ There are some examples that can be used within automations or custom sensors.
 
 #### Community submit by [Kanecaine](https://github.com/Kanecaine)
 I have a sensor for Berlin Central Station and would now like to know which connections there are to Leipzig and should give you the following output:
-IC 495 um 22:28 +1. 
+IC 495 um 22:28 +1.
 
 [More informations](https://github.com/FaserF/ha-db_infoscreen/issues/4#issuecomment-2605743834).
 
@@ -160,7 +162,7 @@ The API returns data in the following json format usually:
 }
 ```
 
-There are some differences depending on the stations, for example: 
+There are some differences depending on the stations, for example:
 ```json
 {
   "departures": [
