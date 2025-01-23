@@ -7,9 +7,9 @@ import homeassistant.helpers.config_validation as cv
 from .const import (
     DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL,
     DEFAULT_NEXT_DEPARTURES, DEFAULT_UPDATE_INTERVAL, DEFAULT_OFFSET, MAX_SENSORS,
-    CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, 
+    CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL,
     CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, DATA_SOURCE_OPTIONS,
-    CONF_VIA_STATIONS 
+    CONF_VIA_STATIONS
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         data_schema=self.data_schema(),
                         errors=errors
                     )
-                
+
             try:
                 # Process `via_stations` input into a list
                 via_stations_input = user_input.get(CONF_VIA_STATIONS, "")
@@ -48,13 +48,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.error("Error processing input: %s", e)
                 errors["base"] = "unknown"
 
-            unique_id = user_input[CONF_STATION]
+            # Build the unique ID from both station and via_stations
+            station = user_input[CONF_STATION]
+            via_stations = user_input[CONF_VIA_STATIONS]
+            unique_id = f"{station}_{'_'.join(via_stations)}" if via_stations else station
             await self.async_set_unique_id(unique_id)
             self._abort_if_unique_id_configured()
             _LOGGER.debug("Initialized new sensor with station: %s", unique_id)
 
             return self.async_create_entry(
-                title=user_input[CONF_STATION], 
+                title=f"{user_input[CONF_STATION]} via {' '.join(user_input[CONF_VIA_STATIONS])}" if user_input[CONF_VIA_STATIONS] else user_input[CONF_STATION],
                 data=user_input
             )
 
