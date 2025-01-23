@@ -34,15 +34,6 @@ body:
         Can be found in: [Settings -> About](https://my.home-assistant.io/redirect/info/).
 
         [![Open your Home Assistant instance and show your Home Assistant version information.](https://my.home-assistant.io/badges/info.svg)](https://my.home-assistant.io/redirect/info/)
-  - type: input
-    id: version_integration
-    validations:
-      required: true
-    attributes:
-      label: What version of this Integration has the issue?
-      placeholder: 
-      description: >
-        The version from the release page you are using. Latest version can be found here: https://github.com/FaserF/ha-db_infoscreen/releases/latest
   - type: dropdown
     validations:
       required: true
@@ -57,6 +48,77 @@ body:
         - Home Assistant Container
         - Home Assistant Supervised
         - Home Assistant Core
+  - type: input
+    id: version_integration
+    validations:
+      required: true
+    attributes:
+      label: What version of this Integration has the issue?
+      placeholder: 
+      description: >
+        The version from the release page you are using. Latest version can be found here: https://github.com/FaserF/ha-db_infoscreen/releases/latest
+  - type: input
+    id: station_name
+    validations:
+      required: false
+    attributes:
+      label: If possible, please provide the station name you were using.
+      placeholder: 
+      description: >
+        If you dont want to share this due to data privacy, please leave this field empty. You can also provide another station name where you can reproduce the issue.
+  - type: input
+    id: data_source
+    validations:
+      required: true
+    attributes:
+      label: What data source are you using (usually IRIS-TTS)?
+      description: >
+        Please provide the data source you are using. Initially you had to choose one in the config flow data_source while setting up the integration.
+      options:
+        - IRIS-TTS  
+        - hafas=1  
+        - MVV  
+        - ÖBB  
+        - BSVG  
+        - DING  
+        - KVV  
+        - LinzAG  
+        - NVBW  
+        - NWL  
+        - VGN  
+        - VMV  
+        - VRN  
+        - VRR  
+        - VRR2  
+        - VRR3  
+        - VVO  
+        - VVS  
+        - bwegt  
+        - AVV  
+        - BART  
+        - BLS  
+        - BVG  
+        - CMTA  
+        - DSB  
+        - IE  
+        - KVB  
+        - NAHSH  
+        - NASA  
+        - NVV  
+        - RMV  
+        - RSAG  
+        - Resrobot  
+        - STV  
+        - SaarVV  
+        - TPG  
+        - VBB  
+        - VBN  
+        - VMT  
+        - VOS  
+        - ZVV  
+        - mobiliteit
+        - Other
+
   - type: markdown
     attributes:
       value: |
