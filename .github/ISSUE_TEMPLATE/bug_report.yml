@@ -1,5 +1,9 @@
 name: Report an issue
 description: Report an issue with the db-infoscreen Integration
+title: "[Bug]: "
+labels: ["bug"]
+assignees:
+  - FaserF
 body:
   - type: markdown
     attributes:
@@ -38,7 +42,7 @@ body:
       label: What version of this Integration has the issue?
       placeholder: 
       description: >
-        The version from the release page you are using. Latest version can be found here: https://github.com/FaserF/ha-foodsharing/releases/latest
+        The version from the release page you are using. Latest version can be found here: https://github.com/FaserF/ha-db_infoscreen/releases/latest
   - type: dropdown
     validations:
       required: true
