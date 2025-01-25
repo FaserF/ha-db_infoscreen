@@ -8,13 +8,15 @@ _LOGGER = logging.getLogger(__name__)
 MAX_LENGTH = 70
 
 class DBInfoSensor(SensorEntity):
-    def __init__(self, coordinator, station, via_stations):
+    def __init__(self, coordinator, station, via_stations, platforms):
         self.coordinator = coordinator
         self.station = station
         self.via_stations = via_stations
+        self.platforms = platforms
 
+        platforms_suffix_name = f" platform {' '.join(platforms)}" if platforms else ""
         via_suffix_name = f" via {' '.join(via_stations)}" if via_stations else ""
-        self._attr_name = f"{station} Departures{via_suffix_name}"
+        self._attr_name = f"{station} Departures{platforms_suffix_name}{via_suffix_name}"
 
         if len(self._attr_name) > MAX_LENGTH:
             self._attr_name = self._attr_name[:MAX_LENGTH]
@@ -22,7 +24,10 @@ class DBInfoSensor(SensorEntity):
         via_suffix_id = (
             f"_via_{'_'.join([station[:4] for station in via_stations])}" if via_stations else ""
         )
-        self._attr_unique_id = f"departures_{station}{via_suffix_id}".lower().replace(" ", "_")
+        platforms_suffix_id = (
+            f"_platform_{'_'.join([platforms for platform in platforms])}" if platforms else ""
+        )
+        self._attr_unique_id = f"departures_{station}{platforms_suffix_id}{via_suffix_id}".lower().replace(" ", "_")
 
         if len(self._attr_unique_id) > MAX_LENGTH:
             self._attr_unique_id = self._attr_unique_id[:MAX_LENGTH]
@@ -104,6 +109,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     station = config_entry.data.get("station")
     via_stations = config_entry.data.get("via_stations", [])
+    platforms = config_entry.data.get("platforms", [])
 
     _LOGGER.debug("Setting up DBInfoSensor for station: %s with via_stations: %s", station, via_stations)
-    async_add_entities([DBInfoSensor(coordinator, station, via_stations)])
+    async_add_entities([DBInfoSensor(coordinator, station, via_stations, platforms)])

@@ -50,13 +50,18 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Build the unique ID from both station and via_stations
             station = user_input[CONF_STATION]
             via_stations = user_input[CONF_VIA_STATIONS]
+            platforms = user_input[CONF_PLATFORMS]
             unique_id = f"{station}_{'_'.join(via_stations)}" if via_stations else station
+            unique_id = f"{unique_id}_{'_'.join(platforms)}" if platforms else unique_id
             await self.async_set_unique_id(unique_id)
             self._abort_if_unique_id_configured()
             _LOGGER.debug("Initialized new sensor with station: %s", unique_id)
 
+            full_title = f"{user_input[CONF_STATION]} platform {' '.join(user_input[CONF_PLATFORMS])}" if user_input[CONF_PLATFORMS] else user_input[CONF_STATION]
+            full_title = f"{full_title} via {' '.join(user_input[CONF_VIA_STATIONS])}" if user_input[CONF_VIA_STATIONS] else full_title
+
             return self.async_create_entry(
-                title=f"{user_input[CONF_STATION]} via {' '.join(user_input[CONF_VIA_STATIONS])}" if user_input[CONF_VIA_STATIONS] else user_input[CONF_STATION],
+                title=full_title,
                 data=user_input
             )
 
