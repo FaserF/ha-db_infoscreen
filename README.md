@@ -145,16 +145,23 @@ sensor:
         icon_template: mdi:train
 ```
 
-#### Community submit by [kRew94](https://github.com/kRew94)
+#### Community submit by [kRew94](https://github.com/kRew94) (Improved by [kaffeetrinker71](https://github.com/FaserF/ha-db_infoscreen/issues/4#issuecomment-2611684018))
 This is a template sensor which gives the information for a destination in the format "HH:MM +DELAY":
 
 ```yaml
-{% set departures = state_attr('sensor.train_departures','next_departures') %} {% if departures %}
-  {% set <destination> = departures  | selectattr('destination','search','<destination>')  | list  | first %}
-    {% if <destination> %} {{ <destination>.scheduledDeparture ~ ' +' ~ (<destination>.delayDeparture|int) }}
-  {% else %} No departure information {% endif %}
-{% else %} No data {% endif %}
+{%- set number = 0 -%}
+{%- set connections = state_attr('sensor.uelzen_departures_via_hannover_hbf', 'next_departures') | selectattr('isCancelled', 'equalto', 0) | list -%}
+{% if connections is not none and connections | length > number %}
+  {% set connection = connections[number] %}
+  {% set product = connection.train %}
+  {% set departure = connection.scheduledDeparture %}
+  {% set delay = connection.delayDeparture | int %}
+  {{ product }} um {{ departure }}{% if delay > 0 %} +{{ delay }}{% endif %}
+{% else %}
+  No data
+{% endif %}
 ```
+The result looks like this: "ICE 2935 um 07:15"
 
 ### YAML Snippets
 There are some examples that can be used within automations or custom sensors.
