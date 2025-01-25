@@ -50,9 +50,48 @@ You can set up one sensor per station, except using different `via_stations` con
 - **custom_api_url** (optional): If you wish to use a custom API URL (f.e. [your self hosted server](https://github.com/derf/db-fakedisplay/blob/master/README.md)) instead of the default one, you can specify it here. The URL should contain only the base domain (e.g., `https://example.com`).
 - **data_source** (optional): Choose the data source for fetching departure information. The available options are:
   - The integration supports fetching departure data from various data sources, including:
-  ["IRIS-TTS", "MVV", "ÖBB", "BSVG", "DING", "KVV", "LinzAG", "NVBW", "NWL", "VGN", "VMV", "VRN", "VRR", "VRR2", "VRR3", "VVO", "VVS", "bwegt", "AVV", "BART", "BLS", "BVG", "CMTA", "DSB", "IE", "KVB", "NAHSH", "NASA", "NVV", "RMV", "RSAG", "Resrobot", "STV", "SaarVV", "TPG", "VBB", "VBN", "VMT", "VOS", "VRN", "ZVV", "mobiliteit"]
+    - IRIS-TTS – Deutsche Bahn (default and used by most)
+    - MVV – Münchener Verkehrs- und Tarifverbund Bayern
+    - ÖBB – Österreichische Bundesbahnen Österreich
+    - BSVG – Braunschweiger Verkehrs-GmbH
+    - DING – Donau-Iller Nahverkehrsverbund
+    - KVV – Karlsruher Verkehrsverbund Baden-Württemberg
+    - LinzAG – Linz AG
+    - NVBW – Nahverkehrsgesellschaft Baden-Württemberg
+    - NWL – Nahverkehr Westfalen-Lippe
+    - VGN – Verkehrsverbund Großraum Nürnberg Bayern
+    - VMV – Verkehrsgesellschaft Mecklenburg-Vorpommern Mecklenburg-Vorpommern
+    - VRN – Verkehrsverbund Rhein-Neckar
+    - VRR – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen
+    - VRR2 – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen
+    - VRR3 – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen
+    - VVO – Verkehrsverbund Oberelbe
+    - VVS – Verkehrs- und Tarifverbund Stuttgart Baden-Württemberg
+    - bwegt – bwegt Baden-Württemberg
+    - AVV – Aachener Verkehrsverbund Nordrhein-Westfalen (avv.de)
+    - BART – Bay Area Rapid Transit California (bart.gov)
+    - BLS – BLS AG Kanton Bern, Kanton Luzern (bls.ch)
+    - BVG – Berliner Verkehrsbetriebe Berlin, Brandenburg (bvg.de)
+    - CMTA – Capital Metro Austin Public Transport Texas (capmetro.org)
+    - DSB – Rejseplanen Dänemark (rejseplanen.dk)
+    - IE – Iarnród Éireann Irland, Nordirland (irishrail.ie)
+    - KVB – Kölner Verkehrs-Betriebe (kvb.koeln)
+    - NAHSH – Nahverkehrsverbund Schleswig-Holstein Schleswig-Holstein (nah.sh)
+    - NASA – Personennahverkehr in Sachsen-Anhalt Sachsen-Anhalt (nasa.de)
+    - NVV – Nordhessischer Verkehrsverbund Hessen (nvv.de)
+    - RMV – Rhein-Main-Verkehrsverbund Hessen, Baden-Württemberg, Bayern, Rheinland-Pfalz (rmv.de)
+    - RSAG – Rostocker Straßenbahn Mecklenburg-Vorpommern (rsag-online.de)
+    - Resrobot – Resrobot
+    - STV – Steirischer Verkehrsverbund AT-6 (verbundlinie.at)
+    - SaarVV – Saarländischer Verkehrsverbund DE-SL (saarvv.de)
+    - TPG – Transports publics genevois Kanton Genf (tpg.ch)
+    - VBB – Verkehrsverbund Berlin-Brandenburg Berlin, Brandenburg (vbb.de)
+    - VBN – Verkehrsverbund Bremen/Niedersachsen Niedersachsen, Bremen (vbn.de)
+    - VMT – Verkehrsverbund Mittelthüringen Thüringen (vmt-thueringen.de)
+    - VOS – Verkehrsgemeinschaft Osnabrück Niedersachsen (vos.info)
+    - ZVV – Züricher Verkehrsverbund Kanton Zürich (zvv.ch)
+    - mobiliteit – mobilitéits zentral Luxembourg (mobiliteit.lu)
   - Some stations can be searched via "IRIS-TTS" but need hafas=1 for data retrival, f.e. "Frankenforst Kippekausen, Bergisch Gladbach", choose `hafas=1` in the list to archive this. [GitHub issue about this](https://github.com/FaserF/ha-db_infoscreen/issues/8)
-  - For the default configuration, the `IRIS-TTS` data source is used. Other data sources can be selected by specifying the `data_source` configuration option.
 - **offset** (optional): Do not display departures leaving sooner than this number of seconds. You can specify the offset in "HH:MM" or "HH:MM:SS" format. Default is `00:00` (no offset).
 - **admode** (optional): Defines whether to display departure times, arrival times, or the default behavior (departure preferred). Available options:
   - **departure prefered** (default): Displays the preferred time based on the system's default behavior (usually departures).
