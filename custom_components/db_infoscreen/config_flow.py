@@ -129,18 +129,54 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(CONF_NEXT_DEPARTURES, default=current_options.get(CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES)): cv.positive_int,
-                    vol.Optional(CONF_UPDATE_INTERVAL, default=current_options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)): cv.positive_int,
-                    vol.Optional(CONF_HIDE_LOW_DELAY, default=current_options.get(CONF_HIDE_LOW_DELAY, False)): cv.boolean,
-                    vol.Optional(CONF_DETAILED, default=current_options.get(CONF_DETAILED, False)): cv.boolean,
-                    vol.Optional(CONF_PAST_60_MINUTES, default=current_options.get(CONF_PAST_60_MINUTES, False)): cv.boolean,
-                    vol.Optional(CONF_CUSTOM_API_URL, default=current_options.get(CONF_CUSTOM_API_URL, "")): cv.string,
-                    vol.Optional(CONF_DATA_SOURCE, default=current_options.get(CONF_DATA_SOURCE, "IRIS-TTS")): vol.In(DATA_SOURCE_OPTIONS),
-                    vol.Optional(CONF_OFFSET, default=current_options.get(CONF_OFFSET, DEFAULT_OFFSET)): cv.string,
-                    vol.Optional(CONF_PLATFORMS, default=current_options.get(CONF_PLATFORMS, "")): cv.string,
-                    vol.Optional(CONF_ADMODE, default="preferred departure"): vol.In(["preferred departure", "arrival", "departure"]),
-                    vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
-                    vol.Optional(CONF_IGNORED_TRAINTYPES, default=[]): cv.multi_select(IGNORED_TRAINTYPES_OPTIONS),
+                    vol.Optional(
+                        CONF_NEXT_DEPARTURES,
+                        default=current_options.get(CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES)
+                    ): cv.positive_int,
+                    vol.Optional(
+                        CONF_UPDATE_INTERVAL,
+                        default=current_options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
+                    ): cv.positive_int,
+                    vol.Optional(
+                        CONF_HIDE_LOW_DELAY,
+                        default=current_options.get(CONF_HIDE_LOW_DELAY, False)
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_DETAILED,
+                        default=current_options.get(CONF_DETAILED, False)
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_PAST_60_MINUTES,
+                        default=current_options.get(CONF_PAST_60_MINUTES, False)
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_CUSTOM_API_URL,
+                        default=current_options.get(CONF_CUSTOM_API_URL, "")
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_DATA_SOURCE,
+                        default=current_options.get(CONF_DATA_SOURCE, "IRIS-TTS")
+                    ): vol.In(DATA_SOURCE_OPTIONS),
+                    vol.Optional(
+                        CONF_OFFSET,
+                        default=current_options.get(CONF_OFFSET, DEFAULT_OFFSET)
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_PLATFORMS,
+                        default=current_options.get(CONF_PLATFORMS, "")
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_ADMODE,
+                        default=current_options.get(CONF_ADMODE, "preferred departure")
+                    ): vol.In(["preferred departure", "arrival", "departure"]),
+                    vol.Optional(
+                        CONF_VIA_STATIONS,
+                        default=",".join(current_options.get(CONF_VIA_STATIONS, []))
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_IGNORED_TRAINTYPES,
+                        default=current_options.get(CONF_IGNORED_TRAINTYPES, [])
+                    ): cv.multi_select(IGNORED_TRAINTYPES_OPTIONS),
                 }
             ),
         )
