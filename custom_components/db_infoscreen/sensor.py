@@ -45,10 +45,23 @@ class DBInfoSensor(SensorEntity):
                 or self.coordinator.data[0].get("scheduledTime")
                 or "Unknown"
             )
+            delay_departure = self.coordinator.data[0].get("delayDeparture", 0)
+            delay = self.coordinator.data[0].get("delay", 0)
+
             if isinstance(departure_time, int):  # Unix timestamp case
                 departure_time = datetime.fromtimestamp(departure_time)
-            _LOGGER.debug("Sensor state updated: %s", departure_time)
-            return departure_time
+
+            if delay_departure == 0 and delay == 0:
+                _LOGGER.debug("Sensor state updated: %s", departure_time)
+                return departure_time
+            else:
+                departure_time_with_delay = departure_time
+                if delay:
+                    departure_time_with_delay = f"{departure_time} +{delay}"
+                else:
+                    departure_time_with_delay = f"{departure_time} +{delay_departure}"
+                _LOGGER.debug("Sensor state updated with delay: %s", departure_time_with_delay)
+                return departure_time_with_delay
         else:
             _LOGGER.warning("No data received for station: %s, via_stations: %s", self.station, self.via_stations)
             return "No Data"

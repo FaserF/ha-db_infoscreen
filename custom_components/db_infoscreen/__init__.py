@@ -25,7 +25,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         station_cleaned = " ".join(station.split())
         encoded_station = quote(station_cleaned, safe=",-")
         encoded_station = encoded_station.replace(" ", "%20")
-        
+
         # Build the API URL
         if custom_api_url:
             url = f"{custom_api_url}/{encoded_station}.json"
@@ -131,13 +131,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             url += "?detailed=1" if "?" not in url else "&detailed=1"
         if past_60_minutes:
             url += "?past=1" if "?" not in url else "&past=1"
-        
+
         if via_stations:
             via_param = ",".join(via_stations)
             url += f"?via={via_param}" if "?" not in url else f"&via={via_param}"
 
         self.api_url = url
-        
+
         # Ensure update_interval is passed correctly
         update_interval = max(update_interval, MIN_UPDATE_INTERVAL)
         super().__init__(
@@ -186,13 +186,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         # Handle different API response formats
                         scheduled_departure = departure.get("scheduledDeparture")
                         scheduled_time = departure.get("scheduledTime")
-                        
+
                         # Use the first available time field
                         departure_time = scheduled_departure or scheduled_time
                         if not departure_time:
                             _LOGGER.warning("No valid departure time found for entry: %s", departure)
                             continue
-                        
+
                         # Convert the time to a datetime object
                         if isinstance(departure_time, int):  # Unix timestamp case
                             departure_time = datetime.fromtimestamp(departure_time)
@@ -214,7 +214,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         departure_seconds = (departure_time - datetime.now()).total_seconds()
                         if departure_seconds >= self.offset:  # Only show departures after the offset
                             filtered_departures.append(departure)
-                    
+
                     return filtered_departures[:self.next_departures]
             except Exception as e:
                 _LOGGER.error(
@@ -240,7 +240,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.Co
 
     coordinator = DBInfoScreenCoordinator(
         hass, station, next_departures, update_interval, hide_low_delay,
-        detailed, past_60_minutes, custom_api_url, data_source, offset, 
+        detailed, past_60_minutes, custom_api_url, data_source, offset,
         platforms, admode, via_stations
     )
     await coordinator.async_config_entry_first_refresh()
