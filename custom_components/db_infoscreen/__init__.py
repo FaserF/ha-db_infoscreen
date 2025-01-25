@@ -7,12 +7,17 @@ import async_timeout
 import logging
 from urllib.parse import quote
 
-from .const import DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL, DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, MIN_UPDATE_INTERVAL, CONF_VIA_STATIONS
+from .const import (
+    DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL,
+    DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES,
+    CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, MIN_UPDATE_INTERVAL,
+    CONF_VIA_STATIONS, CONF_IGNORED_TRAINTYPES
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 class DBInfoScreenCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str, data_source: str, offset: str, platforms: str, admode: str, via_stations: list):
+    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str, data_source: str, offset: str, platforms: str, admode: str, via_stations: list, ignored_train_types: list):
         self.station = station
         self.next_departures = next_departures
         self.hide_low_delay = hide_low_delay
@@ -21,6 +26,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.data_source = data_source
         self.offset = self.convert_offset_to_seconds(offset)
         self.via_stations = via_stations
+        self.ignored_train_types = ignored_train_types
 
         station_cleaned = " ".join(station.split())
         encoded_station = quote(station_cleaned, safe=",-")
@@ -180,8 +186,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     # Set last_update timestamp
                     self.last_update = datetime.now()
 
-                    # Filter departures based on the offset
+                    # Filter departures based on the offset and ignored products
                     filtered_departures = []
+                    ignored_train_types = self.ignored_train_types
+                    if ignored_train_types:
+                        _LOGGER.debug("Ignoring products: %s", ignored_train_types)
+
                     for departure in data.get("departures", []):
                         # Handle different API response formats
                         scheduled_departure = departure.get("scheduledDeparture")
@@ -210,6 +220,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     _LOGGER.error("Invalid time format: %s", departure_time)
                                     continue
 
+                        # Check if the train class is in the ignored products list
+                        train_classes = departure.get("trainClasses", [])
+                        _LOGGER.debug("Departure train classes: %s", train_classes)
+                        if any(train_class in ignored_train_types for train_class in train_classes):
+                            _LOGGER.debug("Ignoring departure due to train class: %s", train_classes)
+                            continue
+
                         # Calculate time offset
                         departure_seconds = (departure_time - datetime.now()).total_seconds()
                         if departure_seconds >= self.offset:  # Only show departures after the offset
@@ -217,10 +234,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                     return filtered_departures[:self.next_departures]
             except Exception as e:
-                _LOGGER.error(
-                    "Error fetching data for station %s: %s", self.station, str(e),
-                    exc_info=True
-                )
+                _LOGGER.error("Error fetching data: %s", e)
                 return []
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
@@ -237,11 +251,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.Co
     platforms = config_entry.data.get(CONF_PLATFORMS, "")
     admode = config_entry.data.get(CONF_ADMODE, "")
     via_stations = config_entry.data.get(CONF_VIA_STATIONS, [])
+    ignored_train_types = config_entry.data.get(CONF_IGNORED_TRAINTYPES, [])
 
     coordinator = DBInfoScreenCoordinator(
         hass, station, next_departures, update_interval, hide_low_delay,
         detailed, past_60_minutes, custom_api_url, data_source, offset,
-        platforms, admode, via_stations
+        platforms, admode, via_stations, ignored_train_types
     )
     await coordinator.async_config_entry_first_refresh()
 

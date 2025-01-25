@@ -17,7 +17,8 @@
           "offset": "Offset-Zeit",
           "admode": "Bevorzugte Zeitdarstellung (Abfahrt / Ankunft)",
           "platforms": "Gleise",
-          "via_stations": "Zeige nur Abfahrten über"
+          "via_stations": "Zeige nur Abfahrten über",
+          "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)"
         }
       }
     },
@@ -46,7 +47,8 @@
           "offset": "Offset-Zeit",
           "admode": "Bevorzugte Zeitdarstellung (Abfahrt / Ankunft)",
           "platforms": "Gleise",
-          "via_stations": "Zeige nur Abfahrten über"
+          "via_stations": "Zeige nur Abfahrten über",
+          "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)"
         }
       }
     }

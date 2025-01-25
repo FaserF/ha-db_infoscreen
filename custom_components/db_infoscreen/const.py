@@ -18,5 +18,18 @@ DEFAULT_OFFSET = "00:00"
 CONF_PLATFORMS = "platforms"
 CONF_ADMODE = "admode"
 CONF_VIA_STATIONS = "via_stations"
+CONF_IGNORED_TRAINTYPES = "ignored_train_types"
 
-DATA_SOURCE_OPTIONS = ["IRIS-TTS", "hafas=1", "MVV", "\u00d6BB", "BSVG", "DING", "KVV", "LinzAG", "NVBW", "NWL", "VGN", "VMV", "VRN", "VRR", "VRR2", "VRR3", "VVO", "VVS", "bwegt", "AVV", "BART", "BLS", "BVG", "CMTA", "DSB", "IE", "KVB", "NAHSH", "NASA", "NVV", "RMV", "RSAG", "Resrobot", "STV", "SaarVV", "TPG", "VBB", "VBN", "VMT", "VOS", "VRN", "ZVV", "mobiliteit"]
+DATA_SOURCE_OPTIONS = [
+    "IRIS-TTS", "hafas=1", "MVV", "\u00d6BB", "BSVG", "DING", "KVV", "LinzAG", "NVBW",
+    "NWL", "VGN", "VMV", "VRN", "VRR", "VRR2", "VRR3", "VVO", "VVS", "bwegt", "AVV", "BART",
+    "BLS", "BVG", "CMTA", "DSB", "IE", "KVB", "NAHSH", "NASA", "NVV", "RMV", "RSAG", "Resrobot",
+    "STV", "SaarVV", "TPG", "VBB", "VBN", "VMT", "VOS", "VRN", "ZVV", "mobiliteit"
+]
+
+IGNORED_TRAINTYPES_OPTIONS = {
+    "S": "Stadtbahn (S-Bahn)",
+    "N": "Regional Bahn (RB), Regional Express (RE)",
+    "F": "EuroCity (EC), Intercity Express (ICE), Intercity (IC)",
+    "D": "Bayrische Regionalbahn, Wiener Lokalbahn",
+}

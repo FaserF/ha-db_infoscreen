@@ -60,6 +60,7 @@ You can set up one sensor per station, except using different `via_stations` con
   - **departure**: Only shows departure times.
 - **platforms** (optional): If your station has multiple platforms and you want to filter by a specific platform, you can use this setting. Enter the platform(s) as a comma-separated list (e.g., `1, 2, 3`). This will ensure that the integration fetches data only for the specified platforms. If left empty, data for all platforms will be shown.
 - **via_stations** (optional): You can filter one or more stations where the Train has to go through. Enter the platform(s) as a comma-separated list (e.g., `München-Pasing,München-Ost`). This will ensure that the integration fetches data only when the Train has a stop at those stations.
+- **ignored_train_types** (optional): You can configure the integration to ignore certain types of trains or buses. This is useful if you only want to see specific types of departures. If you are missing a train type, please add a feature request or pull request. Please note, that filtering wont work for all stations, it wont work for `Bensberg, Bergisch Gladbach` as an example.
 
 
 Note: You are limited to adding 30 sensors, if you are not using a custom_api_url.

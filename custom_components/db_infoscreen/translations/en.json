@@ -17,7 +17,8 @@
           "offset": "Offset Time",
           "admode": "Display Mode",
           "platforms": "Platforms",
-          "via_stations": "Only show departures via"
+          "via_stations": "Only show departures via",
+          "ignored_train_types": "Do not track specified train types (f.e. ICE)"
         }
       }
     },
@@ -46,7 +47,8 @@
           "offset": "Offset Time",
           "admode": "Display Mode",
           "platforms": "Platforms",
-          "via_stations": "Only show departures via"
+          "via_stations": "Only show departures via",
+          "ignored_train_types": "Do not track specified train types (f.e. ICE)"
         }
       }
     }
