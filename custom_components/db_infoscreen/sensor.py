@@ -70,8 +70,16 @@ class DBInfoSensor(SensorEntity):
     def extra_state_attributes(self):
         full_api_url = getattr(self.coordinator, "api_url", "dbf.finalrewind.org")
         attribution = f"Data provided by API {full_api_url}"
+
+        next_departures = self.coordinator.data or []
+        for departure in next_departures:
+            if 'scheduledTime' in departure and isinstance(departure['scheduledTime'], int):
+                departure['scheduledTime'] = datetime.fromtimestamp(departure['scheduledTime']).strftime('%Y-%m-%d %H:%M:%S')
+            if 'time' in departure and isinstance(departure['time'], int):
+                departure['time'] = datetime.fromtimestamp(departure['time']).strftime('%Y-%m-%d %H:%M:%S')
+
         return {
-            "next_departures": self.coordinator.data or [],
+            "next_departures": next_departures,
             "station": self.station,
             "via_stations": self.via_stations,
             "last_updated": self.coordinator.last_update.isoformat() if self.coordinator.last_update else "Unknown",
