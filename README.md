@@ -4,7 +4,8 @@
 The `db-infoscreen` sensor will give you the departure time of the next trains for the given station, containing many more attribute informations. It aims to aggregate departure and train data from different sources and combine them in a useful (and user-friendly) manner. It is intended both for a quick glance at the departure board and for public transportation geeks looking for details about specific trains.
 The backend has many datasources available with it's main source being IRIS-TTS - Deutsche Bahn.
 
-This is the superior to [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn).
+This integration works great side-by-side with [ha-bahnvorhersage](https://github.com/FaserF/ha-bahnvorhersage).
+This is a superior to [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn).
 
 <img src="images/logo.png" alt="Logo" width="300px">
 
