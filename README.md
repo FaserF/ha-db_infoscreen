@@ -185,6 +185,15 @@ There are some differences depending on the stations, for example:
 }
 ```
 
+### Lovelace Custom Cards
+There are some lovelace custom cards, which bringt you a better overview on your dashboard. Be sure to check them out.
+
+#### ha-departureCard
+Check out the card [here](https://github.com/BagelBeef/ha-departureCard/).
+
+#### ha-public-transport-connection-card
+This is currently Work-in-Progress by the maintainer, more informations are [here](https://github.com/silviokennecke/ha-public-transport-connection-card/issues/22).
+
 ## Bug reporting
 Open an issue over at [github issues](https://github.com/FaserF/ha-db_infoscreen/issues). Please prefer sending over a log with debugging enabled.
 
