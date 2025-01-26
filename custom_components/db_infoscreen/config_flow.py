@@ -9,7 +9,7 @@ from .const import (
     DEFAULT_NEXT_DEPARTURES, DEFAULT_UPDATE_INTERVAL, DEFAULT_OFFSET, MAX_SENSORS,
     CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL,
     CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, DATA_SOURCE_OPTIONS,
-    CONF_VIA_STATIONS, CONF_IGNORED_TRAINTYPES, IGNORED_TRAINTYPES_OPTIONS
+    CONF_VIA_STATIONS, CONF_IGNORED_TRAINTYPES, IGNORED_TRAINTYPES_OPTIONS, CONF_DROP_LATE_TRAINS
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -78,6 +78,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_NEXT_DEPARTURES, default=DEFAULT_NEXT_DEPARTURES): cv.positive_int,
                 vol.Optional(CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL): cv.positive_int,
                 vol.Optional(CONF_HIDE_LOW_DELAY, default=False): cv.boolean,
+                vol.Optional(CONF_DROP_LATE_TRAINS, default=False): cv.boolean,
                 vol.Optional(CONF_DETAILED, default=False): cv.boolean,
                 vol.Optional(CONF_PAST_60_MINUTES, default=False): cv.boolean,
                 vol.Optional(CONF_CUSTOM_API_URL, default=""): cv.string,
@@ -140,6 +141,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(
                         CONF_HIDE_LOW_DELAY,
                         default=current_options.get(CONF_HIDE_LOW_DELAY, False)
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_DROP_LATE_TRAINS,
+                        default=current_options.get(CONF_DROP_LATE_TRAINS, False)
                     ): cv.boolean,
                     vol.Optional(
                         CONF_DETAILED,

@@ -19,6 +19,7 @@ CONF_PLATFORMS = "platforms"
 CONF_ADMODE = "admode"
 CONF_VIA_STATIONS = "via_stations"
 CONF_IGNORED_TRAINTYPES = "ignored_train_types"
+CONF_DROP_LATE_TRAINS = "drop_late_trains"
 
 DATA_SOURCE_OPTIONS = [
     "IRIS-TTS", "hafas=1", "MVV", "\u00d6BB", "BSVG", "DING", "KVV", "LinzAG", "NVBW",

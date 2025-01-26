@@ -11,13 +11,13 @@ from .const import (
     DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL,
     DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES,
     CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, MIN_UPDATE_INTERVAL,
-    CONF_VIA_STATIONS, CONF_IGNORED_TRAINTYPES
+    CONF_VIA_STATIONS, CONF_IGNORED_TRAINTYPES, CONF_DROP_LATE_TRAINS
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 class DBInfoScreenCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str, data_source: str, offset: str, platforms: str, admode: str, via_stations: list, ignored_train_types: list):
+    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str, data_source: str, offset: str, platforms: str, admode: str, via_stations: list, ignored_train_types: list, drop_late_trains: bool):
         self.station = station
         self.next_departures = next_departures
         self.hide_low_delay = hide_low_delay
@@ -27,6 +27,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.offset = self.convert_offset_to_seconds(offset)
         self.via_stations = via_stations
         self.ignored_train_types = ignored_train_types
+        self.drop_late_trains = drop_late_trains
 
         station_cleaned = " ".join(station.split())
         encoded_station = quote(station_cleaned, safe=",-")
@@ -38,6 +39,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         else:
             url = f"https://dbf.finalrewind.org/{encoded_station}.json"
 
+        # Additional URL parameters
         if platforms:
             url += f"?platforms={platforms}" if "?" not in url else f"&platforms={platforms}"
 
@@ -145,7 +147,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
         self.api_url = url
 
-        # Ensure update_interval is passed correctly
         update_interval = max(update_interval, MIN_UPDATE_INTERVAL)
         super().__init__(
             hass,
@@ -175,6 +176,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             return 0
 
     async def _async_update_data(self):
+        """
+        Fetches data from the API and processes it based on the configuration.
+        """
         _LOGGER.debug("Fetching data for station: %s", self.station)
         async with aiohttp.ClientSession() as session:
             try:
@@ -194,9 +198,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         _LOGGER.debug("Ignoring products: %s", ignored_train_types)
 
                     for departure in data.get("departures", []):
-                        # Handle different API response formats
                         scheduled_departure = departure.get("scheduledDeparture")
                         scheduled_time = departure.get("scheduledTime")
+                        delay = departure.get("delayDeparture", 0)
 
                         # Use the first available time field
                         departure_time = scheduled_departure or scheduled_time
@@ -228,12 +232,29 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             _LOGGER.debug("Ignoring departure due to train class: %s", train_classes)
                             continue
 
+                        # Calculate predicted departure time
+                        if scheduled_departure:
+                            predicted_departure = datetime.strptime(scheduled_departure, "%H:%M") + timedelta(minutes=delay)
+
+                            # Drop late trains if enabled
+                            if self.drop_late_trains and predicted_departure < datetime.now():
+                                _LOGGER.debug("Dropping late train: %s", departure)
+                                continue
+
                         # Calculate time offset
-                        departure_seconds = (departure_time - datetime.now()).total_seconds()
-                        if departure_seconds >= self.offset:  # Only show departures after the offset
-                            filtered_departures.append(departure)
+                        if predicted_departure:
+                            departure_seconds = (predicted_departure - datetime.now()).total_seconds()
+                            if departure_seconds >= self.offset:  # Only show departures after the offset
+                                # Include only valid departures
+                                filtered_departures.append(departure)
+                        else:
+                            departure_seconds = (departure_time - datetime.now()).total_seconds()
+                            if departure_seconds >= self.offset:  # Only show departures after the offset
+                                # Include only valid departures
+                                filtered_departures.append(departure)
 
                     return filtered_departures[:self.next_departures]
+
             except Exception as e:
                 _LOGGER.error("Error fetching data: %s", e)
                 return []
@@ -253,11 +274,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.Co
     admode = config_entry.data.get(CONF_ADMODE, "")
     via_stations = config_entry.data.get(CONF_VIA_STATIONS, [])
     ignored_train_types = config_entry.data.get(CONF_IGNORED_TRAINTYPES, [])
+    drop_late_trains = config_entry.data.get(CONF_DROP_LATE_TRAINS, False)
 
     coordinator = DBInfoScreenCoordinator(
         hass, station, next_departures, update_interval, hide_low_delay,
         detailed, past_60_minutes, custom_api_url, data_source, offset,
-        platforms, admode, via_stations, ignored_train_types
+        platforms, admode, via_stations, ignored_train_types, drop_late_trains
     )
     await coordinator.async_config_entry_first_refresh()
 

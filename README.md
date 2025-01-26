@@ -46,6 +46,7 @@ You can set up one sensor per station, except using different `via_stations` con
 - **next_departures** (optional): The number of upcoming departures to display. Default is 4, but you can adjust it according to your preferences.
 - **update_interval** (optional): The time interval (in minutes) at which the integration will fetch updated departure data. Default is 3 minutes, minimum is 1 minute (data wont be refreshed more often in the backend).
 - **hide_low_delay** (optional): If enabled, departures with a delay of less than 5 minutes will be hidden. Default is false.
+- **drop_late_trains** (optional): Hide trains whose departure is in the past but would be delayed within the time. For example with the option turned on a train at 09:00 with 5 Minutes delay will be dropped after 09:00 o'clock. With the option enabled this train will be displayed until 09:05 o'clock
 - **detailed** (optional): If enabled, additional details about the departures will be shown. Default is false.
 - **past_60_minutes** (optional): If enabled, shows departures from the past 60 minutes. Default is false.
 - **custom_api_url** (optional): If you wish to use a custom API URL (f.e. [your self hosted server](https://github.com/derf/db-fakedisplay/blob/master/README.md)) instead of the default one, you can specify it here. The URL should contain only the base domain (e.g., `https://example.com`).
