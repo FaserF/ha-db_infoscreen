@@ -139,7 +139,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             url += "?past=1" if "?" not in url else "&past=1"
 
         if via_stations:
-            via_param = ",".join(via_stations)
+            encoded_via_stations = [quote(station.strip(), safe=",-") for station in via_stations]
+            via_param = ",".join(encoded_via_stations)
             url += f"?via={via_param}" if "?" not in url else f"&via={via_param}"
 
         self.api_url = url
