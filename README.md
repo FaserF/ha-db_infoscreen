@@ -175,18 +175,28 @@ IC 495 um 22:28 +1.
 [More informations](https://github.com/FaserF/ha-db_infoscreen/issues/4#issuecomment-2605743834).
 
 ```yaml
+{%- set my_station = "Berlin Hbf" -%}
 {%- set target = "Leipzig Hbf" -%}
 {%- set number = 0 -%}
-{%- set connections = state_attr('sensor.berlin_hbf_departures', 'next_departures') | selectattr('destination', 'equalto', target) | list -%}
-{% if connections is not none and connections | length > number %}
-  {% set connection = connections[number] %}
-  {% set product = connection.train %}
-  {% set departure = connection.scheduledDeparture %}
-  {% set delay = connection.delayDeparture | int %}
-  {{ product }} um {{ departure }}{% if delay > 0 %} +{{ delay }}{% endif %}
-{% else %}
+{%- set connections = state_attr('sensor.berlin_hbf_departures', 'next_departures') | default([]) | selectattr('isCancelled', 'equalto', 0) -%}
+{%- set valid_connections = namespace(connections=[]) -%}
+{%- for connection in connections -%}
+  {%- set route = connection.route | default([]) | selectattr('name', 'defined') | map(attribute='name') | list -%}
+  {%- if my_station in route and target in route and route.index(target) > route.index(my_station) -%}
+    {%- set valid_connections.connections = valid_connections.connections + [connection] -%}
+  {%- endif -%}
+{%- endfor -%}
+
+{%- if valid_connections.connections | length > number -%}
+  {%- set connection = valid_connections.connections[number] -%}
+  {%- set product_raw = connection.train | default('Unknown') -%}
+  {%- set product = product_raw | regex_replace('^(Bus).*|^([A-Z]{2})\\s?\\d*', '\\1\\2') | replace("S ", "S") -%}
+  {%- set departure = connection.scheduledDeparture | default('--') -%}
+  {%- set delay = connection.delayDeparture | default(0) | int -%}
+  {{ product }} {{ departure }}{% if delay > 0 %} +{{ delay }}{% endif %}
+{%- else -%}
   --
-{% endif %}
+{%- endif -%}
 ```
 
 ### JSON Format
