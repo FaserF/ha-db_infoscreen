@@ -39,7 +39,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         else:
             url = f"https://dbf.finalrewind.org/{encoded_station}.json"
 
-        # Additional URL parameters
         if platforms:
             url += f"?platforms={platforms}" if "?" not in url else f"&platforms={platforms}"
 
@@ -147,6 +146,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
         self.api_url = url
 
+        # Ensure update_interval is passed correctly
         update_interval = max(update_interval, MIN_UPDATE_INTERVAL)
         super().__init__(
             hass,
@@ -186,7 +186,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     response = await session.get(self.api_url)
                     response.raise_for_status()
                     data = await response.json()
-                    _LOGGER.debug("Data fetched successfully: %s", str(data)[:400] + ("..." if len(str(data)) > 400 else ""))
+                    _LOGGER.debug("Data fetched successfully: %s", str(data)[:350] + ("..." if len(str(data)) > 350 else ""))
 
                     # Set last_update timestamp
                     self.last_update = datetime.now()
@@ -198,9 +198,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         _LOGGER.debug("Ignoring products: %s", ignored_train_types)
 
                     for departure in data.get("departures", []):
+                        _LOGGER.debug("Processing departure: %s", departure)
+                        # Handle different API response formats
                         scheduled_departure = departure.get("scheduledDeparture")
                         scheduled_time = departure.get("scheduledTime")
-                        delay = departure.get("delayDeparture", 0)
 
                         # Use the first available time field
                         departure_time = scheduled_departure or scheduled_time
@@ -225,6 +226,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     _LOGGER.error("Invalid time format: %s", departure_time)
                                     continue
 
+                        if not self.drop_late_trains:
+                            _LOGGER.debug("Departure time without added delay: %s", departure_time)
+                            delay_departure = departure.get("delayDeparture", 0)
+                            departure_time += timedelta(minutes=delay_departure)
+                            _LOGGER.debug("Departure time with added delay: %s", departure_time)
+
                         # Check if the train class is in the ignored products list
                         train_classes = departure.get("trainClasses", [])
                         _LOGGER.debug("Departure train classes: %s", train_classes)
@@ -232,29 +239,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             _LOGGER.debug("Ignoring departure due to train class: %s", train_classes)
                             continue
 
-                        # Calculate predicted departure time
-                        if scheduled_departure:
-                            predicted_departure = datetime.strptime(scheduled_departure, "%H:%M") + timedelta(minutes=delay)
-
-                            # Drop late trains if enabled
-                            if self.drop_late_trains and predicted_departure < datetime.now():
-                                _LOGGER.debug("Dropping late train: %s", departure)
-                                continue
-
                         # Calculate time offset
-                        if predicted_departure:
-                            departure_seconds = (predicted_departure - datetime.now()).total_seconds()
-                            if departure_seconds >= self.offset:  # Only show departures after the offset
-                                # Include only valid departures
-                                filtered_departures.append(departure)
-                        else:
-                            departure_seconds = (departure_time - datetime.now()).total_seconds()
-                            if departure_seconds >= self.offset:  # Only show departures after the offset
-                                # Include only valid departures
-                                filtered_departures.append(departure)
+                        departure_seconds = (departure_time - datetime.now()).total_seconds()
+                        if departure_seconds >= self.offset:  # Only show departures after the offset
+                            filtered_departures.append(departure)
 
                     return filtered_departures[:self.next_departures]
-
             except Exception as e:
                 _LOGGER.error("Error fetching data: %s", e)
                 return []
@@ -274,7 +264,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.Co
     admode = config_entry.data.get(CONF_ADMODE, "")
     via_stations = config_entry.data.get(CONF_VIA_STATIONS, [])
     ignored_train_types = config_entry.data.get(CONF_IGNORED_TRAINTYPES, [])
-    drop_late_trains = config_entry.data.get(CONF_DROP_LATE_TRAINS, False)
+    drop_late_trains = config_entry.data.get(CONF_DROP_LATE_TRAINS, [])
 
     coordinator = DBInfoScreenCoordinator(
         hass, station, next_departures, update_interval, hide_low_delay,
