@@ -71,6 +71,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             url += f"?efa=VMV" if "?" not in url else "&efa=VMV"
         elif data_source == "VRN":
             url += f"?efa=VRN" if "?" not in url else "&efa=VRN"
+        elif data_source == "VRN2":
+            url += f"?hafas=VRN" if "?" not in url else "&hafas=VRN"
         elif data_source == "VRR":
             url += f"?efa=VRR" if "?" not in url else "&efa=VRR"
         elif data_source == "VRR2":

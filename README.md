@@ -63,7 +63,8 @@ You can set up one sensor per station, except using different `via_stations` con
     - NWL – Nahverkehr Westfalen-Lippe
     - VGN – Verkehrsverbund Großraum Nürnberg Bayern
     - VMV – Verkehrsgesellschaft Mecklenburg-Vorpommern Mecklenburg-Vorpommern
-    - VRN – Verkehrsverbund Rhein-Neckar
+    - VRN – Verkehrsverbund Rhein-Neckar (Nordrhein-Westfalen) (EFA)
+    - VRN2 – Verkehrsverbund Rhein-Neckar (Rheinland-Pfalz, Hessen, Baden-Württemberg) (HAFAS)
     - VRR – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen
     - VRR2 – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen
     - VRR3 – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen

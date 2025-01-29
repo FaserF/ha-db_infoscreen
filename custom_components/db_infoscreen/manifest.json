@@ -2,12 +2,12 @@
   "domain": "db_infoscreen",
   "name": "db-infoscreen",
   "codeowners": [
-    "@faserf"
+    "@FaserF"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/faserf/ha-db_infoscreen#readme",
+  "documentation": "https://github.com/FaserF/ha-db_infoscreen#readme",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/faserf/ha-db_infoscreen/issues",
+  "issue_tracker": "https://github.com/FaserF/ha-db_infoscreen/issues",
   "requirements": [],
-  "version": "2025.01.5"
+  "version": "2025.01.6"
 }
