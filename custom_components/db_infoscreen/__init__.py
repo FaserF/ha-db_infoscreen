@@ -230,7 +230,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                         if not self.drop_late_trains:
                             _LOGGER.debug("Departure time without added delay: %s", departure_time)
-                            delay_departure = departure.get("delayDeparture", 0)
+                            delay_departure = departure.get("delayDeparture")
+                            if delay_departure is None:
+                                delay_departure = 0  # Set default value if None
                             departure_time += timedelta(minutes=delay_departure)
                             _LOGGER.debug("Departure time with added delay: %s", departure_time)
 
