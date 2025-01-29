@@ -5,6 +5,7 @@ from datetime import timedelta, datetime
 import aiohttp
 import async_timeout
 import logging
+import json
 from urllib.parse import quote
 
 from .const import (
@@ -199,26 +200,36 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     if ignored_train_types:
                         _LOGGER.debug("Ignoring products: %s", ignored_train_types)
 
+                    MAX_SIZE_BYTES = 16000
+
                     for departure in data.get("departures", []):
                         _LOGGER.debug("Processing departure: %s", departure)
-                        # Handle different API response formats
+                        json_size = len(json.dumps(filtered_departures))
+                        if json_size > MAX_SIZE_BYTES:
+                            _LOGGER.info("Filtered departures JSON size exceeds limit: %d bytes for entry: %s . Ignoring some future departures to keep the size lower.", json_size, self.station)
+                            break
+
+                        # Get the scheduled departure and scheduled time
                         scheduled_departure = departure.get("scheduledDeparture")
                         scheduled_time = departure.get("scheduledTime")
 
-                        # Use the first available time field
-                        departure_time = scheduled_departure or scheduled_time
+                        # Use scheduledArrival if scheduledDeparture is None or empty
+                        departure_time = scheduled_departure or departure.get("scheduledArrival") or scheduled_time
+                        
+                        # If no valid departure time is found, log a warning and continue to the next departure
                         if not departure_time:
                             _LOGGER.warning("No valid departure time found for entry: %s", departure)
                             continue
 
-                        # Convert the time to a datetime object
+                        # Convert the departure time to a datetime object
                         if isinstance(departure_time, int):  # Unix timestamp case
                             departure_time = datetime.fromtimestamp(departure_time)
-                        else:  # Assume ISO 8601 string
+                        else:  # ISO 8601 string case
                             try:
                                 departure_time = datetime.strptime(departure_time, "%Y-%m-%dT%H:%M:%S")
                             except ValueError:
                                 try:
+                                    # Fallback to assuming time format HH:MM if the previous format doesn't work
                                     departure_time = datetime.strptime(departure_time, "%H:%M").replace(
                                         year=datetime.now().year,
                                         month=datetime.now().month,
@@ -228,6 +239,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     _LOGGER.error("Invalid time format: %s", departure_time)
                                     continue
 
+                        # Apply any delay to the departure time, if applicable
                         if not self.drop_late_trains:
                             _LOGGER.debug("Departure time without added delay: %s", departure_time)
                             delay_departure = departure.get("delayDeparture")
@@ -236,18 +248,19 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             departure_time += timedelta(minutes=delay_departure)
                             _LOGGER.debug("Departure time with added delay: %s", departure_time)
 
-                        # Check if the train class is in the ignored products list
+                        # Check if the train class is in the ignored list
                         train_classes = departure.get("trainClasses", [])
                         _LOGGER.debug("Departure train classes: %s", train_classes)
                         if any(train_class in ignored_train_types for train_class in train_classes):
                             _LOGGER.debug("Ignoring departure due to train class: %s", train_classes)
                             continue
 
-                        # Calculate time offset
+                        # Calculate the time offset and only add departures that occur after the offset
                         departure_seconds = (departure_time - datetime.now()).total_seconds()
                         if departure_seconds >= self.offset:  # Only show departures after the offset
                             filtered_departures.append(departure)
 
+                    _LOGGER.debug("Number of departures added to the filtered list: %d", len(filtered_departures))
                     return filtered_departures[:self.next_departures]
             except Exception as e:
                 _LOGGER.error("Error fetching data: %s", e)
