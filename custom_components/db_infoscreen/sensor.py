@@ -83,11 +83,17 @@ class DBInfoSensor(SensorEntity):
             if 'time' in departure and isinstance(departure['time'], int):
                 departure['time'] = datetime.fromtimestamp(departure['time']).strftime('%Y-%m-%d %H:%M:%S')
 
+        last_updated = getattr(self.coordinator, "last_update", None)
+        if last_updated:
+            last_updated = last_updated.isoformat()
+        else:
+            last_updated = "Unknown"
+
         return {
             "next_departures": next_departures,
             "station": self.station,
             "via_stations": self.via_stations,
-            "last_updated": self.coordinator.last_update.isoformat() if self.coordinator.last_update else "Unknown",
+            "last_updated": last_updated,
             "attribution": attribution,
         }
 
