@@ -40,16 +40,28 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 
 You can set up one sensor per station, except using different `via_stations` configurations.
 
-### Configuration Variables
-- **station**: The name of the station or Trip number to be tracked.
-  - Please check your station at [dbf.finalrewind.org](https://dbf.finalrewind.org/) if it is working.
-- **next_departures** (optional): The number of upcoming departures to display. Default is 4, but you can adjust it according to your preferences.
-- **update_interval** (optional): The time interval (in minutes) at which the integration will fetch updated departure data. Default is 3 minutes, minimum is 1 minute (data wont be refreshed more often in the backend).
-- **hide_low_delay** (optional): If enabled, departures with a delay of less than 5 minutes will be hidden. Default is false.
-- **drop_late_trains** (optional): Hide trains whose departure is in the past but would be delayed within the time. For example with the option turned on a train at 09:00 with 5 Minutes delay will be dropped after 09:00 o'clock. With the option enabled this train will be displayed until 09:05 o'clock
-- **detailed** (optional): If enabled, additional details about the departures will be shown. Default is false.
-- **past_60_minutes** (optional): If enabled, shows departures from the past 60 minutes. Default is false.
-- **custom_api_url** (optional): If you wish to use a custom API URL (f.e. [your self hosted server](https://github.com/derf/db-fakedisplay/blob/master/README.md)) instead of the default one, you can specify it here. The URL should contain only the base domain (e.g., `https://example.com`).
+### Configuration Variables  
+
+| Key                      | Type    | Required | Default | Description |
+|--------------------------|---------|----------|---------|-------------|
+| `station`               | string  | Yes      | -       | The name of the station or Trip number to be tracked. |
+| `next_departures`       | int     | No       | 4       | Number of upcoming departures to display. |
+| `update_interval`       | int     | No       | 3       | Time interval (in minutes) to fetch updated departure data. Minimum: 1 minute. |
+| `hide_low_delay`        | boolean | No       | False   | Hide departures with a delay of less than 5 minutes. |
+| `drop_late_trains`      | boolean | No       | False   | Hide past departures that would still be delayed. |
+| `detailed`             | boolean | No       | False   | Show additional details about departures. |
+| `past_60_minutes`      | boolean | No       | False   | Show departures from the past 60 minutes. |
+| `custom_api_url`       | string  | No       | -       | Use a custom API URL instead of the default one. |
+| `data_source`          | string  | No       | IRIS-TTS | Choose the data source for fetching departure information. More details can be found below at Data Sources |
+| `offset`              | string  | No       | 00:00   | Time offset for departure search (HH:MM or HH:MM:SS). |
+| `admode`              | string  | No       | departure preferred | Defines whether to display departure or arrival times. |
+| `platforms`           | string  | No       | -       | Filter by specific platform(s) (comma-separated). |
+| `via_stations`        | string  | No       | -       | Filter by stations where the train must pass through. |
+| `ignored_train_types` | list    | No       | []      | List of train types to ignore. |
+
+Note: You are limited to adding 30 sensors, if you are not using a custom_api_url.
+
+#### Data Sources
 - **data_source** (optional): Choose the data source for fetching departure information. The available options are:
   - The integration supports fetching departure data from various data sources, including:
     - IRIS-TTS – Deutsche Bahn (default and used by most)
@@ -95,17 +107,6 @@ You can set up one sensor per station, except using different `via_stations` con
     - ZVV – Züricher Verkehrsverbund Kanton Zürich (zvv.ch)
     - mobiliteit – mobilitéits zentral Luxembourg (mobiliteit.lu)
   - Some stations can be searched via "IRIS-TTS" but need hafas=1 for data retrival, f.e. "Frankenforst Kippekausen, Bergisch Gladbach", choose `hafas=1` in the list to archive this. [GitHub issue about this](https://github.com/FaserF/ha-db_infoscreen/issues/8)
-- **offset** (optional): Do not display departures leaving sooner than this number of seconds. You can specify the offset in "HH:MM" or "HH:MM:SS" format. Default is `00:00` (no offset).
-- **admode** (optional): Defines whether to display departure times, arrival times, or the default behavior (departure preferred). Available options:
-  - **departure prefered** (default): Displays the preferred time based on the system's default behavior (usually departures).
-  - **arrival**: Only shows arrival times.
-  - **departure**: Only shows departure times.
-- **platforms** (optional): If your station has multiple platforms and you want to filter by a specific platform, you can use this setting. Enter the platform(s) as a comma-separated list (e.g., `1, 2, 3`). This will ensure that the integration fetches data only for the specified platforms. If left empty, data for all platforms will be shown.
-- **via_stations** (optional): You can filter one or more stations where the Train has to go through. Enter the platform(s) as a comma-separated list (e.g., `München-Pasing,München-Ost`). This will ensure that the integration fetches data only when the Train has a stop at those stations.
-- **ignored_train_types** (optional): You can configure the integration to ignore certain types of trains or buses. This is useful if you only want to see specific types of departures. If you are missing a train type, please add a feature request or pull request. Please note, that filtering wont work for all stations, it wont work for `Bensberg, Bergisch Gladbach` as an example.
-
-
-Note: You are limited to adding 30 sensors, if you are not using a custom_api_url.
 
 ### Migrating from [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn)
 There is no direct way of migrating the ha-deutschebahn integration to ha-db_infoscreen due to the fact, that those are two completly different integrations with different API sources. The old ha-deutschebahn api provided a start and destination option, which is not (yet) available with this newer API backend.
