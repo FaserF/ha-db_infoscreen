@@ -6,7 +6,7 @@ import aiohttp
 import async_timeout
 import logging
 import json
-from urllib.parse import quote, urlencode
+from urllib.parse import quote_plus, urlencode
 
 from .const import (
     DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL,
@@ -32,7 +32,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.keep_route = keep_route
 
         station_cleaned = " ".join(station.split())
-        encoded_station = quote(station_cleaned, safe=",-")
+        encoded_station = quote_plus(station_cleaned, safe=",-")
         encoded_station = encoded_station.replace(" ", "%20")
 
         base_url = custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
@@ -70,12 +70,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             params["detailed"] = "1"
         if past_60_minutes:
             params["past"] = "1"
-        if via_stations:
-            params["via"] = ",".join(quote(station.strip(), safe=",-") for station in via_stations)
 
         # Assemble URL
         query_string = urlencode(params)
-        self.api_url = f"{url}?{query_string}" if query_string else url
+        url = f"{url}?{query_string}" if query_string else url
+        if via_stations:
+            encoded_via_stations = [quote_plus(station.strip(), safe=",-") for station in via_stations]
+            via_param = ",".join(encoded_via_stations)
+            url += f"?via={via_param}" if "?" not in url else f"&via={via_param}"
+        self.api_url = url
 
         # Ensure update_interval is passed correctly
         update_interval = max(update_interval, MIN_UPDATE_INTERVAL)
