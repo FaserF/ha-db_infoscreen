@@ -140,12 +140,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             _LOGGER.info("Filtered departures JSON size exceeds limit: %d bytes for entry: %s . Ignoring some future departures to keep the size lower.", json_size, self.station)
                             break
 
-                        # Get the scheduled departure and scheduled time
-                        scheduled_departure = departure.get("scheduledDeparture")
-                        scheduled_time = departure.get("scheduledTime")
-
                         # Use scheduledArrival if scheduledDeparture is None or empty
-                        departure_time = scheduled_departure or departure.get("scheduledArrival") or scheduled_time
+                        departure_time = departure.get("scheduledDeparture") or departure.get("scheduledArrival") or departure.get("scheduledTime") or departure.get("datetime")
 
                         # If no valid departure time is found, log a warning and continue to the next departure
                         if not departure_time:
