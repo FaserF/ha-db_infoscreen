@@ -66,47 +66,45 @@ Note: You are limited to adding 30 sensors, if you are not using a custom_api_ur
 - **data_source** (optional): Choose the data source for fetching departure information. The available options are:
   - The integration supports fetching departure data from various data sources, including:
     - IRIS-TTS – Deutsche Bahn (default and used by most)
-    - MVV – Münchener Verkehrs- und Tarifverbund Bayern
-    - ÖBB – Österreichische Bundesbahnen Österreich
+    - AVV – Aachener Verkehrsverbund Nordrhein-Westfalen (avv.de)
+    - BART – Bay Area Rapid Transit California (bart.gov)
+    - BLS – BLS AG Kanton Bern, Kanton Luzern (bls.ch)
+    - BVG – Berliner Verkehrsbetriebe Berlin, Brandenburg (bvg.de)
     - BSVG – Braunschweiger Verkehrs-GmbH
+    - CMTA – Capital Metro Austin Public Transport Texas (capmetro.org)
     - DING – Donau-Iller Nahverkehrsverbund
+    - DSB – Rejseplanen Dänemark (rejseplanen.dk)
+    - IE – Iarnród Éireann Irland, Nordirland (irishrail.ie)
     - KVV – Karlsruher Verkehrsverbund Baden-Württemberg
+    - KVB – Kölner Verkehrs-Betriebe (kvb.koeln)
     - LinzAG – Linz AG
+    - mobiliteit – mobilitéits zentral Luxembourg (mobiliteit.lu)
+    - MVV – Münchener Verkehrs- und Tarifverbund Bayern
+    - NAHSH – Nahverkehrsverbund Schleswig-Holstein Schleswig-Holstein (nah.sh)
+    - NASA – Personennahverkehr in Sachsen-Anhalt Sachsen-Anhalt (nasa.de)
     - NVBW – Nahverkehrsgesellschaft Baden-Württemberg
+    - NVV – Nordhessischer Verkehrsverbund Hessen (nvv.de)
     - NWL – Nahverkehr Westfalen-Lippe
+    - ÖBB – Österreichische Bundesbahnen Österreich
+    - Resrobot – Resrobot
+    - RMV – Rhein-Main-Verkehrsverbund Hessen, Baden-Württemberg, Bayern, Rheinland-Pfalz (rmv.de)
+    - RSAG – Rostocker Straßenbahn Mecklenburg-Vorpommern (rsag-online.de)
+    - SaarVV – Saarländischer Verkehrsverbund DE-SL (saarvv.de)
+    - STV – Steirischer Verkehrsverbund AT-6 (verbundlinie.at)
+    - TPG – Transports publics genevois Kanton Genf (tpg.ch)
+    - VBB – Verkehrsverbund Berlin-Brandenburg Berlin, Brandenburg (vbb.de)
+    - VBN – Verkehrsverbund Bremen/Niedersachsen Niedersachsen, Bremen (vbn.de)
     - VGN – Verkehrsverbund Großraum Nürnberg Bayern
-    - VMV – Verkehrsgesellschaft Mecklenburg-Vorpommern Mecklenburg-Vorpommern
+    - VMT – Verkehrsverbund Mittelthüringen Thüringen (vmt-thueringen.de)
+    - VOS – Verkehrsgemeinschaft Osnabrück Niedersachsen (vos.info)
+    - VVO – Verkehrsverbund Oberelbe
+    - VVS – Verkehrs- und Tarifverbund Stuttgart Baden-Württemberg
     - VRN – Verkehrsverbund Rhein-Neckar (Nordrhein-Westfalen) (EFA)
     - VRN2 – Verkehrsverbund Rhein-Neckar (Rheinland-Pfalz, Hessen, Baden-Württemberg) (HAFAS)
     - VRR – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen
     - VRR2 – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen
     - VRR3 – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen
-    - VVO – Verkehrsverbund Oberelbe
-    - VVS – Verkehrs- und Tarifverbund Stuttgart Baden-Württemberg
-    - bwegt – bwegt Baden-Württemberg
-    - AVV – Aachener Verkehrsverbund Nordrhein-Westfalen (avv.de)
-    - BART – Bay Area Rapid Transit California (bart.gov)
-    - BLS – BLS AG Kanton Bern, Kanton Luzern (bls.ch)
-    - BVG – Berliner Verkehrsbetriebe Berlin, Brandenburg (bvg.de)
-    - CMTA – Capital Metro Austin Public Transport Texas (capmetro.org)
-    - DSB – Rejseplanen Dänemark (rejseplanen.dk)
-    - IE – Iarnród Éireann Irland, Nordirland (irishrail.ie)
-    - KVB – Kölner Verkehrs-Betriebe (kvb.koeln)
-    - NAHSH – Nahverkehrsverbund Schleswig-Holstein Schleswig-Holstein (nah.sh)
-    - NASA – Personennahverkehr in Sachsen-Anhalt Sachsen-Anhalt (nasa.de)
-    - NVV – Nordhessischer Verkehrsverbund Hessen (nvv.de)
-    - RMV – Rhein-Main-Verkehrsverbund Hessen, Baden-Württemberg, Bayern, Rheinland-Pfalz (rmv.de)
-    - RSAG – Rostocker Straßenbahn Mecklenburg-Vorpommern (rsag-online.de)
-    - Resrobot – Resrobot
-    - STV – Steirischer Verkehrsverbund AT-6 (verbundlinie.at)
-    - SaarVV – Saarländischer Verkehrsverbund DE-SL (saarvv.de)
-    - TPG – Transports publics genevois Kanton Genf (tpg.ch)
-    - VBB – Verkehrsverbund Berlin-Brandenburg Berlin, Brandenburg (vbb.de)
-    - VBN – Verkehrsverbund Bremen/Niedersachsen Niedersachsen, Bremen (vbn.de)
-    - VMT – Verkehrsverbund Mittelthüringen Thüringen (vmt-thueringen.de)
-    - VOS – Verkehrsgemeinschaft Osnabrück Niedersachsen (vos.info)
     - ZVV – Züricher Verkehrsverbund Kanton Zürich (zvv.ch)
-    - mobiliteit – mobilitéits zentral Luxembourg (mobiliteit.lu)
   - Some stations can be searched via "IRIS-TTS" but need hafas=1 for data retrival, f.e. "Frankenforst Kippekausen, Bergisch Gladbach", choose `hafas=1` in the list to archive this. [GitHub issue about this](https://github.com/FaserF/ha-db_infoscreen/issues/8)
 
 ### Migrating from [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn)
