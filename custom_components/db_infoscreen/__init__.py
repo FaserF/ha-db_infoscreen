@@ -6,7 +6,7 @@ import aiohttp
 import async_timeout
 import logging
 import json
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from .const import (
     DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL,
@@ -34,120 +34,47 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         encoded_station = quote(station_cleaned, safe=",-")
         encoded_station = encoded_station.replace(" ", "%20")
 
-        # Build the API URL
-        if custom_api_url:
-            url = f"{custom_api_url}/{encoded_station}.json"
-        else:
-            url = f"https://dbf.finalrewind.org/{encoded_station}.json"
+        base_url = custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
+        url = f"{base_url}/{encoded_station}.json"
 
+        # Parameter mapping for data_source
+        data_source_map = {
+            "MVV": "efa=MVV", "ÖBB": "hafas=ÖBB", "BSVG": "efa=BSVG", "DING": "efa=DING",
+            "KVV": "efa=KVV", "LinzAG": "efa=LinzAG", "NVBW": "efa=NVBW", "NWL": "efa=NWL",
+            "VAG": "efa=VAG", "VGN": "efa=VGN", "VMV": "efa=VMV", "VRN": "efa=VRN",
+            "VRN2": "hafas=VRN", "VRR": "efa=VRR", "VRR2": "efa=VRR2", "VRR3": "efa=VRR3",
+            "VVO": "efa=VVO", "VVS": "efa=VVS", "bwegt": "efa=bwegt", "AVV": "hafas=AVV",
+            "BART": "hafas=BART", "BLS": "hafas=BLS", "BVG": "hafas=BVG", "CMTA": "hafas=CMTA",
+            "DSB": "hafas=DSB", "IE": "hafas=IE", "KVB": "hafas=KVB", "NAHSH": "hafas=NAHSH",
+            "NVV": "hafas=NVV", "RMV": "hafas=RMV", "RSAG": "hafas=RSAG", "Resrobot": "hafas=Resrobot",
+            "STV": "hafas=STV", "SaarVV": "hafas=SaarVV", "TPG": "hafas=TPG", "VBB": "hafas=VBB",
+            "VBN": "hafas=VBN", "VMT": "hafas=VMT", "VOS": "hafas=VOS", "ZVV": "hafas=ZVV",
+            "mobiliteit": "hafas=mobiliteit", "hafas=1": "hafas=1"
+        }
+
+        # Collect parameters
+        params = {}
         if platforms:
-            url += f"?platforms={platforms}" if "?" not in url else f"&platforms={platforms}"
-
+            params["platforms"] = platforms
         if admode == "arrival":
-            url += "?admode=arr" if "?" not in url else "&admode=arr"
+            params["admode"] = "arr"
         elif admode == "departure":
-            url += "?admode=dep" if "?" not in url else "&admode=dep"
-
-        if data_source == "MVV":
-            url += f"?efa=MVV" if "?" not in url else "&efa=MVV"
-        elif data_source == "\u00d6BB":
-            url += f"?hafas=\u00d6BB" if "?" not in url else "&hafas=\u00d6BB"
-        elif data_source == "BSVG":
-            url += f"?efa=BSVG" if "?" not in url else "&efa=BSVG"
-        elif data_source == "DING":
-            url += f"?efa=DING" if "?" not in url else "&efa=DING"
-        elif data_source == "KVV":
-            url += f"?efa=KVV" if "?" not in url else "&efa=KVV"
-        elif data_source == "LinzAG":
-            url += f"?efa=LinzAG" if "?" not in url else "&efa=LinzAG"
-        elif data_source == "NVBW":
-            url += f"?efa=NVBW" if "?" not in url else "&efa=NVBW"
-        elif data_source == "NWL":
-            url += f"?efa=NWL" if "?" not in url else "&efa=NWL"
-        elif data_source == "VAG":
-            url += f"?efa=VAG" if "?" not in url else "&efa=VAG"
-        elif data_source == "VGN":
-            url += f"?efa=VGN" if "?" not in url else "&efa=VGN"
-        elif data_source == "VMV":
-            url += f"?efa=VMV" if "?" not in url else "&efa=VMV"
-        elif data_source == "VRN":
-            url += f"?efa=VRN" if "?" not in url else "&efa=VRN"
-        elif data_source == "VRN2":
-            url += f"?hafas=VRN" if "?" not in url else "&hafas=VRN"
-        elif data_source == "VRR":
-            url += f"?efa=VRR" if "?" not in url else "&efa=VRR"
-        elif data_source == "VRR2":
-            url += f"?efa=VRR2" if "?" not in url else "&efa=VRR2"
-        elif data_source == "VRR3":
-            url += f"?efa=VRR3" if "?" not in url else "&efa=VRR3"
-        elif data_source == "VVO":
-            url += f"?efa=VVO" if "?" not in url else "&efa=VVO"
-        elif data_source == "VVS":
-            url += f"?efa=VVS" if "?" not in url else "&efa=VVS"
-        elif data_source == "bwegt":
-            url += f"?efa=bwegt" if "?" not in url else "&efa=bwegt"
-        elif data_source == "AVV":
-            url += f"?hafas=AVV" if "?" not in url else "&hafas=AVV"
-        elif data_source == "BART":
-            url += f"?hafas=BART" if "?" not in url else "&hafas=BART"
-        elif data_source == "BLS":
-            url += f"?hafas=BLS" if "?" not in url else "&hafas=BLS"
-        elif data_source == "BVG":
-            url += f"?hafas=BVG" if "?" not in url else "&hafas=BVG"
-        elif data_source == "CMTA":
-            url += f"?hafas=CMTA" if "?" not in url else "&hafas=CMTA"
-        elif data_source == "DSB":
-            url += f"?hafas=DSB" if "?" not in url else "&hafas=DSB"
-        elif data_source == "IE":
-            url += f"?hafas=IE" if "?" not in url else "&hafas=IE"
-        elif data_source == "KVB":
-            url += f"?hafas=KVB" if "?" not in url else "&hafas=KVB"
-        elif data_source == "NAHSH":
-            url += f"?hafas=NAHSH" if "?" not in url else "&hafas=NAHSH"
-        elif data_source == "NVV":
-            url += f"?hafas=NVV" if "?" not in url else "&hafas=NVV"
-        elif data_source == "RMV":
-            url += f"?hafas=RMV" if "?" not in url else "&hafas=RMV"
-        elif data_source == "RSAG":
-            url += f"?hafas=RSAG" if "?" not in url else "&hafas=RSAG"
-        elif data_source == "Resrobot":
-            url += f"?hafas=Resrobot" if "?" not in url else "&hafas=Resrobot"
-        elif data_source == "STV":
-            url += f"?hafas=STV" if "?" not in url else "&hafas=STV"
-        elif data_source == "SaarVV":
-            url += f"?hafas=SaarVV" if "?" not in url else "&hafas=SaarVV"
-        elif data_source == "TPG":
-            url += f"?hafas=TPG" if "?" not in url else "&hafas=TPG"
-        elif data_source == "VBB":
-            url += f"?hafas=VBB" if "?" not in url else "&hafas=VBB"
-        elif data_source == "VBN":
-            url += f"?hafas=VBN" if "?" not in url else "&hafas=VBN"
-        elif data_source == "VMT":
-            url += f"?hafas=VMT" if "?" not in url else "&hafas=VMT"
-        elif data_source == "VOS":
-            url += f"?hafas=VOS" if "?" not in url else "&hafas=VOS"
-        elif data_source == "VRN":
-            url += f"?hafas=VRN" if "?" not in url else "&hafas=VRN"
-        elif data_source == "ZVV":
-            url += f"?hafas=ZVV" if "?" not in url else "&hafas=ZVV"
-        elif data_source == "mobiliteit":
-            url += f"?hafas=mobiliteit" if "?" not in url else "&hafas=mobiliteit"
-        elif data_source == "hafas=1":
-            url += f"?hafas=1" if "?" not in url else "&hafas=1"
-
+            params["admode"] = "dep"
+        if data_source in data_source_map:
+            key, value = data_source_map[data_source].split("=")
+            params[key] = value
         if hide_low_delay:
-            url += "?hidelowdelay=1" if "?" not in url else "&hidelowdelay=1"
+            params["hidelowdelay"] = "1"
         if detailed:
-            url += "?detailed=1" if "?" not in url else "&detailed=1"
+            params["detailed"] = "1"
         if past_60_minutes:
-            url += "?past=1" if "?" not in url else "&past=1"
-
+            params["past"] = "1"
         if via_stations:
-            encoded_via_stations = [quote(station.strip(), safe=",-") for station in via_stations]
-            via_param = ",".join(encoded_via_stations)
-            url += f"?via={via_param}" if "?" not in url else f"&via={via_param}"
+            params["via"] = ",".join(quote(station.strip(), safe=",-") for station in via_stations)
 
-        self.api_url = url
+        # Assemble URL
+        query_string = urlencode(params)
+        self.api_url = f"{url}?{query_string}" if query_string else url
 
         # Ensure update_interval is passed correctly
         update_interval = max(update_interval, MIN_UPDATE_INTERVAL)
@@ -215,7 +142,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                         # Use scheduledArrival if scheduledDeparture is None or empty
                         departure_time = scheduled_departure or departure.get("scheduledArrival") or scheduled_time
-                        
+
                         # If no valid departure time is found, log a warning and continue to the next departure
                         if not departure_time:
                             _LOGGER.warning("No valid departure time found for entry: %s", departure)
