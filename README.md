@@ -51,6 +51,7 @@ You can set up one sensor per station, except using different `via_stations` con
 | `drop_late_trains`      | boolean | No       | False   | Hide past departures that would still be delayed. |
 | `detailed`             | boolean | No       | False   | Show additional details about departures. |
 | `past_60_minutes`      | boolean | No       | False   | Show departures from the past 60 minutes. |
+| `keep_route`           | boolean | No       | False   | Keep route details (all Train stations on train route). |
 | `custom_api_url`       | string  | No       | -       | Use a custom API URL instead of the default one. |
 | `data_source`          | string  | No       | IRIS-TTS | Choose the data source for fetching departure information. More details can be found below at Data Sources |
 | `offset`              | string  | No       | 00:00   | Time offset for departure search (HH:MM or HH:MM:SS). |

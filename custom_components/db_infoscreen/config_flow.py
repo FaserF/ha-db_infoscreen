@@ -9,7 +9,7 @@ from .const import (
     DEFAULT_NEXT_DEPARTURES, DEFAULT_UPDATE_INTERVAL, DEFAULT_OFFSET, MAX_SENSORS,
     CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL,
     CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, DATA_SOURCE_OPTIONS,
-    CONF_VIA_STATIONS, CONF_IGNORED_TRAINTYPES, IGNORED_TRAINTYPES_OPTIONS, CONF_DROP_LATE_TRAINS
+    CONF_VIA_STATIONS, CONF_IGNORED_TRAINTYPES, IGNORED_TRAINTYPES_OPTIONS, CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -81,6 +81,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_DROP_LATE_TRAINS, default=False): cv.boolean,
                 vol.Optional(CONF_DETAILED, default=False): cv.boolean,
                 vol.Optional(CONF_PAST_60_MINUTES, default=False): cv.boolean,
+                vol.Optional(CONF_KEEP_ROUTE, default=False): cv.boolean,
                 vol.Optional(CONF_CUSTOM_API_URL, default=""): cv.string,
                 vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(DATA_SOURCE_OPTIONS),
                 vol.Optional(CONF_OFFSET, default=DEFAULT_OFFSET): cv.string,
@@ -153,6 +154,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(
                         CONF_PAST_60_MINUTES,
                         default=current_options.get(CONF_PAST_60_MINUTES, False)
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_KEEP_ROUTE,
+                        default=current_options.get(CONF_KEEP_ROUTE, False)
                     ): cv.boolean,
                     vol.Optional(
                         CONF_CUSTOM_API_URL,

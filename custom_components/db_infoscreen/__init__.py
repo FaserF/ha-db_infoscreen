@@ -12,13 +12,13 @@ from .const import (
     DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL,
     DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES,
     CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, MIN_UPDATE_INTERVAL,
-    CONF_VIA_STATIONS, CONF_IGNORED_TRAINTYPES, CONF_DROP_LATE_TRAINS
+    CONF_VIA_STATIONS, CONF_IGNORED_TRAINTYPES, CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 class DBInfoScreenCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str, data_source: str, offset: str, platforms: str, admode: str, via_stations: list, ignored_train_types: list, drop_late_trains: bool):
+    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str, data_source: str, offset: str, platforms: str, admode: str, via_stations: list, ignored_train_types: list, drop_late_trains: bool, keep_route: bool):
         self.station = station
         self.next_departures = next_departures
         self.hide_low_delay = hide_low_delay
@@ -29,6 +29,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.via_stations = via_stations
         self.ignored_train_types = ignored_train_types
         self.drop_late_trains = drop_late_trains
+        self.keep_route = keep_route
 
         station_cleaned = " ".join(station.split())
         encoded_station = quote(station_cleaned, safe=",-")
@@ -177,10 +178,16 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                         # Check if the train class is in the ignored list
                         train_classes = departure.get("trainClasses", [])
-                        _LOGGER.debug("Departure train classes: %s", train_classes)
                         if any(train_class in ignored_train_types for train_class in train_classes):
                             _LOGGER.debug("Ignoring departure due to train class: %s", train_classes)
                             continue
+
+                        if not self.keep_route:
+                            _LOGGER.debug("Removing route attributes because keep_route is False")
+                            departure.pop("route", None)
+                            departure.pop("via", None)
+                        else:
+                            _LOGGER.debug("Keeping route attributes")
 
                         # Calculate the time offset and only add departures that occur after the offset
                         departure_seconds = (departure_time - datetime.now()).total_seconds()
@@ -209,11 +216,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.Co
     via_stations = config_entry.data.get(CONF_VIA_STATIONS, [])
     ignored_train_types = config_entry.data.get(CONF_IGNORED_TRAINTYPES, [])
     drop_late_trains = config_entry.data.get(CONF_DROP_LATE_TRAINS, [])
+    keep_route = config_entry.data.get(CONF_KEEP_ROUTE, False)
 
     coordinator = DBInfoScreenCoordinator(
         hass, station, next_departures, update_interval, hide_low_delay,
         detailed, past_60_minutes, custom_api_url, data_source, offset,
-        platforms, admode, via_stations, ignored_train_types, drop_late_trains
+        platforms, admode, via_stations, ignored_train_types, drop_late_trains, keep_route
     )
     await coordinator.async_config_entry_first_refresh()
 
