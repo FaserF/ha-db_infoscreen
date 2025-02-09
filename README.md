@@ -4,7 +4,7 @@
 The `db-infoscreen` sensor will give you the departure time of the next trains for the given station, containing many more attribute informations. It aims to aggregate departure and train data from different sources and combine them in a useful (and user-friendly) manner. It is intended both for a quick glance at the departure board and for public transportation geeks looking for details about specific trains.
 The backend has many datasources available with it's main source being IRIS-TTS - Deutsche Bahn.
 
-This integration works great side-by-side with [ha-bahnvorhersage](https://github.com/FaserF/ha-bahnvorhersage).
+<del>This integration works great side-by-side with [ha-bahnvorhersage](https://github.com/FaserF/ha-bahnvorhersage).</del>
 This is a superior to [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn).
 
 <img src="images/logo.png" alt="Logo" width="300px">
@@ -40,7 +40,7 @@ Go to Configuration -> Integrations and click on "add integration". Then search 
 
 You can set up one sensor per station, except using different `via_stations` configurations.
 
-### Configuration Variables  
+### Configuration Variables
 
 | Key                      | Type    | Required | Default | Description |
 |--------------------------|---------|----------|---------|-------------|
@@ -112,7 +112,7 @@ Note: You are limited to adding 30 sensors, if you are not using a custom_api_ur
 There is no direct way of migrating the ha-deutschebahn integration to ha-db_infoscreen due to the fact, that those are two completly different integrations with different API sources. The old ha-deutschebahn api provided a start and destination option, which is not (yet) available with this newer API backend.
 To get a most similar option about this, I recommend starting playing around with the `platforms` option to only display one direction for your direction and afterwards filtering with a custom sensor to only display trains with a specific end station or using for example two sensors for the same station but choosing different `via_stations` to only display "one direction".
 
-All other features of ha-deutschebahn are ported to this integration or will be ported soon.
+All other features of ha-deutschebahn are ported to this integration already.
 
 [Discussion about this](https://github.com/FaserF/ha-db_infoscreen/issues/4)
 
