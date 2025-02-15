@@ -185,6 +185,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             _LOGGER.debug("Removing route attributes because keep_route is False")
                             departure.pop("route", None)
                             departure.pop("via", None)
+                            departure.pop("prev_route", None)
                         else:
                             _LOGGER.debug("Keeping route attributes")
 
