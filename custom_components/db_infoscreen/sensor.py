@@ -45,11 +45,7 @@ class DBInfoSensor(SensorEntity):
     @property
     def native_value(self):
         if self.coordinator.data:
-            departure_time = (
-                self.coordinator.data[0].get("scheduledDeparture")
-                or self.coordinator.data[0].get("scheduledTime")
-                or "Unknown"
-            )
+            departure_time = self.coordinator.data[0].get("scheduledDeparture") or self.coordinator.data[0].get("scheduledArrival") or self.coordinator.data[0].get("scheduledTime") or self.coordinator.data[0].get("datetime")
             delay_departure = self.coordinator.data[0].get("delayDeparture", 0)
             delay = self.coordinator.data[0].get("delay", 0)
 
