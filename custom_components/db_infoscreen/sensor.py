@@ -52,6 +52,14 @@ class DBInfoSensor(SensorEntity):
             if isinstance(departure_time, int):  # Unix timestamp case
                 departure_time = datetime.fromtimestamp(departure_time)
 
+                # Check if the departure date is not today
+                if departure_time.date() != datetime.today().date():
+                    # If not today, show full date and time
+                    departure_time = departure_time.strftime("%Y-%m-%d %H:%M")
+                else:
+                    # If today, show only time
+                    departure_time = departure_time.strftime("%H:%M")
+
             if delay_departure == 0 and delay == 0:
                 _LOGGER.debug("Sensor state updated: %s", departure_time)
                 return departure_time
