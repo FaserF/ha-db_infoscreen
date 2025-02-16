@@ -32,8 +32,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.keep_route = keep_route
 
         station_cleaned = " ".join(station.split())
-        encoded_station = quote_plus(station_cleaned, safe=",-")
-        encoded_station = encoded_station.replace(" ", "%20")
+        encoded_station = quote_plus(station_cleaned, safe=",-").replace("+", "%20").replace(" ", "%20")
 
         base_url = custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
         url = f"{base_url}/{encoded_station}.json"
