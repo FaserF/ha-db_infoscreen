@@ -87,6 +87,7 @@ Note: You are limited to adding 30 sensors, if you are not using a custom_api_ur
     - NVV – Nordhessischer Verkehrsverbund Hessen (nvv.de)
     - NWL – Nahverkehr Westfalen-Lippe
     - ÖBB – Österreichische Bundesbahnen Österreich
+    - PKP - Polskie Koleje Państwowe PL (polnische Staatsbahn)
     - Resrobot – Resrobot
     - RMV – Rhein-Main-Verkehrsverbund Hessen, Baden-Württemberg, Bayern, Rheinland-Pfalz (rmv.de)
     - RSAG – Rostocker Straßenbahn Mecklenburg-Vorpommern (rsag-online.de)
