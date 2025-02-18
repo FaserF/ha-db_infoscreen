@@ -98,6 +98,7 @@ Note: You are limited to adding 30 sensors, if you are not using a custom_api_ur
     - VBN – Verkehrsverbund Bremen/Niedersachsen Niedersachsen, Bremen (vbn.de)
     - VGN – Verkehrsverbund Großraum Nürnberg Bayern
     - VMT – Verkehrsverbund Mittelthüringen Thüringen (vmt-thueringen.de)
+    - VMV – Verkehrsgesellschaft Mecklenburg-Vorpommern Mecklenburg-Vorpommern
     - VOS – Verkehrsgemeinschaft Osnabrück Niedersachsen (vos.info)
     - VVO – Verkehrsverbund Oberelbe
     - VVS – Verkehrs- und Tarifverbund Stuttgart Baden-Württemberg
