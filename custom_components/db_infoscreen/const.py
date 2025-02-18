@@ -23,7 +23,7 @@ CONF_DROP_LATE_TRAINS = "drop_late_trains"
 CONF_KEEP_ROUTE = "keep_route"
 
 DATA_SOURCE_OPTIONS = [
-    "IRIS-TTS", "hafas=1", "AVV", "BART", "BLS", "BSVG", "BVG", "CMTA", "DING", "DSB", "IE",
+    "IRIS-TTS", "hafas=1", "AVV", "BART", "BLS", "BSVG", "BVG", "bwegt", "CMTA", "DING", "DSB", "IE",
     "KVV", "KVB", "LinzAG", "mobiliteit", "MVV", "NAHSH", "NASA", "NVBW", "NVV", "NWL", "\u00d6BB", "Resrobot", "RMV",
     "RSAG", "SaarVV", "STV", "TPG", "VBB", "VBN", "VGN", "VMT", "VOS", "VRN", "VRN2", "VRR",
     "VRR2", "VRR3", "VVO", "VVS", "ZVV"

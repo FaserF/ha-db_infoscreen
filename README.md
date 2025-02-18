@@ -71,6 +71,7 @@ Note: You are limited to adding 30 sensors, if you are not using a custom_api_ur
     - BLS – BLS AG Kanton Bern, Kanton Luzern (bls.ch)
     - BVG – Berliner Verkehrsbetriebe Berlin, Brandenburg (bvg.de)
     - BSVG – Braunschweiger Verkehrs-GmbH
+    - bwegt - Personennahverkehr in Baden-Württemberg (ehem. 3-Löwen-Takt)
     - CMTA – Capital Metro Austin Public Transport Texas (capmetro.org)
     - DING – Donau-Iller Nahverkehrsverbund
     - DSB – Rejseplanen Dänemark (rejseplanen.dk)
