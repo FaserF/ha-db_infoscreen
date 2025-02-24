@@ -170,7 +170,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             _LOGGER.debug("Departure time without added delay: %s", departure_time)
                             delay_departure = departure.get("delayDeparture")
                             if delay_departure is None:
-                                delay_departure = 0  # Set default value if None
+                                delay_departure = 0  # Set delay to 0 as fallback if no valid delay has been found
                             departure_time += timedelta(minutes=delay_departure)
                             _LOGGER.debug("Departure time with added delay: %s", departure_time)
 

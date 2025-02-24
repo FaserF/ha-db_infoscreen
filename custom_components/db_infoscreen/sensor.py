@@ -46,8 +46,7 @@ class DBInfoSensor(SensorEntity):
     def native_value(self):
         if self.coordinator.data:
             departure_time = self.coordinator.data[0].get("scheduledDeparture") or self.coordinator.data[0].get("scheduledArrival") or self.coordinator.data[0].get("scheduledTime") or self.coordinator.data[0].get("datetime")
-            delay_departure = self.coordinator.data[0].get("delayDeparture", 0)
-            delay = self.coordinator.data[0].get("delay", 0)
+            delay_departure = self.coordinator.data[0].get("delayDeparture") or self.coordinator.data[0].get("delay", 0)
 
             if isinstance(departure_time, int):  # Unix timestamp case
                 departure_time = datetime.fromtimestamp(departure_time)
@@ -60,14 +59,12 @@ class DBInfoSensor(SensorEntity):
                     # If today, show only time
                     departure_time = departure_time.strftime("%H:%M")
 
-            if delay_departure == 0 and delay == 0:
+            if delay_departure == 0:
                 _LOGGER.debug("Sensor state updated: %s", departure_time)
                 return departure_time
             else:
                 departure_time_with_delay = departure_time
-                if delay:
-                    departure_time_with_delay = f"{departure_time} +{delay}"
-                else:
+                if delay_departure:
                     departure_time_with_delay = f"{departure_time} +{delay_departure}"
                 _LOGGER.debug("Sensor state updated with delay: %s", departure_time_with_delay)
                 return departure_time_with_delay
