@@ -180,11 +180,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             _LOGGER.debug("Ignoring departure due to train class: %s", train_classes)
                             continue
 
+                        # Remove route attributes to lower sensor size limit: https://github.com/FaserF/ha-db_infoscreen/issues/22
+                        departure.pop("id", None)
+                        departure.pop("stop_id_num", None)
                         if not self.keep_route:
                             _LOGGER.debug("Removing route attributes because keep_route is False")
                             departure.pop("route", None)
                             departure.pop("via", None)
                             departure.pop("prev_route", None)
+                            departure.pop("next_route", None)
                         else:
                             _LOGGER.debug("Keeping route attributes")
 

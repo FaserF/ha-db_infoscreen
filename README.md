@@ -45,13 +45,13 @@ You can set up one sensor per station, except using different `via_stations` con
 | Key                      | Type    | Required | Default | Description |
 |--------------------------|---------|----------|---------|-------------|
 | `station`               | string  | Yes      | -       | The name of the station or Trip number to be tracked. |
-| `next_departures`       | int     | No       | 4       | Number of upcoming departures to display. |
+| `next_departures`       | int     | No       | 4       | Number of upcoming departures to display. Please note that there may be displayed less than your number, due to [storage limitations](https://github.com/FaserF/ha-db_infoscreen/issues/22) |
 | `update_interval`       | int     | No       | 3       | Time interval (in minutes) to fetch updated departure data. Minimum: 1 minute. |
 | `hide_low_delay`        | boolean | No       | False   | Hide departures with a delay of less than 5 minutes. |
 | `drop_late_trains`      | boolean | No       | False   | Hide past departures that would still be delayed. |
 | `detailed`             | boolean | No       | False   | Show additional details about departures. |
 | `past_60_minutes`      | boolean | No       | False   | Show departures from the past 60 minutes. |
-| `keep_route`           | boolean | No       | False   | Keep route details (all Train stations on train route). |
+| `keep_route`           | boolean | No       | False   | Keep route (stopover) details (all Train stations on train route). WARNING: Enabling this will result into reaching [storage limitations](https://github.com/FaserF/ha-db_infoscreen/issues/22) faster |
 | `custom_api_url`       | string  | No       | -       | Use a custom API URL instead of the default one. |
 | `data_source`          | string  | No       | IRIS-TTS | Choose the data source for fetching departure information. More details can be found below at Data Sources |
 | `offset`              | string  | No       | 00:00   | Time offset for departure search (HH:MM or HH:MM:SS). |
