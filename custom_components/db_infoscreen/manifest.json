@@ -9,5 +9,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/FaserF/ha-db_infoscreen/issues",
   "requirements": [],
-  "version": "2025.02.4"
+  "version": "2025.02.5"
 }
