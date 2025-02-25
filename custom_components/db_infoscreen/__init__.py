@@ -128,6 +128,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     filtered_departures = []
                     ignored_train_types = self.ignored_train_types
                     if ignored_train_types:
+                        if "S" in ignored_train_types and "S-Bahn" not in ignored_train_types:
+                            ignored_train_types.append("S-Bahn")
                         _LOGGER.debug("Ignoring products: %s", ignored_train_types)
 
                     MAX_SIZE_BYTES = 16000
@@ -175,7 +177,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             _LOGGER.debug("Departure time with added delay: %s", departure_time)
 
                         # Check if the train class is in the ignored list
-                        train_classes = departure.get("trainClasses", [])
+                        train_classes = departure.get("trainClasses", []) or departure.get("train_type") or departure.get("type")
                         if any(train_class in ignored_train_types for train_class in train_classes):
                             _LOGGER.debug("Ignoring departure due to train class: %s", train_classes)
                             continue
@@ -183,6 +185,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         # Remove route attributes to lower sensor size limit: https://github.com/FaserF/ha-db_infoscreen/issues/22
                         departure.pop("id", None)
                         departure.pop("stop_id_num", None)
+                        departure.pop("stateless", None)
+                        departure.pop("key", None)
                         if not self.keep_route:
                             _LOGGER.debug("Removing route attributes because keep_route is False")
                             departure.pop("route", None)
