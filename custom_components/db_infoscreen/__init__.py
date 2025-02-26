@@ -177,10 +177,39 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     _LOGGER.error("Invalid time format: %s", departure_time)
                                     continue
 
+                        scheduled_arrival = departure.get("scheduledArrival")
+                        delay_arrival = departure.get("delayArrival")
+
+                        if scheduled_arrival not in (None, "") and delay_arrival is not None:
+                            try:
+                                if "T" in scheduled_arrival:
+                                    arrival_time = datetime.strptime(scheduled_arrival, "%Y-%m-%dT%H:%M:%S")
+                                else:
+                                    now = datetime.now()
+                                    arrival_time = datetime.strptime(scheduled_arrival, "%H:%M").replace(year=now.year, month=now.month, day=now.day)
+                                departure["arrival_current"] = (arrival_time + timedelta(minutes=delay_arrival)).strftime("%Y-%m-%dT%H:%M:%S")
+                            except ValueError:
+                                _LOGGER.error("Invalid time format for scheduledArrival: %s", scheduled_arrival)
+
+                        delay_departure = departure.get("delayDeparture") or departure.get("delay")
+
+                        if departure_time not in (None, "") and delay_departure is not None:
+                            try:
+                                departure["departure_current"] = (departure_time + timedelta(minutes=delay_departure)).strftime("%Y-%m-%dT%H:%M:%S")
+                            except ValueError:
+                                _LOGGER.error("Invalid time format for scheduledDeparture: %s", departure_time)
+
+                        # Fallback für departure_time, falls es immer noch None ist
+                        if departure_time is None:
+                            _LOGGER.warning("departure_time is None, skipping entry: %s", departure)
+                            continue
+
+                        if not self.drop_late_trains:
+                            departure_time += timedelta(minutes=delay_departure or 0)
+
                         # Apply any delay to the departure time, if applicable
                         if not self.drop_late_trains:
                             _LOGGER.debug("Departure time without added delay: %s", departure_time)
-                            delay_departure = departure.get("delayDeparture")
                             if delay_departure is None:
                                 delay_departure = 0  # Set delay to 0 as fallback if no valid delay has been found
                             departure_time += timedelta(minutes=delay_departure)
