@@ -42,22 +42,48 @@ class DBInfoSensor(SensorEntity):
             self._attr_name,
         )
 
+    def format_departure_time(self, departure_time):
+        if departure_time is None:
+            _LOGGER.debug("Departure time is None")
+            return None
+
+        if isinstance(departure_time, int):  # Unix timestamp case
+            departure_time = datetime.fromtimestamp(departure_time)
+            _LOGGER.debug("Converted departure time from timestamp: %s", departure_time)
+
+        elif isinstance(departure_time, str):  # Falls der Zeitstempel als String geliefert wird
+            try:
+                departure_time = datetime.strptime(departure_time, "%Y-%m-%d %H:%M:%S")
+                _LOGGER.debug("Converted departure time from string: %s", departure_time)
+            except ValueError:
+                _LOGGER.warning("Unable to parse departure time from string: %s", departure_time)
+                return None
+
+        if isinstance(departure_time, datetime):
+            _LOGGER.debug("Checking departure time date: %s", departure_time.date())
+            _LOGGER.debug("Today's date: %s", datetime.now().date())
+            if departure_time.date() != datetime.now().date():
+                return departure_time.strftime("%Y-%m-%d %H:%M")
+            else:
+                return departure_time.strftime("%H:%M")
+        else:
+            _LOGGER.warning("Invalid departure time: %s", departure_time)
+            return None
+
     @property
     def native_value(self):
         if self.coordinator.data:
             departure_time = self.coordinator.data[0].get("scheduledDeparture") or self.coordinator.data[0].get("scheduledArrival") or self.coordinator.data[0].get("scheduledTime") or self.coordinator.data[0].get("datetime")
             delay_departure = self.coordinator.data[0].get("delayDeparture") or self.coordinator.data[0].get("delay", 0)
 
-            if isinstance(departure_time, int):  # Unix timestamp case
-                departure_time = datetime.fromtimestamp(departure_time)
+            _LOGGER.debug("Raw departure time: %s", departure_time)
 
-                # Check if the departure date is not today
-                if departure_time.date() != datetime.today().date():
-                    # If not today, show full date and time
-                    departure_time = departure_time.strftime("%Y-%m-%d %H:%M")
-                else:
-                    # If today, show only time
-                    departure_time = departure_time.strftime("%H:%M")
+            departure_time = self.format_departure_time(departure_time)
+            if departure_time is None:
+                _LOGGER.debug("Formatted departure time is None, skipping update.")
+                return "Invalid Time"
+
+            _LOGGER.debug("Formatted departure time: %s", departure_time)
 
             if delay_departure == 0:
                 _LOGGER.debug("Sensor state updated: %s", departure_time)

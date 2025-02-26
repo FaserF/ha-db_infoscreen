@@ -158,7 +158,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         # Convert the departure time to a datetime object
                         if isinstance(departure_time, int):  # Unix timestamp case
                             departure_time = datetime.fromtimestamp(departure_time)
-                            departure["departure_time_readable"] = departure_time.strftime("%Y-%m-%d %H:%M:%S")
+                            if departure_time.date() == datetime.now().date():
+                                departure["departure_time_readable"] = departure_time.strftime("%H:%M:%S")
+                            else:
+                                departure["departure_time_readable"] = departure_time.strftime("%Y-%m-%d %H:%M:%S")
                         else:  # ISO 8601 string case
                             try:
                                 departure_time = datetime.strptime(departure_time, "%Y-%m-%dT%H:%M:%S")
@@ -191,10 +194,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                 continue
 
                         # Remove route attributes to lower sensor size limit: https://github.com/FaserF/ha-db_infoscreen/issues/22
-                        departure.pop("id", None)
-                        departure.pop("stop_id_num", None)
-                        departure.pop("stateless", None)
-                        departure.pop("key", None)
+                        if not self.detailed:
+                            departure.pop("id", None)
+                            departure.pop("stop_id_num", None)
+                            departure.pop("stateless", None)
+                            departure.pop("key", None)
+                            departure.pop("messages", None)
                         if not self.keep_route:
                             _LOGGER.debug("Removing route attributes because keep_route is False")
                             departure.pop("route", None)
