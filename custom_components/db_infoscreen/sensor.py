@@ -51,13 +51,17 @@ class DBInfoSensor(SensorEntity):
             departure_time = datetime.fromtimestamp(departure_time)
             _LOGGER.debug("Converted departure time from timestamp: %s", departure_time)
 
-        elif isinstance(departure_time, str):  # Falls der Zeitstempel als String geliefert wird
+        elif isinstance(departure_time, str):
             try:
                 departure_time = datetime.strptime(departure_time, "%Y-%m-%d %H:%M:%S")
                 _LOGGER.debug("Converted departure time from string: %s", departure_time)
             except ValueError:
-                _LOGGER.warning("Unable to parse departure time from string: %s", departure_time)
-                return None
+                try:
+                    departure_time = datetime.strptime(f"{datetime.now().date()} {departure_time}", "%Y-%m-%d %H:%M")
+                    _LOGGER.debug("Converted departure time from time string: %s", departure_time)
+                except ValueError:
+                    _LOGGER.warning("Unable to parse departure time from string: %s", departure_time)
+                    return None
 
         if isinstance(departure_time, datetime):
             _LOGGER.debug("Checking departure time date: %s", departure_time.date())
