@@ -119,6 +119,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     response = await session.get(self.api_url)
                     response.raise_for_status()
                     data = await response.json()
+                    if data.get("departures", []) is None:
+                        _LOGGER.warning("Encountered empty departures list, skipping.")
+                        return []
                     _LOGGER.debug("Data fetched successfully: %s", str(data)[:350] + ("..." if len(str(data)) > 350 else ""))
 
                     # Set last_update timestamp
@@ -135,6 +138,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     MAX_SIZE_BYTES = 16000
 
                     for departure in data.get("departures", []):
+                        if departure is None:
+                            _LOGGER.warning("Encountered None in departures list, skipping.")
+                            continue
                         _LOGGER.debug("Processing departure: %s", departure)
                         json_size = len(json.dumps(filtered_departures))
                         if json_size > MAX_SIZE_BYTES:
@@ -179,9 +185,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                         # Check if the train class is in the ignored list
                         train_classes = departure.get("trainClasses", []) or departure.get("train_type") or departure.get("type")
-                        if any(train_class in ignored_train_types for train_class in train_classes):
-                            _LOGGER.debug("Ignoring departure due to train class: %s", train_classes)
-                            continue
+                        if train_classes:
+                            if any(train_class in ignored_train_types for train_class in train_classes):
+                                _LOGGER.debug("Ignoring departure due to train class: %s", train_classes)
+                                continue
 
                         # Remove route attributes to lower sensor size limit: https://github.com/FaserF/ha-db_infoscreen/issues/22
                         departure.pop("id", None)
