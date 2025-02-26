@@ -45,24 +45,34 @@ You can set up one sensor per station, except using different `via_stations` con
 | Key                      | Type    | Required | Default | Description |
 |--------------------------|---------|----------|---------|-------------|
 | `station`               | string  | Yes      | -       | The name of the station or Trip number to be tracked. |
-| `next_departures`       | int     | No       | 4       | Number of upcoming departures to display. Please note that there may be displayed less than your number, due to [storage limitations](https://github.com/FaserF/ha-db_infoscreen/issues/22) |
+| `next_departures`       | int     | No       | 4       | Number of upcoming departures to display. Please note that there may be displayed less than your number, due to [storage limitations](https://github.com/FaserF/ha-db_infoscreen/issues/22). |
 | `update_interval`       | int     | No       | 3       | Time interval (in minutes) to fetch updated departure data. Minimum: 1 minute. |
 | `hide_low_delay`        | boolean | No       | False   | Hide departures with a delay of less than 5 minutes. |
 | `drop_late_trains`      | boolean | No       | False   | Hide past departures that would still be delayed. |
 | `detailed`             | boolean | No       | False   | Show additional details about departures. |
 | `past_60_minutes`      | boolean | No       | False   | Show departures from the past 60 minutes. |
-| `keep_route`           | boolean | No       | False   | Keep route (stopover) details (all Train stations on train route). WARNING: Enabling this will result into reaching [storage limitations](https://github.com/FaserF/ha-db_infoscreen/issues/22) faster |
+| `keep_route`           | boolean | No       | False   | Keep route (stopover) details (all train stations on train route). |
 | `custom_api_url`       | string  | No       | -       | Use a custom API URL instead of the default one. |
-| `data_source`          | string  | No       | IRIS-TTS | Choose the data source for fetching departure information. More details can be found below at Data Sources |
+| `data_source`          | string  | No       | IRIS-TTS | Choose the data source for fetching departure information. More details can be found below at Data Sources. |
 | `offset`              | string  | No       | 00:00   | Time offset for departure search (HH:MM or HH:MM:SS). |
 | `admode`              | string  | No       | departure preferred | Defines whether to display departure or arrival times. |
 | `platforms`           | string  | No       | -       | Filter by specific platform(s) (comma-separated). |
 | `via_stations`        | string  | No       | -       | Filter by stations where the train must pass through. |
-| `ignored_train_types` | list    | No       | []      | List of train types to ignore. |
+| `ignored_train_types` | list    | No       | []      | List of train types to ignore (may not work for all data sources, e.g., VMT). |
 
-Note: You are limited to adding 30 sensors, if you are not using a custom_api_url.
+#### Warnings and Limitations
+
+- **Sensor limits:** You are limited to adding 30 sensors, if you are not using a custom_api_url. This is due to backend limitations, see [here](https://dbf.finalrewind.org/) under "API".
+- **Storage Limitations:** Certain configurations (e.g., `detailed`, `keep_route`, or many `next_departures`) may quickly lead to reaching storage limitations. See [issue #22](https://github.com/FaserF/ha-db_infoscreen/issues/22) for details.
+- **Data Accuracy:** The accuracy of the departure information depends on the selected `data_source`. Some sources may provide outdated or incomplete data.
+- **Update Interval:** The minimum `update_interval` is 1 minute. A lower interval may cause high API usage and lead to throttling or bans. This is due to backend limitations, see [here](https://dbf.finalrewind.org/) under "API".
+- **Custom API URL:** If using `custom_api_url`, ensure that the API follows the expected response format to avoid errors.
+
 
 #### Data Sources
+Supported are only available [Backend Sources from DBF](https://dbf.finalrewind.org/_backend). There is no way for me to support other sources than that. The mentioned sources there are all using HAFAS or EFA. If you are missing a source that uses HAFAS or EFA, you can create a feature request at [a db-infoscreen - (formerly db-fakedisplay)](https://github.com/derf/db-fakedisplay/tree/main).
+
+
 - **data_source** (optional): Choose the data source for fetching departure information. The available options are:
   - The integration supports fetching departure data from various data sources, including:
     - IRIS-TTS – Deutsche Bahn (default and used by most)
@@ -110,13 +120,56 @@ Note: You are limited to adding 30 sensors, if you are not using a custom_api_ur
     - ZVV – Züricher Verkehrsverbund Kanton Zürich (zvv.ch)
   - Some stations can be searched via "IRIS-TTS" but need hafas=1 for data retrival, f.e. "Frankenforst Kippekausen, Bergisch Gladbach", choose `hafas=1` in the list to archive this. [GitHub issue about this](https://github.com/FaserF/ha-db_infoscreen/issues/8)
 
+
 ### Migrating from [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn)
-There is no direct way of migrating the ha-deutschebahn integration to ha-db_infoscreen due to the fact, that those are two completly different integrations with different API sources. The old ha-deutschebahn api provided a start and destination option, which is not (yet) available with this newer API backend.
-To get a most similar option about this, I recommend starting playing around with the `platforms` option to only display one direction for your direction and afterwards filtering with a custom sensor to only display trains with a specific end station or using for example two sensors for the same station but choosing different `via_stations` to only display "one direction".
 
-All other features of ha-deutschebahn are ported to this integration already.
+Migration from `ha-deutschebahn` to `ha-db_infoscreen` is not directly possible because the two integrations use different API sources and data structures. The old `ha-deutschebahn` API supported start and destination stations directly, which the new `ha-db_infoscreen` API cannot fully replicate. However, you can still achieve a similar experience with a few workarounds:
 
-[Discussion about this](https://github.com/FaserF/ha-db_infoscreen/issues/4)
+#### Options to Achieve a "Start to Destination" Experience:
+
+1. **Use the `platforms` Parameter**
+   You can display only one direction by filtering for specific platforms. For example, show only trains from Munich to Augsburg, and then filter by specific end stations on the way.
+
+2. **Use Two Sensors**
+   To simulate a fixed start-to-destination route, create two sensors for the same station but with different `via_stations`. This will allow you to simulate the direction from the start station to the destination.
+
+---
+
+#### Example for Using `via_stations`
+
+If you want to see trains departing from Munich Hbf to Augsburg Hbf, you can configure it as follows:
+
+```yaml
+sensor:
+  - platform: db_infoscreen
+    station: "München Hbf"
+    next_departures: 4
+    via_stations: "Augsburg Hbf"
+    platforms: "5,6"
+```
+
+This configuration will display only the relevant departures from Munich to Augsburg, excluding the return trips.
+
+---
+
+#### Key Options for "Start to Destination" (Migration)
+
+- **Platform Filter (`platforms`)**:
+  Use this parameter to restrict departures to specific platforms. This can help narrow down the direction you want to track.
+
+- **Via Stations (`via_stations`)**:
+  To simulate a specific direction, use `via_stations` to filter trains passing through certain intermediate stations.
+
+- **Use Two Sensors**:
+  If you want to filter departures in a single direction (for example, from Munich to Augsburg), use two sensors with different `via_stations` configurations.
+
+---
+
+#### Further Information
+
+All other features of the old `ha-deutschebahn` integration have been ported to `ha-db_infoscreen`. For further discussion, check out the [discussion on GitHub](https://github.com/FaserF/ha-db_infoscreen/issues/4).
+You can also check out some examples in Accessing the data. 
+
 
 ## Accessing the data
 
