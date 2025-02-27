@@ -147,6 +147,26 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             _LOGGER.info("Filtered departures JSON size exceeds limit: %d bytes for entry: %s . Ignoring some future departures to keep the size lower.", json_size, self.station)
                             break
 
+                        # Check if the train class is in the ignored list
+                        trainClasses = departure.get("trainClasses")
+                        train_classes = trainClasses or departure.get("train_type") or departure.get("type", [])
+                        if train_classes:
+                            if trainClasses:
+                                train_type_mapping = {
+                                    "S": "S-Bahn",
+                                    "N": "Regionalbahn (DB)",
+                                    "D": "Regionalbahn",
+                                    "F": "Intercity (Express) / Eurocity",
+                                    "": "Internationale Bahn"
+                                }
+                                updated_train_classes = [
+                                    train_type_mapping.get(train_class, train_class) for train_class in train_classes
+                                ]
+                                departure["trainClasses"] = updated_train_classes
+                            if any(train_class in ignored_train_types for train_class in train_classes):
+                                _LOGGER.debug("Ignoring departure due to train class: %s", train_classes)
+                                continue
+
                         # Use scheduledArrival if scheduledDeparture is None or empty
                         departure_time = departure.get("scheduledDeparture") or departure.get("scheduledArrival") or departure.get("scheduledTime") or departure.get("datetime")
 
@@ -252,13 +272,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                 delay_departure = 0  # Set delay to 0 as fallback if no valid delay has been found
                             departure_time += timedelta(minutes=delay_departure)
                             _LOGGER.debug("Departure time with added delay: %s", departure_time)
-
-                        # Check if the train class is in the ignored list
-                        train_classes = departure.get("trainClasses", []) or departure.get("train_type") or departure.get("type")
-                        if train_classes:
-                            if any(train_class in ignored_train_types for train_class in train_classes):
-                                _LOGGER.debug("Ignoring departure due to train class: %s", train_classes)
-                                continue
 
                         # Remove route attributes to lower sensor size limit: https://github.com/FaserF/ha-db_infoscreen/issues/22
                         if not self.detailed:
