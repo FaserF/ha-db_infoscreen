@@ -177,8 +177,36 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     _LOGGER.error("Invalid time format: %s", departure_time)
                                     continue
 
+                        delay_departure = departure.get("delayDeparture") or departure.get("delay")
+                        if delay_departure is None:
+                            delay_departure = 0
+
+                        if departure_time not in (None, "") and delay_departure is not None:
+                            try:
+                                departure_time_adjusted = departure_time + timedelta(minutes=delay_departure)
+                                _LOGGER.debug("departure_current with added delay: %s", departure_time_adjusted)
+
+                                if departure_time_adjusted.date() == datetime.now().date():
+                                    departure["departure_current"] = departure_time_adjusted.strftime("%H:%M:%S")
+                                else:
+                                    departure["departure_current"] = departure_time_adjusted.strftime("%Y-%m-%dT%H:%M:%S")
+
+                            except ValueError:
+                                _LOGGER.error("Invalid time format for scheduledDeparture: %s", departure_time)
+                        elif delay_departure is None:
+                            _LOGGER.debug("No delay attribute found. Setting departure_current to departure_time: %s", departure_time)
+                            if departure_time.date() == datetime.now().date():
+                                departure["departure_current"] = departure_time.strftime("%H:%M:%S")
+                            else:
+                                departure["departure_current"] = departure_time.strftime("%Y-%m-%dT%H:%M:%S")
+                        else:
+                            _LOGGER.debug("No valid departure_time found. Setting departure_current to None.")
+                            departure["departure_current"] = None
+
                         scheduled_arrival = departure.get("scheduledArrival")
                         delay_arrival = departure.get("delayArrival")
+                        if delay_arrival is None:
+                            delay_arrival = 0
 
                         if scheduled_arrival not in (None, "") and delay_arrival is not None:
                             try:
@@ -186,23 +214,33 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     arrival_time = datetime.strptime(scheduled_arrival, "%Y-%m-%dT%H:%M:%S")
                                 else:
                                     now = datetime.now()
-                                    arrival_time = datetime.strptime(scheduled_arrival, "%H:%M").replace(year=now.year, month=now.month, day=now.day)
-                                departure["arrival_current"] = (arrival_time + timedelta(minutes=delay_arrival)).strftime("%Y-%m-%dT%H:%M:%S")
+                                    arrival_time = datetime.strptime(scheduled_arrival, "%H:%M").replace(
+                                        year=now.year, month=now.month, day=now.day
+                                    )
+
+                                arrival_time_adjusted = arrival_time + timedelta(minutes=delay_arrival)
+                                _LOGGER.debug("arrival_current with added delay: %s", arrival_time_adjusted)
+
+                                if arrival_time_adjusted.date() == datetime.now().date():
+                                    departure["arrival_current"] = arrival_time_adjusted.strftime("%H:%M:%S")
+                                else:
+                                    departure["arrival_current"] = arrival_time_adjusted.strftime("%Y-%m-%dT%H:%M:%S")
+
                             except ValueError:
                                 _LOGGER.error("Invalid time format for scheduledArrival: %s", scheduled_arrival)
-
-                        delay_departure = departure.get("delayDeparture") or departure.get("delay")
-
-                        if departure_time not in (None, "") and delay_departure is not None:
-                            try:
-                                departure["departure_current"] = (departure_time + timedelta(minutes=delay_departure)).strftime("%Y-%m-%dT%H:%M:%S")
-                            except ValueError:
-                                _LOGGER.error("Invalid time format for scheduledDeparture: %s", departure_time)
-
-                        # Fallback für departure_time, falls es immer noch None ist
-                        if departure_time is None:
-                            _LOGGER.warning("departure_time is None, skipping entry: %s", departure)
-                            continue
+                        elif delay_arrival is None:
+                            _LOGGER.debug("No delay attribute found. Setting arrival_current to scheduledArrival: %s", scheduled_arrival)
+                            if scheduled_arrival.date() == datetime.now().date():
+                                departure["arrival_current"] = scheduled_arrival.strftime("%H:%M:%S")
+                            else:
+                                departure["arrival_current"] = scheduled_arrival.strftime("%Y-%m-%dT%H:%M:%S")
+                        else:
+                            if not delay_arrival is None:
+                                _LOGGER.debug("No valid scheduledArrival found. Setting arrival_current to departure_current.")
+                                departure["arrival_current"] = departure.get("departure_current")
+                            else:
+                                _LOGGER.debug("No valid scheduledArrival found. Setting arrival_current to None.")
+                                departure["arrival_current"] = None
 
                         if not self.drop_late_trains:
                             departure_time += timedelta(minutes=delay_departure or 0)
