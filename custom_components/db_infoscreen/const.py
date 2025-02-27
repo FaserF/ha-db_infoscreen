@@ -31,7 +31,10 @@ DATA_SOURCE_OPTIONS = [
 
 IGNORED_TRAINTYPES_OPTIONS = {
     "S": "Stadtbahn (S-Bahn)",
+    "U-Bahn": "Untergrundbahn (U-Bahn)",
+    "StadtBus": "Stadtbus",
     "N": "Regional Bahn (RB), Regional Express (RE)",
+    "D": "Andere Regionalbahn (z.B. BRB, Wiener Bahn)",
     "F": "EuroCity (EC), Intercity Express (ICE), Intercity (IC)",
-    "D": "Bayrische Regionalbahn, Wiener Lokalbahn",
+    "": "Internationale Bahn (RJ, ECE), unbekannte Linien"
 }
