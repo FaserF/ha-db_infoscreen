@@ -178,10 +178,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         # Convert the departure time to a datetime object
                         if isinstance(departure_time, int):  # Unix timestamp case
                             departure_time = datetime.fromtimestamp(departure_time)
-                            if departure_time.date() == datetime.now().date():
-                                departure["departure_time_readable"] = departure_time.strftime("%H:%M:%S")
-                            else:
-                                departure["departure_time_readable"] = departure_time.strftime("%Y-%m-%d %H:%M:%S")
                         else:  # ISO 8601 string case
                             try:
                                 departure_time = datetime.strptime(departure_time, "%Y-%m-%dT%H:%M:%S")
