@@ -196,6 +196,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         delay_departure = departure.get("delayDeparture") or departure.get("delay")
                         if delay_departure is None:
                             delay_departure = 0
+                        else:
+                            delay_departure = int(delay_departure)
 
                         if departure_time not in (None, "") and delay_departure is not None:
                             try:
