@@ -52,6 +52,7 @@ You can set up one sensor per station, except using different `via_stations` con
 | `detailed`             | boolean | No       | False   | Show additional details about departures. |
 | `past_60_minutes`      | boolean | No       | False   | Show departures from the past 60 minutes. |
 | `keep_route`           | boolean | No       | False   | Keep route (stopover) details (all train stations on train route). |
+| `keep_endstation`      | boolean | No       | False   | Keep departure if station is also endstation. |
 | `custom_api_url`       | string  | No       | -       | Use a custom API URL instead of the default one. |
 | `data_source`          | string  | No       | IRIS-TTS | Choose the data source for fetching departure information. More details can be found below at Data Sources. |
 | `offset`              | string  | No       | 00:00   | Time offset for departure search (HH:MM or HH:MM:SS). |
@@ -168,7 +169,7 @@ This configuration will display only the relevant departures from Munich to Augs
 #### Further Information
 
 All other features of the old `ha-deutschebahn` integration have been ported to `ha-db_infoscreen`. For further discussion, check out the [discussion on GitHub](https://github.com/FaserF/ha-db_infoscreen/issues/4).
-You can also check out some examples in Accessing the data. 
+You can also check out some examples in Accessing the data.
 
 
 ## Accessing the data

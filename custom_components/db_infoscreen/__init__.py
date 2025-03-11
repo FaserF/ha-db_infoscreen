@@ -12,13 +12,13 @@ from .const import (
     DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL,
     DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES,
     CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, MIN_UPDATE_INTERVAL,
-    CONF_VIA_STATIONS, CONF_IGNORED_TRAINTYPES, CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE
+    CONF_VIA_STATIONS, CONF_IGNORED_TRAINTYPES, CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE, CONF_KEEP_ENDSTATION
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 class DBInfoScreenCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str, data_source: str, offset: str, platforms: str, admode: str, via_stations: list, ignored_train_types: list, drop_late_trains: bool, keep_route: bool):
+    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str, data_source: str, offset: str, platforms: str, admode: str, via_stations: list, ignored_train_types: list, drop_late_trains: bool, keep_route: bool, keep_endstation: bool):
         self.station = station
         self.next_departures = next_departures
         self.hide_low_delay = hide_low_delay
@@ -30,6 +30,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.ignored_train_types = ignored_train_types
         self.drop_late_trains = drop_late_trains
         self.keep_route = keep_route
+        self.keep_endstation = keep_endstation
 
         station_cleaned = " ".join(station.split())
         encoded_station = quote_plus(station_cleaned, safe=",-").replace("+", "%20").replace(" ", "%20")
@@ -146,6 +147,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         if json_size > MAX_SIZE_BYTES:
                             _LOGGER.info("Filtered departures JSON size exceeds limit: %d bytes for entry: %s . Ignoring some future departures to keep the size lower.", json_size, self.station)
                             break
+
+                        if not self.keep_endstation:
+                            if departure.get("destination") == self.station:
+                                _LOGGER.debug("Skipping departure as %s is the final stop.", self.station)
+                                continue
 
                         # Check if the train class is in the ignored list
                         trainClasses = departure.get("trainClasses")
@@ -315,11 +321,13 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.Co
     ignored_train_types = config_entry.data.get(CONF_IGNORED_TRAINTYPES, [])
     drop_late_trains = config_entry.data.get(CONF_DROP_LATE_TRAINS, [])
     keep_route = config_entry.data.get(CONF_KEEP_ROUTE, False)
+    keep_endstation = config_entry.data.get(CONF_KEEP_ENDSTATION, False)
 
     coordinator = DBInfoScreenCoordinator(
         hass, station, next_departures, update_interval, hide_low_delay,
         detailed, past_60_minutes, custom_api_url, data_source, offset,
-        platforms, admode, via_stations, ignored_train_types, drop_late_trains, keep_route
+        platforms, admode, via_stations, ignored_train_types, drop_late_trains,
+        keep_route, keep_endstation
     )
     await coordinator.async_config_entry_first_refresh()
 
