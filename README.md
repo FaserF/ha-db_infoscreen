@@ -105,6 +105,7 @@ Supported are only available [Backend Sources from DBF](https://dbf.finalrewind.
     - SaarVV – Saarländischer Verkehrsverbund DE-SL (saarvv.de)
     - STV – Steirischer Verkehrsverbund AT-6 (verbundlinie.at)
     - TPG – Transports publics genevois Kanton Genf (tpg.ch)
+    - VAG - Freiburger Verkehrs AG
     - VBB – Verkehrsverbund Berlin-Brandenburg Berlin, Brandenburg (vbb.de)
     - VBN – Verkehrsverbund Bremen/Niedersachsen Niedersachsen, Bremen (vbn.de)
     - VGN – Verkehrsverbund Großraum Nürnberg Bayern
