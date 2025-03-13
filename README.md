@@ -122,6 +122,8 @@ Supported are only available [Backend Sources from DBF](https://dbf.finalrewind.
     - ZVV – Züricher Verkehrsverbund Kanton Zürich (zvv.ch)
   - Some stations can be searched via "IRIS-TTS" but need hafas=1 for data retrival, f.e. "Frankenforst Kippekausen, Bergisch Gladbach", choose `hafas=1` in the list to archive this. [GitHub issue about this](https://github.com/FaserF/ha-db_infoscreen/issues/8)
 
+#### Config changes after setup
+Due to a bug the option flow (option to change config flow settings after set up) has been removed for now. Once I got the issue fixed, it will be re-added. For now to change settings you need to remove the entry and then afterwards set it up again to change your settings.
 
 ### Migrating from [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn)
 
