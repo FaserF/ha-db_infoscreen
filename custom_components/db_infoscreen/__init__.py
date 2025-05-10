@@ -124,7 +124,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     data = await response.json()
                     if data.get("departures", []) is None:
                         _LOGGER.warning("Encountered empty departures list, skipping.")
-                        return []
+                        return self._last_valid_value or []
                     _LOGGER.debug("Data fetched successfully: %s", str(data)[:350] + ("..." if len(str(data)) > 350 else ""))
 
                     # Set last_update timestamp
@@ -301,7 +301,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             filtered_departures.append(departure)
 
                     _LOGGER.debug("Number of departures added to the filtered list: %d", len(filtered_departures))
-                    self._last_valid_value = filtered_departures
+                    self._last_valid_value = filtered_departures if filtered_departures else self._last_valid_value
                     return filtered_departures[:self.next_departures]
             except Exception as e:
                 _LOGGER.error("Error fetching data: %s", e)

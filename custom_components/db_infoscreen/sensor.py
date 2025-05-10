@@ -34,6 +34,9 @@ class DBInfoSensor(SensorEntity):
 
         self._attr_icon = "mdi:train"
 
+        # Initialize _last_valid_value in case there is no valid data initially
+        self._last_valid_value = None
+
         _LOGGER.debug(
             "DBInfoSensor initialized for station: %s, via_stations: %s, unique_id: %s, name: %s",
             station,
@@ -76,37 +79,61 @@ class DBInfoSensor(SensorEntity):
 
     @property
     def native_value(self):
+        # Check if there is data and if it is valid
         if self.coordinator.data:
             try:
+                # Try to get the scheduled departure time
                 departure_time = self.coordinator.data[0].get("scheduledDeparture") \
                     or self.coordinator.data[0].get("scheduledArrival") \
                     or self.coordinator.data[0].get("scheduledTime") \
                     or self.coordinator.data[0].get("datetime")
 
+                # Get the delay in departure, if available
                 delay_departure = self.coordinator.data[0].get("delayDeparture") \
                     or self.coordinator.data[0].get("delay", 0)
 
                 _LOGGER.debug("Raw departure time: %s", departure_time)
 
+                # Format the departure time if it's valid
                 departure_time = self.format_departure_time(departure_time)
                 if departure_time is None:
                     _LOGGER.debug("Formatted departure time is None, skipping update.")
+                    # If the time is not valid, return the last valid value or "Invalid Time"
                     return self._last_valid_value or "Invalid Time"
 
+                # If there is no delay, update the last valid value with the departure time
                 if delay_departure in (0, None, "None"):
                     self._last_valid_value = departure_time
                 else:
+                    # If there is a delay, append the delay to the departure time
                     departure_time = f"{departure_time} +{delay_departure}"
                     self._last_valid_value = departure_time
 
                 _LOGGER.debug("Sensor state updated: %s", self._last_valid_value)
                 return self._last_valid_value
             except Exception as e:
+                # Log the error if there is an issue with data parsing
                 _LOGGER.error("Exception during data parsing: %s", e)
+                # In case of error, return the last valid value or "Error"
                 return self._last_valid_value or "Error"
         else:
-            _LOGGER.warning("No data received for station: %s, via_stations: %s. Keeping previous value.", self.station, self.via_stations)
-            return self._last_valid_value or "No Data"
+            # If no new data is available, return the last valid value or a fallback value
+            if self._last_valid_value:
+                _LOGGER.warning(
+                    "No data received for station: %s, via_stations: %s. Keeping previous value: %s.",
+                    self.station,
+                    self.via_stations,
+                    self._last_valid_value
+                )
+                return self._last_valid_value
+            else:
+                # If no data and no previous valid value, return a fallback message
+                _LOGGER.warning(
+                    "No data received for station: %s, via_stations: %s. No previous value available.",
+                    self.station,
+                    self.via_stations
+                )
+                return "No Data"
 
     @property
     def extra_state_attributes(self):
