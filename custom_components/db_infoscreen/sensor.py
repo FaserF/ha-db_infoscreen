@@ -93,7 +93,7 @@ class DBInfoSensor(SensorEntity):
                     _LOGGER.debug("Formatted departure time is None, skipping update.")
                     return self._last_valid_value or "Invalid Time"
 
-                if delay_departure == 0:
+                if delay_departure in (0, None, "None"):
                     self._last_valid_value = departure_time
                 else:
                     departure_time = f"{departure_time} +{delay_departure}"
