@@ -77,30 +77,36 @@ class DBInfoSensor(SensorEntity):
     @property
     def native_value(self):
         if self.coordinator.data:
-            departure_time = self.coordinator.data[0].get("scheduledDeparture") or self.coordinator.data[0].get("scheduledArrival") or self.coordinator.data[0].get("scheduledTime") or self.coordinator.data[0].get("datetime")
-            delay_departure = self.coordinator.data[0].get("delayDeparture") or self.coordinator.data[0].get("delay", 0)
+            try:
+                departure_time = self.coordinator.data[0].get("scheduledDeparture") \
+                    or self.coordinator.data[0].get("scheduledArrival") \
+                    or self.coordinator.data[0].get("scheduledTime") \
+                    or self.coordinator.data[0].get("datetime")
 
-            _LOGGER.debug("Raw departure time: %s", departure_time)
+                delay_departure = self.coordinator.data[0].get("delayDeparture") \
+                    or self.coordinator.data[0].get("delay", 0)
 
-            departure_time = self.format_departure_time(departure_time)
-            if departure_time is None:
-                _LOGGER.debug("Formatted departure time is None, skipping update.")
-                return "Invalid Time"
+                _LOGGER.debug("Raw departure time: %s", departure_time)
 
-            _LOGGER.debug("Formatted departure time: %s", departure_time)
+                departure_time = self.format_departure_time(departure_time)
+                if departure_time is None:
+                    _LOGGER.debug("Formatted departure time is None, skipping update.")
+                    return self._last_valid_value or "Invalid Time"
 
-            if delay_departure == 0:
-                _LOGGER.debug("Sensor state updated: %s", departure_time)
-                return departure_time
-            else:
-                departure_time_with_delay = departure_time
-                if delay_departure:
-                    departure_time_with_delay = f"{departure_time} +{delay_departure}"
-                _LOGGER.debug("Sensor state updated with delay: %s", departure_time_with_delay)
-                return departure_time_with_delay
+                if delay_departure == 0:
+                    self._last_valid_value = departure_time
+                else:
+                    departure_time = f"{departure_time} +{delay_departure}"
+                    self._last_valid_value = departure_time
+
+                _LOGGER.debug("Sensor state updated: %s", self._last_valid_value)
+                return self._last_valid_value
+            except Exception as e:
+                _LOGGER.error("Exception during data parsing: %s", e)
+                return self._last_valid_value or "Error"
         else:
-            _LOGGER.warning("No data received for station: %s, via_stations: %s", self.station, self.via_stations)
-            return "No Data"
+            _LOGGER.warning("No data received for station: %s, via_stations: %s. Keeping previous value.", self.station, self.via_stations)
+            return self._last_valid_value or "No Data"
 
     @property
     def extra_state_attributes(self):

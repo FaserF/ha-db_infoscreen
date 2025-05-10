@@ -89,6 +89,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             name=f"DB Info {station}",
             update_interval=timedelta(minutes=update_interval),
         )
+        self._last_valid_value = None
         _LOGGER.debug(
             "Coordinator initialized for station %s with update interval %d minutes",
             station, update_interval
@@ -300,10 +301,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             filtered_departures.append(departure)
 
                     _LOGGER.debug("Number of departures added to the filtered list: %d", len(filtered_departures))
+                    self._last_valid_value = filtered_departures
                     return filtered_departures[:self.next_departures]
             except Exception as e:
                 _LOGGER.error("Error fetching data: %s", e)
-                return []
+                _LOGGER.info("Trying to use last valid data: %s", e)
+                return self._last_valid_value or []
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
     hass.data.setdefault(DOMAIN, {})
