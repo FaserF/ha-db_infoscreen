@@ -286,6 +286,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             departure.pop("stateless", None)
                             departure.pop("key", None)
                             departure.pop("messages", None)
+                            # Remove attributes with null
+                            allowed_null_keys = {"scheduledDeparture", "scheduledTime", "delay", "delayDeparture", "scheduledArrival", "arrival_current", "departure_current", "departure_current", "arrival_current", "sched_dep", "sched_arr", "dep", "datetime"}
+                            keys_to_remove = [key for key, value in departure.items() if value is None and key not in allowed_null_keys]
+                            for key in keys_to_remove:
+                                departure.pop(key)
                         if not self.keep_route:
                             _LOGGER.debug("Removing route attributes because keep_route is False")
                             departure.pop("route", None)
