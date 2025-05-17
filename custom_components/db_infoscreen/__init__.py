@@ -301,8 +301,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             filtered_departures.append(departure)
 
                     _LOGGER.debug("Number of departures added to the filtered list: %d", len(filtered_departures))
-                    self._last_valid_value = filtered_departures if filtered_departures else self._last_valid_value
-                    return filtered_departures[:self.next_departures]
+                    if filtered_departures:
+                        self._last_valid_value = filtered_departures[:self.next_departures]
+                        _LOGGER.debug("Fetched and cached %d valid departures", len(filtered_departures))
+                        return filtered_departures[:self.next_departures]
+                    else:
+                        _LOGGER.warning("Departures fetched but all were filtered out. Using cached data.")
+                        return self._last_valid_value or []
             except Exception as e:
                 _LOGGER.error("Error fetching data: %s", e)
                 _LOGGER.info("Trying to use last valid data: %s", e)
