@@ -176,7 +176,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                 continue
 
                         # Use scheduledArrival if scheduledDeparture is None or empty
-                        departure_time = departure.get("scheduledDeparture") or departure.get("scheduledArrival") or departure.get("scheduledTime") or departure.get("datetime")
+                        departure_time = departure.get("scheduledDeparture") or departure.get("sched_dep") or departure.get("scheduledArrival") or departure.get("sched_arr") or departure.get("scheduledTime") or departure.get("dep") or departure.get("datetime")
 
                         # If no valid departure time is found, log a warning and continue to the next departure
                         if not departure_time:
@@ -201,7 +201,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     _LOGGER.error("Invalid time format: %s", departure_time)
                                     continue
 
-                        delay_departure = departure.get("delayDeparture") or departure.get("delay")
+                        delay_departure = departure.get("delayDeparture") or departure.get("dep_delay") or departure.get("delay")
                         if delay_departure is None:
                             delay_departure = 0
                         else:

@@ -84,12 +84,16 @@ class DBInfoSensor(SensorEntity):
             try:
                 # Try to get the scheduled departure time
                 departure_time = self.coordinator.data[0].get("scheduledDeparture") \
+                    or self.coordinator.data[0].get("sched_dep") \
                     or self.coordinator.data[0].get("scheduledArrival") \
+                    or self.coordinator.data[0].get("sched_arr") \
                     or self.coordinator.data[0].get("scheduledTime") \
+                    or self.coordinator.data[0].get("dep") \
                     or self.coordinator.data[0].get("datetime")
 
                 # Get the delay in departure, if available
                 delay_departure = self.coordinator.data[0].get("delayDeparture") \
+                    or self.coordinator.data[0].get("dep_delay") \
                     or self.coordinator.data[0].get("delay", 0)
 
                 _LOGGER.debug("Raw departure time: %s", departure_time)
