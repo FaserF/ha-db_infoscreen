@@ -1,11 +1,11 @@
-[![hacs_badge](https://img.shields.io/badge/HACS-CUSTOM-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
 # db-infoscreen Homeassistant Sensor
 The `db-infoscreen` sensor will give you the departure time of the next trains for the given station, containing many more attribute informations. It aims to aggregate departure and train data from different sources and combine them in a useful (and user-friendly) manner. It is intended both for a quick glance at the departure board and for public transportation geeks looking for details about specific trains.
 The backend has many datasources available with it's main source being IRIS-TTS - Deutsche Bahn.
 
 <del>This integration works great side-by-side with [ha-bahnvorhersage](https://github.com/FaserF/ha-bahnvorhersage).</del>
-This is a superior to [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn).
+This integration is superior to [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn).
 
 <img src="images/logo.png" alt="Logo" width="300px">
 
@@ -14,11 +14,11 @@ This is a superior to [ha-deutschebahn](https://github.com/FaserF/ha-deutschebah
 ## Installation
 ### 1. Using HACS (recommended way)
 
-This integration is NO official HACS Integration right now.
+This integration is a official HACS Integration.
 
 Open HACS then install the "db-infoscreen" integration or use the link below.
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=FaserF&repository=ha-db_infoscreen&category=integration)
+[![Open your Home Assistant instance to install this integration from the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=FaserF&repository=ha-db_infoscreen&category=integration)
 
 If you use this method, your component will always update to the latest version.
 
@@ -114,7 +114,7 @@ Supported are only available [Backend Sources from DBF](https://dbf.finalrewind.
     - VOS – Verkehrsgemeinschaft Osnabrück Niedersachsen (vos.info)
     - VVO – Verkehrsverbund Oberelbe
     - VVS – Verkehrs- und Tarifverbund Stuttgart Baden-Württemberg
-    - VRN – Verkehrsverbund Rhein-Neckar (Nordrhein-Westfalen) (EFA)
+    - VRN – Verkehrsverbund Rhein-Neckar (Nordrhein-Westfalen) (EFA) (Seems to be used for VRT too!)
     - VRN2 – Verkehrsverbund Rhein-Neckar (Rheinland-Pfalz, Hessen, Baden-Württemberg) (HAFAS)
     - VRR – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen
     - VRR2 – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen
@@ -127,7 +127,7 @@ Due to a bug the option flow (option to change config flow settings after set up
 
 ### Migrating from [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn)
 
-Migration from `ha-deutschebahn` to `ha-db_infoscreen` is not directly possible because the two integrations use different API sources and data structures. The old `ha-deutschebahn` API supported start and destination stations directly, which the new `ha-db_infoscreen` API cannot fully replicate. However, you can still achieve a similar experience with a few workarounds:
+Migration from `ha-deutschebahn` to `ha-db_infoscreen` is not directly possible because the two integrations use different API sources and data structures. The old `ha-deutschebahn` API supported start and destination stations directly, which the new `db_infoscreen` API cannot fully replicate. However, you can still achieve a similar experience with a few workarounds:
 
 #### Options to Achieve a "Start to Destination" Experience:
 
@@ -313,6 +313,10 @@ Check out the card [here](https://github.com/BagelBeef/ha-departureCard/).
 
 #### ha-public-transport-connection-card
 This is currently Work-in-Progress by the maintainer, more informations are [here](https://github.com/silviokennecke/ha-public-transport-connection-card/issues/22).
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request if you'd like to help improve this integration.
 
 ## Bug reporting
 Open an issue over at [github issues](https://github.com/FaserF/ha-db_infoscreen/issues). Please prefer sending over a log with debugging enabled.
