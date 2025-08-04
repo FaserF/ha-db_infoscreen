@@ -8,8 +8,9 @@ _LOGGER = logging.getLogger(__name__)
 MAX_LENGTH = 70
 
 class DBInfoSensor(SensorEntity):
-    def __init__(self, coordinator, station, via_stations, platforms):
+    def __init__(self, coordinator, config_entry, station, via_stations, platforms):
         self.coordinator = coordinator
+        self.config_entry = config_entry
         self.station = station
         self.via_stations = via_stations
         self.platforms = platforms
@@ -21,17 +22,8 @@ class DBInfoSensor(SensorEntity):
         if len(self._attr_name) > MAX_LENGTH:
             self._attr_name = self._attr_name[:MAX_LENGTH]
 
-        via_suffix_id = (
-            f"_via_{'_'.join([station[:4] for station in via_stations])}" if via_stations else ""
-        )
-        platforms_suffix_id = (
-            f"_platform_{'_'.join([platforms for platform in platforms])}" if platforms else ""
-        )
-        self._attr_unique_id = f"departures_{station}{platforms_suffix_id}{via_suffix_id}".lower().replace(" ", "_")
-
-        if len(self._attr_unique_id) > MAX_LENGTH:
-            self._attr_unique_id = self._attr_unique_id[:MAX_LENGTH]
-
+        # Use config entry ID as guaranteed-unique sensor ID
+        self._attr_unique_id = f"db_infoscreen_{config_entry.entry_id}"
         self._attr_icon = "mdi:train"
 
         # Initialize _last_valid_value in case there is no valid data initially
@@ -186,4 +178,4 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     platforms = config_entry.data.get("platforms", [])
 
     _LOGGER.debug("Setting up DBInfoSensor for station: %s with via_stations: %s", station, via_stations)
-    async_add_entities([DBInfoSensor(coordinator, station, via_stations, platforms)])
+    async_add_entities([DBInfoSensor(coordinator, config_entry, station, via_stations, platforms)])

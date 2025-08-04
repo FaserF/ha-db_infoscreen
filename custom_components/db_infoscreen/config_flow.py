@@ -1,4 +1,5 @@
 import logging
+import re
 import voluptuous as vol
 from homeassistant import config_entries
 import homeassistant.helpers.config_validation as cv
@@ -14,54 +15,84 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow"""
+    """Handle a config flow for the integration."""
 
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
     async def async_step_user(self, user_input=None):
-        """Handle the initial step."""
+        """Handle the user input step."""
         errors = {}
 
         if user_input is not None:
-            # Check if CONF_CUSTOM_API_URL is empty before checking MAX_SENSORS
-            custom_api_url = user_input.get(CONF_CUSTOM_API_URL, "")
-            if not custom_api_url:
-                existing_entries = self.hass.config_entries.async_entries(DOMAIN)
-                if len(existing_entries) >= MAX_SENSORS:
+            # Check MAX_SENSORS only if no custom API URL is provided
+            if not user_input.get(CONF_CUSTOM_API_URL):
+                if len(self.hass.config_entries.async_entries(DOMAIN)) >= MAX_SENSORS:
                     errors["base"] = "max_sensors_reached"
                     return self.async_show_form(
                         step_id="user",
                         data_schema=self.data_schema(),
-                        errors=errors
+                        errors=errors,
                     )
 
-            try:
-                # Process `via_stations` input into a list
-                via_stations_input = user_input.get(CONF_VIA_STATIONS, "")
-                user_input[CONF_VIA_STATIONS] = [
-                    station.strip() for station in via_stations_input.split(",") if station.strip()
-                ]
-            except Exception as e:
-                _LOGGER.error("Error processing input: %s", e)
-                errors["base"] = "unknown"
+            # Process comma-separated via stations into list
+            via_raw = user_input.get(CONF_VIA_STATIONS, "")
+            user_input[CONF_VIA_STATIONS] = [
+                s.strip() for s in via_raw.split(",") if s.strip()
+            ]
 
-            # Build the unique ID from both station and via_stations
-            station = user_input[CONF_STATION]
-            via_stations = user_input[CONF_VIA_STATIONS]
-            platforms = user_input[CONF_PLATFORMS]
-            unique_id = f"{station}_{'_'.join(via_stations)}" if via_stations else station
-            unique_id = f"{unique_id}_{'_'.join(platforms)}" if platforms else unique_id
-            await self.async_set_unique_id(unique_id)
-            self._abort_if_unique_id_configured()
-            _LOGGER.debug("Initialized new sensor with station: %s", unique_id)
+            # Build base unique ID from station, via stations, and platforms
+            station     = user_input[CONF_STATION]
+            via         = user_input[CONF_VIA_STATIONS]
+            platforms   = user_input[CONF_PLATFORMS]
+            data_source = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
 
-            full_title = f"{user_input[CONF_STATION]} platform {' '.join(user_input[CONF_PLATFORMS])}" if user_input[CONF_PLATFORMS] else user_input[CONF_STATION]
-            full_title = f"{full_title} via {' '.join(user_input[CONF_VIA_STATIONS])}" if user_input[CONF_VIA_STATIONS] else full_title
+            parts = [station]
+            if via:
+                parts.extend(via)
+            if platforms:
+                parts.extend(platforms)
+            base_unique_id = "_".join(parts)
+
+            # Check if same station and same data source already exist
+            existing_entries = self.hass.config_entries.async_entries(DOMAIN)
+            same_station_entries = [
+                e for e in existing_entries
+                if re.match(fr"^{re.escape(base_unique_id)}(_\d+)?$", e.unique_id or "")
+            ]
+
+            for entry in same_station_entries:
+                if entry.data.get(CONF_DATA_SOURCE) == data_source:
+                    await self.async_set_unique_id(entry.unique_id)
+                    _LOGGER.info("Aborting: configuration for this station and data source already exists.")
+                    return self.async_abort(reason="already_configured")
+
+            # Find a free unique ID by appending a numeric suffix if needed
+            suffix = 1
+            unique_id_candidate = base_unique_id
+            used_ids = {e.unique_id for e in same_station_entries}
+
+            while unique_id_candidate in used_ids:
+                suffix += 1
+                unique_id_candidate = f"{base_unique_id}_{suffix}"
+
+            await self.async_set_unique_id(unique_id_candidate)
+            _LOGGER.debug("Creating new sensor with unique_id: %s", unique_id_candidate)
+
+            # Build display title (append data source only if there are multiple for this station)
+            title_parts = [station]
+            if platforms:
+                title_parts.append(f"platform {' '.join(platforms)}")
+            if via:
+                title_parts.append(f"via {' '.join(via)}")
+            if same_station_entries:
+                title_parts.append(f"({data_source})")
+
+            full_title = " ".join(title_parts)
 
             return self.async_create_entry(
                 title=full_title,
-                data=user_input
+                data=user_input,
             )
 
         return self.async_show_form(
@@ -71,6 +102,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     def data_schema(self):
+        """Define the input schema for the user form."""
         return vol.Schema(
             {
                 vol.Required(CONF_STATION): cv.string,
