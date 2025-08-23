@@ -188,23 +188,27 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             departure_time = datetime.fromtimestamp(departure_time)
                         else:  # ISO 8601 string case
                             try:
+                                # Try ISO with seconds first
                                 departure_time = datetime.strptime(departure_time, "%Y-%m-%dT%H:%M:%S")
                             except ValueError:
                                 try:
-                                    # Fallback to assuming time format HH:MM if the previous format doesn't work
-                                    now = datetime.now()
-                                    departure_time_candidate = datetime.strptime(departure_time, "%H:%M").replace(
-                                        year=now.year,
-                                        month=now.month,
-                                        day=now.day,
-                                    )
-                                    # If the time is before now (already passed today), treat as next day
-                                    if departure_time_candidate < now:
-                                        departure_time_candidate = departure_time_candidate + timedelta(days=1)
-                                    departure_time = departure_time_candidate
+                                    # Try ISO without seconds
+                                    departure_time = datetime.strptime(departure_time, "%Y-%m-%dT%H:%M")
                                 except ValueError:
-                                    _LOGGER.error("Invalid time format: %s", departure_time)
-                                    continue
+                                    try:
+                                        # Fallback to HH:MM and roll over to next day if needed
+                                        now = datetime.now()
+                                        departure_time_candidate = datetime.strptime(departure_time, "%H:%M").replace(
+                                            year=now.year,
+                                            month=now.month,
+                                            day=now.day,
+                                        )
+                                        if departure_time_candidate < now:
+                                            departure_time_candidate = departure_time_candidate + timedelta(days=1)
+                                        departure_time = departure_time_candidate
+                                    except ValueError:
+                                        _LOGGER.error("Invalid time format: %s", departure_time)
+                                        continue
 
                         delay_departure = departure.get("delayDeparture") or departure.get("dep_delay") or departure.get("delay")
                         if delay_departure is None:
@@ -291,6 +295,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             departure.pop("stateless", None)
                             departure.pop("key", None)
                             departure.pop("messages", None)
+                            departure.pop("mot", None)
 
                             # Remove attributes with None or empty string – except for allowed keys
                             allowed_null_keys = {
