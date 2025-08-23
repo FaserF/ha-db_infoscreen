@@ -136,6 +136,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     if ignored_train_types:
                         if "S" in ignored_train_types and "S-Bahn" not in ignored_train_types:
                             ignored_train_types.append("S-Bahn")
+                            if "StadtBus" in ignored_train_types and "MetroBus" not in ignored_train_types:
+                            ignored_train_types.append("MetroBus")
                         _LOGGER.debug("Ignoring products: %s", ignored_train_types)
 
                     MAX_SIZE_BYTES = 16000
