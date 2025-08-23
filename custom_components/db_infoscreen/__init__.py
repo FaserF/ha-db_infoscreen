@@ -192,11 +192,16 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             except ValueError:
                                 try:
                                     # Fallback to assuming time format HH:MM if the previous format doesn't work
-                                    departure_time = datetime.strptime(departure_time, "%H:%M").replace(
-                                        year=datetime.now().year,
-                                        month=datetime.now().month,
-                                        day=datetime.now().day,
+                                    now = datetime.now()
+                                    departure_time_candidate = datetime.strptime(departure_time, "%H:%M").replace(
+                                        year=now.year,
+                                        month=now.month,
+                                        day=now.day,
                                     )
+                                    # If the time is before now (already passed today), treat as next day
+                                    if departure_time_candidate < now:
+                                        departure_time_candidate = departure_time_candidate + timedelta(days=1)
+                                    departure_time = departure_time_candidate
                                 except ValueError:
                                     _LOGGER.error("Invalid time format: %s", departure_time)
                                     continue
