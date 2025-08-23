@@ -51,7 +51,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             "STV": "hafas=STV", "SaarVV": "hafas=SaarVV", "TPG": "hafas=TPG", "VBB": "hafas=VBB",
             "VBN": "hafas=VBN", "VMT": "hafas=VMT", "VOS": "hafas=VOS", "ZVV": "hafas=ZVV",
             "mobiliteit": "hafas=mobiliteit", "hafas=1": "hafas=1", "PKP": "hafas=PKP", "VMV": "efa=VMV",
-            "NASA": "hafas=NASA"
+            "NASA": "hafas=NASA", "BEG": "efa=BEG"
         }
 
         # Collect parameters
