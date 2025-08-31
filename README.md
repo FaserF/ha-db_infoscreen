@@ -79,6 +79,7 @@ Supported are only available [Backend Sources from DBF](https://dbf.finalrewind.
     - IRIS-TTS – Deutsche Bahn (default and used by most)
     - AVV – Aachener Verkehrsverbund Nordrhein-Westfalen (avv.de)
     - BART – Bay Area Rapid Transit California (bart.gov)
+    - BEG - Bayrische Eisenbahngesellschaft (beg.bahnland-bayern.de)
     - BLS – BLS AG Kanton Bern, Kanton Luzern (bls.ch)
     - BVG – Berliner Verkehrsbetriebe Berlin, Brandenburg (bvg.de)
     - BSVG – Braunschweiger Verkehrs-GmbH
