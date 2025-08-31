@@ -134,6 +134,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
+            # Process comma-separated via stations into list
+            via_raw = user_input.get(CONF_VIA_STATIONS, "")
+            user_input[CONF_VIA_STATIONS] = [
+                s.strip() for s in via_raw.split(",") if s.strip()
+            ]
             return self.async_create_entry(title="", data=user_input)
 
         return self.async_show_form(
