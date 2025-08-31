@@ -17,22 +17,61 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-class DBInfoScreenCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, station: str, next_departures: int, update_interval: int, hide_low_delay: bool, detailed: bool, past_60_minutes: bool, custom_api_url: str, data_source: str, offset: str, platforms: str, admode: str, via_stations: list, ignored_train_types: list, drop_late_trains: bool, keep_route: bool, keep_endstation: bool):
-        self.station = station
-        self.next_departures = next_departures
-        self.hide_low_delay = hide_low_delay
-        self.detailed = detailed
-        self.past_60_minutes = past_60_minutes
-        self.data_source = data_source
-        self.offset = self.convert_offset_to_seconds(offset)
-        self.via_stations = via_stations
-        self.ignored_train_types = ignored_train_types
-        self.drop_late_trains = drop_late_trains
-        self.keep_route = keep_route
-        self.keep_endstation = keep_endstation
+async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
+    hass.data.setdefault(DOMAIN, {})
 
-        station_cleaned = " ".join(station.split())
+    # Set up the coordinator
+    coordinator = DBInfoScreenCoordinator(hass, config_entry)
+    await coordinator.async_config_entry_first_refresh()
+
+    hass.data[DOMAIN][config_entry.entry_id] = coordinator
+
+    # Set up the sensor platform
+    await hass.config_entries.async_forward_entry_setups(config_entry, ["sensor"])
+
+    # Add an update listener for options
+    config_entry.add_update_listener(update_listener)
+
+    return True
+
+
+async def async_unload_entry(hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
+    unload_ok = await hass.config_entries.async_forward_entry_unload(config_entry, "sensor")
+    if unload_ok:
+        hass.data[DOMAIN].pop(config_entry.entry_id)
+    return unload_ok
+
+
+async def update_listener(hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
+    """Handle options update."""
+    await hass.config_entries.async_reload(config_entry.entry_id)
+
+
+class DBInfoScreenCoordinator(DataUpdateCoordinator):
+    def __init__(self, hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
+        self.config_entry = config_entry
+
+        # Get config from data and options
+        config = {**config_entry.data, **config_entry.options}
+
+        self.station = config[CONF_STATION]
+        self.next_departures = config.get(CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES)
+        self.hide_low_delay = config.get(CONF_HIDE_LOW_DELAY, False)
+        self.detailed = config.get(CONF_DETAILED, False)
+        self.past_60_minutes = config.get(CONF_PAST_60_MINUTES, False)
+        self.data_source = config.get(CONF_DATA_SOURCE, "IRIS-TTS")
+        self.offset = self.convert_offset_to_seconds(config.get(CONF_OFFSET, DEFAULT_OFFSET))
+        self.via_stations = config.get(CONF_VIA_STATIONS, [])
+        self.ignored_train_types = config.get(CONF_IGNORED_TRAINTYPES, [])
+        self.drop_late_trains = config.get(CONF_DROP_LATE_TRAINS, False)
+        self.keep_route = config.get(CONF_KEEP_ROUTE, False)
+        self.keep_endstation = config.get(CONF_KEEP_ENDSTATION, False)
+        custom_api_url = config.get(CONF_CUSTOM_API_URL, "")
+        platforms = config.get(CONF_PLATFORMS, "")
+        admode = config.get(CONF_ADMODE, "")
+        update_interval = max(config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL), MIN_UPDATE_INTERVAL)
+
+        station_cleaned = " ".join(self.station.split())
         encoded_station = quote_plus(station_cleaned, safe=",-").replace("+", "%20").replace(" ", "%20")
 
         base_url = custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
@@ -62,37 +101,35 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             params["admode"] = "arr"
         elif admode == "departure":
             params["admode"] = "dep"
-        if data_source in data_source_map:
-            key, value = data_source_map[data_source].split("=")
+        if self.data_source in data_source_map:
+            key, value = data_source_map[self.data_source].split("=")
             params[key] = value
-        if hide_low_delay:
+        if self.hide_low_delay:
             params["hidelowdelay"] = "1"
-        if detailed:
+        if self.detailed:
             params["detailed"] = "1"
-        if past_60_minutes:
+        if self.past_60_minutes:
             params["past"] = "1"
 
         # Assemble URL
         query_string = urlencode(params)
         url = f"{url}?{query_string}" if query_string else url
-        if via_stations:
-            encoded_via_stations = [quote_plus(station.strip(), safe=",-") for station in via_stations]
+        if self.via_stations:
+            encoded_via_stations = [quote_plus(station.strip(), safe=",-") for station in self.via_stations]
             via_param = ",".join(encoded_via_stations)
             url += f"?via={via_param}" if "?" not in url else f"&via={via_param}"
         self.api_url = url
 
-        # Ensure update_interval is passed correctly
-        update_interval = max(update_interval, MIN_UPDATE_INTERVAL)
         super().__init__(
             hass,
             _LOGGER,
-            name=f"DB Info {station}",
+            name=f"DB Info {self.station}",
             update_interval=timedelta(minutes=update_interval),
         )
         self._last_valid_value = None
         _LOGGER.debug(
             "Coordinator initialized for station %s with update interval %d minutes",
-            station, update_interval
+            self.station, update_interval
         )
 
     def convert_offset_to_seconds(self, offset: str) -> int:
@@ -340,41 +377,3 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 _LOGGER.error("Error fetching data: %s", e)
                 _LOGGER.info("Trying to use last valid data: %s", e)
                 return self._last_valid_value or []
-
-async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
-    hass.data.setdefault(DOMAIN, {})
-    station = config_entry.data[CONF_STATION]
-    next_departures = config_entry.data.get(CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES)
-    update_interval = max(config_entry.data.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL), MIN_UPDATE_INTERVAL)
-    hide_low_delay = config_entry.data.get(CONF_HIDE_LOW_DELAY, False)
-    detailed = config_entry.data.get(CONF_DETAILED, False)
-    past_60_minutes = config_entry.data.get(CONF_PAST_60_MINUTES, False)
-    custom_api_url = config_entry.data.get(CONF_CUSTOM_API_URL, "")
-    data_source = config_entry.data.get(CONF_DATA_SOURCE, "IRIS-TTS")
-    offset = config_entry.data.get(CONF_OFFSET, DEFAULT_OFFSET)
-    platforms = config_entry.data.get(CONF_PLATFORMS, "")
-    admode = config_entry.data.get(CONF_ADMODE, "")
-    via_stations = config_entry.data.get(CONF_VIA_STATIONS, [])
-    ignored_train_types = config_entry.data.get(CONF_IGNORED_TRAINTYPES, [])
-    drop_late_trains = config_entry.data.get(CONF_DROP_LATE_TRAINS, [])
-    keep_route = config_entry.data.get(CONF_KEEP_ROUTE, False)
-    keep_endstation = config_entry.data.get(CONF_KEEP_ENDSTATION, False)
-
-    coordinator = DBInfoScreenCoordinator(
-        hass, station, next_departures, update_interval, hide_low_delay,
-        detailed, past_60_minutes, custom_api_url, data_source, offset,
-        platforms, admode, via_stations, ignored_train_types, drop_late_trains,
-        keep_route, keep_endstation
-    )
-    await coordinator.async_config_entry_first_refresh()
-
-    hass.data[DOMAIN][config_entry.entry_id] = coordinator
-
-    await hass.config_entries.async_forward_entry_setups(config_entry, ["sensor"])
-    return True
-
-async def async_unload_entry(hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
-    unload_ok = await hass.config_entries.async_forward_entry_unload(config_entry, "sensor")
-    if unload_ok:
-        hass.data[DOMAIN].pop(config_entry.entry_id)
-    return unload_ok

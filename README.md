@@ -74,7 +74,7 @@ You can set up one sensor per station, except using different `via_stations` con
 Supported are only available [Backend Sources from DBF](https://dbf.finalrewind.org/_backend). There is no way for me to support other sources than that. The mentioned sources there are all using HAFAS or EFA. If you are missing a source that uses HAFAS or EFA, you can create a feature request at [a db-infoscreen - (formerly db-fakedisplay)](https://github.com/derf/db-fakedisplay/tree/main).
 
 
-- **data_source** (optional): Choose the data source for fetching departure information. The available options are:
+- **data_source** (optional): Choose the data source for fetching departure information.
   - The integration supports fetching departure data from various data sources, including:
     - IRIS-TTS – Deutsche Bahn (default and used by most)
     - AVV – Aachener Verkehrsverbund Nordrhein-Westfalen (avv.de)
@@ -122,9 +122,6 @@ Supported are only available [Backend Sources from DBF](https://dbf.finalrewind.
     - VRR3 – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen
     - ZVV – Züricher Verkehrsverbund Kanton Zürich (zvv.ch)
   - Some stations can be searched via "IRIS-TTS" but need hafas=1 for data retrival, f.e. "Frankenforst Kippekausen, Bergisch Gladbach", choose `hafas=1` in the list to archive this. [GitHub issue about this](https://github.com/FaserF/ha-db_infoscreen/issues/8)
-
-#### Config changes after setup
-Due to a bug the option flow (option to change config flow settings after set up) has been removed for now. Once I got the issue fixed, it will be re-added. For now to change settings you need to remove the entry and then afterwards set it up again to change your settings.
 
 ### Migrating from [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn)
 

@@ -101,6 +101,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
+    @staticmethod
+    def async_get_options_flow(config_entry):
+        return OptionsFlowHandler(config_entry)
+
     def data_schema(self):
         """Define the input schema for the user form."""
         return vol.Schema(
@@ -122,4 +126,100 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
                 vol.Optional(CONF_IGNORED_TRAINTYPES, default=[]): cv.multi_select(IGNORED_TRAINTYPES_OPTIONS),
             }
+        )
+
+class OptionsFlowHandler(config_entries.OptionsFlow):
+    def __init__(self, config_entry):
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_NEXT_DEPARTURES,
+                        default=self.config_entry.options.get(
+                            CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES
+                        ),
+                    ): cv.positive_int,
+                    vol.Optional(
+                        CONF_UPDATE_INTERVAL,
+                        default=self.config_entry.options.get(
+                            CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
+                        ),
+                    ): cv.positive_int,
+                    vol.Optional(
+                        CONF_HIDE_LOW_DELAY,
+                        default=self.config_entry.options.get(
+                            CONF_HIDE_LOW_DELAY, False
+                        ),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_DROP_LATE_TRAINS,
+                        default=self.config_entry.options.get(
+                            CONF_DROP_LATE_TRAINS, False
+                        ),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_DETAILED,
+                        default=self.config_entry.options.get(CONF_DETAILED, False),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_PAST_60_MINUTES,
+                        default=self.config_entry.options.get(
+                            CONF_PAST_60_MINUTES, False
+                        ),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_KEEP_ROUTE,
+                        default=self.config_entry.options.get(CONF_KEEP_ROUTE, False),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_KEEP_ENDSTATION,
+                        default=self.config_entry.options.get(
+                            CONF_KEEP_ENDSTATION, False
+                        ),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_CUSTOM_API_URL,
+                        default=self.config_entry.options.get(CONF_CUSTOM_API_URL, ""),
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_DATA_SOURCE,
+                        default=self.config_entry.options.get(
+                            CONF_DATA_SOURCE, "IRIS-TTS"
+                        ),
+                    ): vol.In(DATA_SOURCE_OPTIONS),
+                    vol.Optional(
+                        CONF_OFFSET,
+                        default=self.config_entry.options.get(CONF_OFFSET, DEFAULT_OFFSET),
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_PLATFORMS,
+                        default=self.config_entry.options.get(CONF_PLATFORMS, ""),
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_ADMODE,
+                        default=self.config_entry.options.get(
+                            CONF_ADMODE, "preferred departure"
+                        ),
+                    ): vol.In(["preferred departure", "arrival", "departure"]),
+                    vol.Optional(
+                        CONF_VIA_STATIONS,
+                        default=", ".join(
+                            self.config_entry.options.get(CONF_VIA_STATIONS, [])
+                        ),
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_IGNORED_TRAINTYPES,
+                        default=self.config_entry.options.get(
+                            CONF_IGNORED_TRAINTYPES, []
+                        ),
+                    ): cv.multi_select(IGNORED_TRAINTYPES_OPTIONS),
+                }
+            ),
         )
