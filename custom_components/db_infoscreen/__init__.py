@@ -173,8 +173,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     if ignored_train_types:
                         if "S" in ignored_train_types and "S-Bahn" not in ignored_train_types:
                             ignored_train_types.append("S-Bahn")
-                            if "StadtBus" in ignored_train_types and "MetroBus" not in ignored_train_types:
-                                ignored_train_types.append("MetroBus")
+                        if "StadtBus" in ignored_train_types and "MetroBus" not in ignored_train_types:
+                            ignored_train_types.append("MetroBus")
                         _LOGGER.debug("Ignoring products: %s", ignored_train_types)
 
                     MAX_SIZE_BYTES = 16000
@@ -210,6 +210,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     train_type_mapping.get(train_class, train_class) for train_class in train_classes
                                 ]
                                 departure["trainClasses"] = updated_train_classes
+                                train_classes = updated_train_classes
                             if any(train_class in ignored_train_types for train_class in train_classes):
                                 _LOGGER.debug("Ignoring departure due to train class: %s", train_classes)
                                 continue
