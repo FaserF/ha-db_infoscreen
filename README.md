@@ -77,7 +77,7 @@ Supported are only available [Backend Sources from DBF](https://dbf.finalrewind.
 - **data_source** (optional): Choose the data source for fetching departure information.
   - The integration supports fetching departure data from various data sources, including:
     - IRIS-TTS (DB) – Deutsche Bahn AG (db.de) (default and used by most)
-    - Deutschland (DE)
+    - Germany (DE)
       - AVV – Aachener Verkehrsverbund Nordrhein-Westfalen (avv.de)
       - AVV – Augsburger Verkehrs- und Tarifverbund (avv-augsburg.de)
       - BEG - Bayrische Eisenbahngesellschaft (beg.bahnland-bayern.de)
@@ -112,23 +112,23 @@ Supported are only available [Backend Sources from DBF](https://dbf.finalrewind.
       - VRR2 – Verkehrsverbund Rhein-Ruhr
       - VRR3 – Verkehrsverbund Rhein-Ruhr
       - VVS – Verkehrs- und Tarifverbund Stuttgart Baden-Württemberg
-    - Österreich (AT)
+    - Austria (AT)
       - LinzAG – Linz AG
       - ÖBB – Österreichische Bundesbahnen
       - STV – Steirischer Verkehrsverbund (verbundlinie.at)
-    - Schweiz (CH)
+    - Switzerland (CH)
       - BLS – BLS AG Kanton Bern, Kanton Luzern (bls.ch)
       - TPG – Transports publics genevois (tpg.ch)
       - ZVV – Züricher Verkehrsverbund Kanton Zürich (zvv.ch)
-    - Dänemark (DK)
+    - Denmark (DK)
       - DSB – Rejseplanen (rejseplanen.dk)
-    - Irland (IE)
+    - Ireland (IE)
       - IE – Iarnród Éireann Irland, Nordirland (irishrail.ie)
-    - Luxemburg (LU)
+    - Luxembourg (LU)
       - mobiliteit – mobilitéits zentral (mobiliteit.lu)
-    - Polen (PL)
+    - Poland (PL)
       - PKP - Polskie Koleje Państwowe
-    - Schweden (SE)
+    - Sweden (SE)
       - Resrobot – Resrobot
     - USA (US)
       - BART – Bay Area Rapid Transit California (bart.gov)
