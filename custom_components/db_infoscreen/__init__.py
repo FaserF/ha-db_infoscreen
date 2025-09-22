@@ -83,14 +83,14 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             "KVV": "efa=KVV", "LinzAG": "efa=LinzAG", "NVBW": "efa=NVBW", "NWL": "efa=NWL",
             "VAG": "efa=VAG", "VGN": "efa=VGN", "VMV": "efa=VMV", "VRN": "efa=VRN",
             "VRN2": "hafas=VRN", "VRR": "efa=VRR", "VRR2": "efa=VRR2", "VRR3": "efa=VRR3",
-            "VVO": "efa=VVO", "VVS": "efa=VVS", "bwegt": "efa=bwegt", "AVV": "hafas=AVV",
-            "BART": "hafas=BART", "BLS": "hafas=BLS", "BVG": "hafas=BVG", "CMTA": "hafas=CMTA",
-            "DSB": "hafas=DSB", "IE": "hafas=IE", "KVB": "hafas=KVB", "NAHSH": "hafas=NAHSH",
-            "NVV": "hafas=NVV", "RMV": "hafas=RMV", "RSAG": "hafas=RSAG", "Resrobot": "hafas=Resrobot",
-            "STV": "hafas=STV", "SaarVV": "hafas=SaarVV", "TPG": "hafas=TPG", "VBB": "hafas=VBB",
-            "VBN": "hafas=VBN", "VMT": "hafas=VMT", "VOS": "hafas=VOS", "ZVV": "hafas=ZVV",
-            "mobiliteit": "hafas=mobiliteit", "hafas=1": "hafas=1", "PKP": "hafas=PKP", "VMV": "efa=VMV",
-            "NASA": "hafas=NASA", "BEG": "efa=BEG"
+            "VVO": "efa=VVO", "VVS": "efa=VVS", "bwegt": "efa=bwegt", "AVV": "hafas=AVV", "AVV (Aachen)": "hafas=AVV",
+            "AVV (Augsburg)": "efa=AVV", "BART": "hafas=BART", "BLS": "hafas=BLS", "BVG": "hafas=BVG",
+            "CMTA": "hafas=CMTA", "DSB": "hafas=DSB", "IE": "hafas=IE", "KVB": "hafas=KVB",
+            "NAHSH": "hafas=NAHSH", "NVV": "hafas=NVV", "RMV": "hafas=RMV", "Resrobot": "hafas=Resrobot",
+            "RSAG": "hafas=RSAG", "SaarVV": "hafas=SaarVV", "STV": "hafas=STV", "TPG": "hafas=TPG",
+            "VBB": "hafas=VBB", "VBN": "hafas=VBN", "VMT": "hafas=VMT", "VOS": "hafas=VOS",
+            "ZVV": "hafas=ZVV", "mobiliteit": "hafas=mobiliteit", "hafas=1": "hafas=1", "PKP": "hafas=PKP",
+            "VMV": "efa=VMV", "NASA": "hafas=NASA", "BEG": "efa=BEG", "Rolph": "efa=Rolph"
         }
 
         # Collect parameters
@@ -101,9 +101,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             params["admode"] = "arr"
         elif admode == "departure":
             params["admode"] = "dep"
+
+        # Check if the data source is in the HAFAS list
         if self.data_source in data_source_map:
             key, value = data_source_map[self.data_source].split("=")
             params[key] = value
+
         if self.hide_low_delay:
             params["hidelowdelay"] = "1"
         if self.detailed:

@@ -76,51 +76,63 @@ Supported are only available [Backend Sources from DBF](https://dbf.finalrewind.
 
 - **data_source** (optional): Choose the data source for fetching departure information.
   - The integration supports fetching departure data from various data sources, including:
-    - IRIS-TTS – Deutsche Bahn (default and used by most)
-    - AVV – Aachener Verkehrsverbund Nordrhein-Westfalen (avv.de)
-    - BART – Bay Area Rapid Transit California (bart.gov)
-    - BEG - Bayrische Eisenbahngesellschaft (beg.bahnland-bayern.de)
-    - BLS – BLS AG Kanton Bern, Kanton Luzern (bls.ch)
-    - BVG – Berliner Verkehrsbetriebe Berlin, Brandenburg (bvg.de)
-    - BSVG – Braunschweiger Verkehrs-GmbH
-    - bwegt - Personennahverkehr in Baden-Württemberg (ehem. 3-Löwen-Takt)
-    - CMTA – Capital Metro Austin Public Transport Texas (capmetro.org)
-    - DING – Donau-Iller Nahverkehrsverbund
-    - DSB – Rejseplanen Dänemark (rejseplanen.dk)
-    - IE – Iarnród Éireann Irland, Nordirland (irishrail.ie)
-    - KVV – Karlsruher Verkehrsverbund Baden-Württemberg
-    - KVB – Kölner Verkehrs-Betriebe (kvb.koeln)
-    - LinzAG – Linz AG
-    - mobiliteit – mobilitéits zentral Luxembourg (mobiliteit.lu)
-    - MVV – Münchener Verkehrs- und Tarifverbund Bayern
-    - NAHSH – Nahverkehrsverbund Schleswig-Holstein Schleswig-Holstein (nah.sh)
-    - NASA – Personennahverkehr in Sachsen-Anhalt Sachsen-Anhalt (nasa.de)
-    - NVBW – Nahverkehrsgesellschaft Baden-Württemberg
-    - NVV – Nordhessischer Verkehrsverbund Hessen (nvv.de)
-    - NWL – Nahverkehr Westfalen-Lippe
-    - ÖBB – Österreichische Bundesbahnen Österreich
-    - PKP - Polskie Koleje Państwowe PL (polnische Staatsbahn)
-    - Resrobot – Resrobot
-    - RMV – Rhein-Main-Verkehrsverbund Hessen, Baden-Württemberg, Bayern, Rheinland-Pfalz (rmv.de)
-    - RSAG – Rostocker Straßenbahn Mecklenburg-Vorpommern (rsag-online.de)
-    - SaarVV – Saarländischer Verkehrsverbund DE-SL (saarvv.de)
-    - STV – Steirischer Verkehrsverbund AT-6 (verbundlinie.at)
-    - TPG – Transports publics genevois Kanton Genf (tpg.ch)
-    - VAG - Freiburger Verkehrs AG
-    - VBB – Verkehrsverbund Berlin-Brandenburg Berlin, Brandenburg (vbb.de)
-    - VBN – Verkehrsverbund Bremen/Niedersachsen Niedersachsen, Bremen (vbn.de)
-    - VGN – Verkehrsverbund Großraum Nürnberg Bayern
-    - VMT – Verkehrsverbund Mittelthüringen Thüringen (vmt-thueringen.de)
-    - VMV – Verkehrsgesellschaft Mecklenburg-Vorpommern Mecklenburg-Vorpommern
-    - VOS – Verkehrsgemeinschaft Osnabrück Niedersachsen (vos.info)
-    - VVO – Verkehrsverbund Oberelbe
-    - VVS – Verkehrs- und Tarifverbund Stuttgart Baden-Württemberg
-    - VRN – Verkehrsverbund Rhein-Neckar (Nordrhein-Westfalen) (EFA) (Seems to be used for VRT too!)
-    - VRN2 – Verkehrsverbund Rhein-Neckar (Rheinland-Pfalz, Hessen, Baden-Württemberg) (HAFAS)
-    - VRR – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen
-    - VRR2 – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen
-    - VRR3 – Verkehrsverbund Rhein-Ruhr Nordrhein-Westfalen
-    - ZVV – Züricher Verkehrsverbund Kanton Zürich (zvv.ch)
+    - IRIS-TTS (DB) – Deutsche Bahn AG (db.de) (default and used by most)
+    - Deutschland (DE)
+      - AVV – Aachener Verkehrsverbund Nordrhein-Westfalen (avv.de)
+      - AVV – Augsburger Verkehrs- und Tarifverbund (avv-augsburg.de)
+      - BEG - Bayrische Eisenbahngesellschaft (beg.bahnland-bayern.de)
+      - BSVG – Braunschweiger Verkehrs-GmbH
+      - BVG – Berliner Verkehrsbetriebe Berlin, Brandenburg (bvg.de)
+      - bwegt - Personennahverkehr in Baden-Württemberg (ehem. 3-Löwen-Takt)
+      - DING – Donau-Iller Nahverkehrsverbund
+      - IRIS-TTS – Deutsche Bahn (Standard)
+      - KVB – Kölner Verkehrs-Betriebe (kvb.koeln)
+      - KVV – Karlsruher Verkehrsverbund Baden-Württemberg
+      - MVV – Münchener Verkehrs- und Tarifverbund Bayern
+      - NAHSH – Nahverkehrsverbund Schleswig-Holstein (nah.sh)
+      - NASA – Personennahverkehr in Sachsen-Anhalt (nasa.de)
+      - NVBW – Nahverkehrsgesellschaft Baden-Württemberg
+      - NVV – Nordhessischer Verkehrsverbund Hessen (nvv.de)
+      - NWL – Nahverkehr Westfalen-Lippe
+      - RMV – Rhein-Main-Verkehrsverbund
+      - Rolph – DB Rolph
+      - RSAG – Rostocker Straßenbahn Mecklenburg-Vorpommern (rsag-online.de)
+      - SaarVV – Saarländischer Verkehrsverbund DE-SL (saarvv.de)
+      - VAG - Freiburger Verkehrs AG
+      - VBB – Verkehrsverbund Berlin-Brandenburg (vbb.de)
+      - VBN – Verkehrsverbund Bremen/Niedersachsen (vbn.de)
+      - VGN – Verkehrsverbund Großraum Nürnberg Bayern
+      - VMT – Verkehrsverbund Mittelthüringen Thüringen (vmt-thueringen.de)
+      - VMV – Verkehrsgesellschaft Mecklenburg-Vorpommern
+      - VOS – Verkehrsgemeinschaft Osnabrück (vos.info)
+      - VVO – Verkehrsverbund Oberelbe
+      - VRN – Verkehrsverbund Rhein-Neckar
+      - VRN2 – Verkehrsverbund Rhein-Neckar
+      - VRR – Verkehrsverbund Rhein-Ruhr
+      - VRR2 – Verkehrsverbund Rhein-Ruhr
+      - VRR3 – Verkehrsverbund Rhein-Ruhr
+      - VVS – Verkehrs- und Tarifverbund Stuttgart Baden-Württemberg
+    - Österreich (AT)
+      - LinzAG – Linz AG
+      - ÖBB – Österreichische Bundesbahnen
+      - STV – Steirischer Verkehrsverbund (verbundlinie.at)
+    - Schweiz (CH)
+      - BLS – BLS AG Kanton Bern, Kanton Luzern (bls.ch)
+      - TPG – Transports publics genevois (tpg.ch)
+      - ZVV – Züricher Verkehrsverbund Kanton Zürich (zvv.ch)
+    - Dänemark (DK)
+      - DSB – Rejseplanen (rejseplanen.dk)
+    - Irland (IE)
+      - IE – Iarnród Éireann Irland, Nordirland (irishrail.ie)
+    - Luxemburg (LU)
+      - mobiliteit – mobilitéits zentral (mobiliteit.lu)
+    - Polen (PL)
+      - PKP - Polskie Koleje Państwowe
+    - Schweden (SE)
+      - Resrobot – Resrobot
+    - USA (US)
+      - BART – Bay Area Rapid Transit California (bart.gov)
+      - CMTA – Capital Metro Austin Public Transport Texas (capmetro.org)
   - Some stations can be searched via "IRIS-TTS" but need hafas=1 for data retrival, f.e. "Frankenforst Kippekausen, Bergisch Gladbach", choose `hafas=1` in the list to archive this. [GitHub issue about this](https://github.com/FaserF/ha-db_infoscreen/issues/8)
 
 ### Migrating from [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn)
