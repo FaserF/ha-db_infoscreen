@@ -21,6 +21,7 @@
           "admode": "Display Mode",
           "platforms": "Platforms",
           "via_stations": "Only show departures via",
+          "direction": "Only show departures in direction",
           "ignored_train_types": "Do not track specified train types (f.e. ICE)"
         }
       }
@@ -54,6 +55,7 @@
           "admode": "Display Mode",
           "platforms": "Platforms",
           "via_stations": "Only show departures via",
+          "direction": "Only show departures in direction",
           "ignored_train_types": "Do not track specified train types (f.e. ICE)"
         }
       }

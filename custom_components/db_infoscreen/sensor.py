@@ -8,16 +8,18 @@ _LOGGER = logging.getLogger(__name__)
 MAX_LENGTH = 70
 
 class DBInfoSensor(SensorEntity):
-    def __init__(self, coordinator, config_entry, station, via_stations, platforms):
+    def __init__(self, coordinator, config_entry, station, via_stations, direction, platforms):
         self.coordinator = coordinator
         self.config_entry = config_entry
         self.station = station
         self.via_stations = via_stations
+        self.direction = direction
         self.platforms = platforms
 
-        platforms_suffix_name = f" platform {' '.join(platforms)}" if platforms else ""
+        platforms_suffix_name = f" platform {platforms}" if platforms else ""
         via_suffix_name = f" via {' '.join(via_stations)}" if via_stations else ""
-        self._attr_name = f"{station} Departures{platforms_suffix_name}{via_suffix_name}"
+        direction_suffix_name = f" direction {self.direction}" if self.direction else ""
+        self._attr_name = f"{station} Departures{platforms_suffix_name}{via_suffix_name}{direction_suffix_name}"
 
         if len(self._attr_name) > MAX_LENGTH:
             self._attr_name = self._attr_name[:MAX_LENGTH]
@@ -30,9 +32,10 @@ class DBInfoSensor(SensorEntity):
         self._last_valid_value = None
 
         _LOGGER.debug(
-            "DBInfoSensor initialized for station: %s, via_stations: %s, unique_id: %s, name: %s",
+            "DBInfoSensor initialized for station: %s, via_stations: %s, direction: %s, unique_id: %s, name: %s",
             station,
             via_stations,
+            direction,
             self._attr_unique_id,
             self._attr_name,
         )
@@ -153,6 +156,7 @@ class DBInfoSensor(SensorEntity):
             "next_departures": next_departures,
             "station": self.station,
             "via_stations": self.via_stations,
+            "direction": self.direction,
             "last_updated": last_updated,
             "attribution": attribution,
         }
@@ -175,7 +179,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     station = config_entry.data.get("station")
     via_stations = config_entry.data.get("via_stations", [])
-    platforms = config_entry.data.get("platforms", [])
+    direction = config_entry.data.get("direction", "")
+    platforms = config_entry.data.get("platforms", "")
 
-    _LOGGER.debug("Setting up DBInfoSensor for station: %s with via_stations: %s", station, via_stations)
-    async_add_entities([DBInfoSensor(coordinator, config_entry, station, via_stations, platforms)])
+    _LOGGER.debug("Setting up DBInfoSensor for station: %s with via_stations: %s and direction: %s", station, via_stations, direction)
+    async_add_entities([DBInfoSensor(coordinator, config_entry, station, via_stations, direction, platforms)])

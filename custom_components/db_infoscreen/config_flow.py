@@ -8,7 +8,7 @@ from .const import (
     DEFAULT_NEXT_DEPARTURES, DEFAULT_UPDATE_INTERVAL, DEFAULT_OFFSET, MAX_SENSORS,
     CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL,
     CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, DATA_SOURCE_OPTIONS,
-    CONF_VIA_STATIONS, CONF_IGNORED_TRAINTYPES, IGNORED_TRAINTYPES_OPTIONS,
+    CONF_VIA_STATIONS, CONF_DIRECTION, CONF_IGNORED_TRAINTYPES, IGNORED_TRAINTYPES_OPTIONS,
     CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE, CONF_KEEP_ENDSTATION
 )
 
@@ -41,17 +41,20 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 s.strip() for s in via_raw.split(",") if s.strip()
             ]
 
-            # Build base unique ID from station, via stations, and platforms
+            # Build base unique ID from station, via stations, direction, and platforms
             station     = user_input[CONF_STATION]
             via         = user_input[CONF_VIA_STATIONS]
+            direction   = user_input.get(CONF_DIRECTION, "")
             platforms   = user_input[CONF_PLATFORMS]
             data_source = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
 
             parts = [station]
             if via:
                 parts.extend(via)
+            if direction:
+                parts.append(direction)
             if platforms:
-                parts.extend(platforms)
+                parts.append(platforms)
             base_unique_id = "_".join(parts)
 
             # Check if same station and same data source already exist
@@ -82,9 +85,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Build display title (append data source only if there are multiple for this station)
             title_parts = [station]
             if platforms:
-                title_parts.append(f"platform {' '.join(platforms)}")
+                title_parts.append(f"platform {platforms}")
             if via:
                 title_parts.append(f"via {' '.join(via)}")
+            if direction:
+                title_parts.append(f"direction {direction}")
             if same_station_entries:
                 title_parts.append(f"({data_source})")
 
@@ -124,6 +129,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_PLATFORMS, default=""): cv.string,
                 vol.Optional(CONF_ADMODE, default="preferred departure"): vol.In(["preferred departure", "arrival", "departure"]),
                 vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
+                vol.Optional(CONF_DIRECTION, default=""): cv.string,
                 vol.Optional(CONF_IGNORED_TRAINTYPES, default=[]): cv.multi_select(IGNORED_TRAINTYPES_OPTIONS),
             }
         )
@@ -218,6 +224,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         default=", ".join(
                             self.config_entry.options.get(CONF_VIA_STATIONS, [])
                         ),
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_DIRECTION,
+                        default=self.config_entry.options.get(CONF_DIRECTION, ""),
                     ): cv.string,
                     vol.Optional(
                         CONF_IGNORED_TRAINTYPES,
