@@ -52,9 +52,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
         """
         Initialize coordinator state from a config entry, build the API endpoint, and configure the DataUpdateCoordinator.
-        
+
         Reads runtime configuration and options from the provided config entry to set coordinator attributes (for example: station, next_departures, hide_low_delay, detailed, past_60_minutes, data_source, offset, via_stations, direction, ignored_train_types, drop_late_trains, keep_route, keep_endstation, deduplicate_departures, custom API URL, platforms, admode, and update interval). Constructs the encoded API URL with appropriate query parameters and initializes the base DataUpdateCoordinator with a human-readable name and the computed update interval. Also initializes the coordinator's last-valid-value cache.
-        
+
         Parameters:
             hass (HomeAssistant): Home Assistant core instance.
             config_entry (config_entries.ConfigEntry): Integration config entry providing `data` and `options` used to configure the coordinator.
@@ -166,9 +166,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """
         Retrieve and process next departures for the configured station.
-        
+
         Fetches JSON from the coordinator's API, parses and normalizes departure times, optionally deduplicates entries, applies configured filters (direction, ignored train types, offset, final-stop exclusion, size limits), adjusts departure/arrival times for delays, and prunes detail fields according to configuration. The most recent valid result is cached and used as a fallback when no valid departures can be produced.
-        
+
         Returns:
             list[dict]: Processed departure objects limited to the configured `next_departures` count. If no valid departures can be produced, returns the last cached valid list or an empty list.
         """
@@ -345,15 +345,40 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         if delay_arrival is None:
                             delay_arrival = 0
 
-                        if scheduled_arrival:
+                        if scheduled_arrival is not None:
                             try:
-                                arrival_time = datetime.strptime(scheduled_arrival, "%Y-%m-%dT%H:%M") if "T" in scheduled_arrival else datetime.strptime(scheduled_arrival, "%H:%M").replace(year=datetime.now().year, month=datetime.now().month, day=datetime.now().day)
-                                arrival_time_adjusted = arrival_time + timedelta(minutes=delay_arrival)
-                                departure["arrival_current"] = arrival_time_adjusted.strftime("%Y-%m-%dT%H:%M") if arrival_time_adjusted.date() != datetime.now().date() else arrival_time_adjusted.strftime("%H:%M")
-                            except ValueError:
+                                arrival_time = None
+                                if isinstance(scheduled_arrival, (int, float)):
+                                    arrival_time = datetime.fromtimestamp(int(scheduled_arrival))
+                                elif isinstance(scheduled_arrival, str):
+                                    try:
+                                        arrival_time = datetime.strptime(scheduled_arrival, "%Y-%m-%dT%H:%M:%S")
+                                    except ValueError:
+                                        try:
+                                            arrival_time = datetime.strptime(scheduled_arrival, "%Y-%m-%dT%H:%M")
+                                        except ValueError:
+                                            today = datetime.now()
+                                            arrival_time = datetime.strptime(scheduled_arrival, "%H:%M").replace(
+                                                year=today.year,
+                                                month=today.month,
+                                                day=today.day,
+                                            )
+                                else:
+                                     _LOGGER.warning(f"Unsupported scheduledArrival type: {type(scheduled_arrival)}")
+
+                                if arrival_time:
+                                    arrival_delay = int(delay_arrival)
+                                    arrival_time_adjusted = arrival_time + timedelta(minutes=arrival_delay)
+                                    today = datetime.now()
+                                    departure["arrival_current"] = (
+                                        arrival_time_adjusted.strftime("%Y-%m-%dT%H:%M")
+                                        if arrival_time_adjusted.date() != today.date()
+                                        else arrival_time_adjusted.strftime("%H:%M")
+                                    )
+                            except (TypeError, ValueError):
                                 _LOGGER.error("Invalid time format for scheduledArrival: %s", scheduled_arrival)
                         elif departure.get("departure_current"):
-                             departure["arrival_current"] = departure.get("departure_current")
+                            departure["arrival_current"] = departure.get("departure_current")
 
                         effective_departure_time = departure_time
                         if not self.drop_late_trains:
