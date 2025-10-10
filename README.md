@@ -59,6 +59,7 @@ You can set up one sensor per station, except using different `via_stations` con
 | `admode`              | string  | No       | departure preferred | Defines whether to display departure or arrival times. |
 | `platforms`           | string  | No       | -       | Filter by specific platform(s) (comma-separated). |
 | `via_stations`        | string  | No       | -       | Filter by stations where the train must pass through. |
+| `direction`           | string  | No       | -       | Filter departures by direction text. Useful for APIs that do not provide 'via' stations but a 'direction' (may not work for all data sources, e.g., IRIS-TTS). |
 | `ignored_train_types` | list    | No       | []      | List of train types to ignore (may not work for all data sources, e.g., VMT). |
 
 #### Warnings and Limitations

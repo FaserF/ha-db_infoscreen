@@ -8,7 +8,7 @@ from .const import (
     DEFAULT_NEXT_DEPARTURES, DEFAULT_UPDATE_INTERVAL, DEFAULT_OFFSET, MAX_SENSORS,
     CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL,
     CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, DATA_SOURCE_OPTIONS,
-    CONF_VIA_STATIONS, CONF_IGNORED_TRAINTYPES, IGNORED_TRAINTYPES_OPTIONS,
+    CONF_VIA_STATIONS, CONF_DIRECTION, CONF_IGNORED_TRAINTYPES, IGNORED_TRAINTYPES_OPTIONS,
     CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE, CONF_KEEP_ENDSTATION
 )
 
@@ -21,7 +21,30 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
     async def async_step_user(self, user_input=None):
-        """Handle the user input step."""
+        """
+        Handle the initial user step of the config flow: validate input, normalize fields, ensure uniqueness, and create or abort a config entry.
+        
+        Parameters:
+        	user_input (dict|None): Form data from the user. Expected keys include:
+        		- CONF_STATION: station identifier (required when provided)
+        		- CONF_VIA_STATIONS: comma-separated string of intermediate stations
+        		- CONF_DIRECTION: optional direction string
+        		- CONF_PLATFORMS: optional platform specification
+        		- CONF_DATA_SOURCE: optional data source identifier (defaults to "IRIS-TTS")
+        		- CONF_CUSTOM_API_URL: optional custom API URL (bypasses MAX_SENSORS limit when present)
+        
+        Description:
+        	- If user_input is None, shows the user form with the configured data schema.
+        	- If provided, enforces the MAX_SENSORS limit unless a custom API URL is supplied.
+        	- Normalizes CONF_VIA_STATIONS into a list of trimmed station strings.
+        	- Builds a base unique ID from station, via stations, direction, and platforms.
+        	- If an existing entry for the same station and data source exists, aborts the flow with reason "already_configured".
+        	- Otherwise, selects an unused unique ID (appending a numeric suffix if needed), sets it for the flow, and creates a new config entry.
+        	- The created entry's title is derived from station, platforms, via stations, direction, and includes the data source only when multiple entries exist for the station.
+        
+        Returns:
+        	flow_result: The flow result that either shows the form, aborts the flow, or creates a new configuration entry.
+        """
         errors = {}
 
         if user_input is not None:
@@ -41,17 +64,20 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 s.strip() for s in via_raw.split(",") if s.strip()
             ]
 
-            # Build base unique ID from station, via stations, and platforms
+            # Build base unique ID from station, via stations, direction, and platforms
             station     = user_input[CONF_STATION]
             via         = user_input[CONF_VIA_STATIONS]
+            direction   = user_input.get(CONF_DIRECTION, "")
             platforms   = user_input[CONF_PLATFORMS]
             data_source = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
-
             parts = [station]
+
             if via:
-                parts.extend(via)
+                parts.append(f"via={','.join(via)}")
+            if direction:
+                parts.append(f"dir={direction}")
             if platforms:
-                parts.extend(platforms)
+                parts.append(f"plat={platforms}")
             base_unique_id = "_".join(parts)
 
             # Check if same station and same data source already exist
@@ -82,9 +108,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Build display title (append data source only if there are multiple for this station)
             title_parts = [station]
             if platforms:
-                title_parts.append(f"platform {' '.join(platforms)}")
+                title_parts.append(f"platform {platforms}")
             if via:
                 title_parts.append(f"via {' '.join(via)}")
+            if direction:
+                title_parts.append(f"direction {direction}")
             if same_station_entries:
                 title_parts.append(f"({data_source})")
 
@@ -106,7 +134,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return OptionsFlowHandler(config_entry)
 
     def data_schema(self):
-        """Define the input schema for the user form."""
+        """
+        Build the voluptuous Schema used for the integration's user configuration form.
+        
+        The schema defines all configuration fields presented to the user and their defaults,
+        including station selection, polling and display options, data source selection,
+        platforms, via stations, direction, and ignored train types.
+        
+        Returns:
+            vol.Schema: A Voluptuous schema mapping configuration keys to validators and defaults.
+        """
         return vol.Schema(
             {
                 vol.Required(CONF_STATION): cv.string,
@@ -124,6 +161,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_PLATFORMS, default=""): cv.string,
                 vol.Optional(CONF_ADMODE, default="preferred departure"): vol.In(["preferred departure", "arrival", "departure"]),
                 vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
+                vol.Optional(CONF_DIRECTION, default=""): cv.string,
                 vol.Optional(CONF_IGNORED_TRAINTYPES, default=[]): cv.multi_select(IGNORED_TRAINTYPES_OPTIONS),
             }
         )
@@ -133,6 +171,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
+        """
+        Handle the options flow initial step: show the options form or create an options entry from submitted values.
+        
+        When `user_input` is provided, parse CONF_VIA_STATIONS as a comma-separated string into a list of trimmed, non-empty station strings and return an options entry containing the processed data. When `user_input` is None, present a form whose schema exposes all configurable options with defaults taken from the existing entry's options (or module defaults).
+        
+        Returns:
+            A Flow result representing either the created options entry (when input was submitted) or the form to display (when no input was provided).
+        """
         if user_input is not None:
             # Process comma-separated via stations into list
             via_raw = user_input.get(CONF_VIA_STATIONS, "")
@@ -218,6 +264,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         default=", ".join(
                             self.config_entry.options.get(CONF_VIA_STATIONS, [])
                         ),
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_DIRECTION,
+                        default=self.config_entry.options.get(CONF_DIRECTION, ""),
                     ): cv.string,
                     vol.Optional(
                         CONF_IGNORED_TRAINTYPES,

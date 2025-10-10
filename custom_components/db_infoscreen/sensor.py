@@ -8,16 +8,31 @@ _LOGGER = logging.getLogger(__name__)
 MAX_LENGTH = 70
 
 class DBInfoSensor(SensorEntity):
-    def __init__(self, coordinator, config_entry, station, via_stations, platforms):
+    def __init__(self, coordinator, config_entry, station, via_stations, direction, platforms):
+        """
+        Initialize the DBInfoSensor for a specific station's departure display.
+        
+        Constructs the entity name from station, optional platforms, via_stations, and direction (truncating to 70 characters), sets a unique_id based on the config entry, sets a train icon, initializes the last-valid value cache, and logs initialization details.
+        
+        Parameters:
+        	coordinator: Data update coordinator providing sensor data and metadata.
+        	config_entry: Config entry containing entry_id and stored config.
+        	station (str): Station name used in the sensor display name.
+        	via_stations (list[str] | None): Intermediate stations to include in the display name.
+        	direction (str | None): Direction suffix to include in the display name.
+        	platforms (str | None): Platform information to include in the display name.
+        """
         self.coordinator = coordinator
         self.config_entry = config_entry
         self.station = station
         self.via_stations = via_stations
+        self.direction = direction
         self.platforms = platforms
 
-        platforms_suffix_name = f" platform {' '.join(platforms)}" if platforms else ""
+        platforms_suffix_name = f" platform {platforms}" if platforms else ""
         via_suffix_name = f" via {' '.join(via_stations)}" if via_stations else ""
-        self._attr_name = f"{station} Departures{platforms_suffix_name}{via_suffix_name}"
+        direction_suffix_name = f" direction {self.direction}" if self.direction else ""
+        self._attr_name = f"{station} Departures{platforms_suffix_name}{via_suffix_name}{direction_suffix_name}"
 
         if len(self._attr_name) > MAX_LENGTH:
             self._attr_name = self._attr_name[:MAX_LENGTH]
@@ -30,9 +45,10 @@ class DBInfoSensor(SensorEntity):
         self._last_valid_value = None
 
         _LOGGER.debug(
-            "DBInfoSensor initialized for station: %s, via_stations: %s, unique_id: %s, name: %s",
+            "DBInfoSensor initialized for station: %s, via_stations: %s, direction: %s, unique_id: %s, name: %s",
             station,
             via_stations,
+            direction,
             self._attr_unique_id,
             self._attr_name,
         )
@@ -133,6 +149,23 @@ class DBInfoSensor(SensorEntity):
 
     @property
     def extra_state_attributes(self):
+        """
+        Return additional state attributes for the sensor including next departures and metadata.
+        
+        Converts any integer epoch values found in each departure's 'scheduledTime' or 'time' to
+        'YYYY-MM-DD HH:MM:SS' strings. Builds an attribution string from the coordinator's
+        `api_url` (defaults to "dbf.finalrewind.org") and formats the coordinator's `last_update`
+        as an ISO timestamp or "Unknown" if not present.
+        
+        Returns:
+            dict: A mapping containing:
+                - "next_departures": list of departure dicts (with epoch times converted to strings when applicable)
+                - "station": configured station identifier
+                - "via_stations": configured via stations string or list
+                - "direction": configured direction value
+                - "last_updated": ISO-formatted last update timestamp or "Unknown"
+                - "attribution": attribution string for the data source
+        """
         full_api_url = getattr(self.coordinator, "api_url", "dbf.finalrewind.org")
         attribution = f"Data provided by API {full_api_url}"
 
@@ -153,6 +186,7 @@ class DBInfoSensor(SensorEntity):
             "next_departures": next_departures,
             "station": self.station,
             "via_stations": self.via_stations,
+            "direction": self.direction,
             "last_updated": last_updated,
             "attribution": attribution,
         }
@@ -172,10 +206,16 @@ class DBInfoSensor(SensorEntity):
         _LOGGER.debug("Listener attached for station: %s, via_stations: %s", self.station, self.via_stations)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
+    """
+    Set up a DBInfoSensor entity for the given config entry.
+    
+    Reads 'station', 'via_stations', 'direction', and 'platforms' from config_entry.data, retrieves the coordinator from hass.data[DOMAIN][config_entry.entry_id], and adds a single DBInfoSensor via async_add_entities.
+    """
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     station = config_entry.data.get("station")
     via_stations = config_entry.data.get("via_stations", [])
-    platforms = config_entry.data.get("platforms", [])
+    direction = config_entry.data.get("direction", "")
+    platforms = config_entry.data.get("platforms", "")
 
-    _LOGGER.debug("Setting up DBInfoSensor for station: %s with via_stations: %s", station, via_stations)
-    async_add_entities([DBInfoSensor(coordinator, config_entry, station, via_stations, platforms)])
+    _LOGGER.debug("Setting up DBInfoSensor for station: %s with via_stations: %s and direction: %s", station, via_stations, direction)
+    async_add_entities([DBInfoSensor(coordinator, config_entry, station, via_stations, direction, platforms)])
