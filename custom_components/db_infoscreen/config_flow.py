@@ -173,12 +173,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """
-        Handle the options flow initial step: show the options form or create an options entry from submitted values.
+        Handle the options flow initial step for the integration.
         
-        When `user_input` is provided, parse CONF_VIA_STATIONS as a comma-separated string into a list of trimmed, non-empty station strings and return an options entry containing the processed data. When `user_input` is None, present a form whose schema exposes all configurable options with defaults taken from the existing entry's options (or module defaults).
+        If `user_input` is provided, normalize `CONF_VIA_STATIONS` from a comma-separated string into a list of trimmed, non-empty station strings and create an options entry using the processed data. If `user_input` is None, show a form whose schema exposes all configurable options with defaults taken from the existing config entry's options or module defaults.
         
         Returns:
-            A Flow result representing either the created options entry (when input was submitted) or the form to display (when no input was provided).
+            A flow result representing the created options entry when input was submitted, or the form to display when no input was provided.
         """
         if user_input is not None:
             # Process comma-separated via stations into list
