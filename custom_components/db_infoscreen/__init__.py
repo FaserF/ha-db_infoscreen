@@ -336,15 +336,21 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         else:
                             delay_departure = int(delay_departure)
 
+                        departure_time_adjusted = None
                         if departure_time and delay_departure is not None:
                             departure_time_adjusted = departure_time + timedelta(minutes=delay_departure)
+                            # Keep existing human-readable time string
                             departure["departure_current"] = departure_time_adjusted.strftime("%Y-%m-%dT%H:%M") if departure_time_adjusted.date() != datetime.now().date() else departure_time_adjusted.strftime("%H:%M")
+                            # Add new machine-readable Unix timestamp
+                            departure["departure_timestamp"] = int(departure_time_adjusted.timestamp())
+
 
                         scheduled_arrival = departure.get("scheduledArrival")
                         delay_arrival = departure.get("delayArrival")
                         if delay_arrival is None:
                             delay_arrival = 0
 
+                        arrival_time_adjusted = None
                         if scheduled_arrival is not None:
                             try:
                                 arrival_time = None
@@ -359,26 +365,33 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                         except ValueError:
                                             today = datetime.now()
                                             arrival_time = datetime.strptime(scheduled_arrival, "%H:%M").replace(
-                                                year=today.year,
-                                                month=today.month,
-                                                day=today.day,
+                                                year=today.year, month=today.month, day=today.day
                                             )
                                 else:
-                                     _LOGGER.warning(f"Unsupported scheduledArrival type: {type(scheduled_arrival)}")
+                                    _LOGGER.warning(f"Unsupported scheduledArrival type: {type(scheduled_arrival)}")
 
                                 if arrival_time:
                                     arrival_delay = int(delay_arrival)
                                     arrival_time_adjusted = arrival_time + timedelta(minutes=arrival_delay)
                                     today = datetime.now()
+                                    # Keep existing human-readable time string
                                     departure["arrival_current"] = (
                                         arrival_time_adjusted.strftime("%Y-%m-%dT%H:%M")
                                         if arrival_time_adjusted.date() != today.date()
                                         else arrival_time_adjusted.strftime("%H:%M")
                                     )
+                                    # Add new machine-readable Unix timestamp
+                                    departure["arrival_timestamp"] = int(arrival_time_adjusted.timestamp())
+
                             except (TypeError, ValueError):
                                 _LOGGER.error("Invalid time format for scheduledArrival: %s", scheduled_arrival)
-                        elif departure.get("departure_current"):
+
+                        # Fallback for arrival time if not present
+                        if "arrival_current" not in departure and departure.get("departure_current"):
                             departure["arrival_current"] = departure.get("departure_current")
+                        # Fallback for the new timestamp attribute
+                        if "arrival_timestamp" not in departure and departure.get("departure_timestamp"):
+                            departure["arrival_timestamp"] = departure.get("departure_timestamp")
 
                         effective_departure_time = departure_time
                         if not self.drop_late_trains:
