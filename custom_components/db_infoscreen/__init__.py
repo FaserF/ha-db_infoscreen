@@ -49,6 +49,11 @@ async def update_listener(hass: HomeAssistant, config_entry: config_entries.Conf
 
 class DBInfoScreenCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
+        """
+        Initialize the coordinator for a station: configure runtime options, build the API URL, and start the DataUpdateCoordinator.
+        
+        This constructor reads configuration and options from the provided config entry and sets up coordinator state used when fetching departures. It assigns attributes such as `station`, `next_departures`, `hide_low_delay`, `detailed`, `past_60_minutes`, `data_source`, `offset`, `via_stations`, `direction`, `ignored_train_types`, `drop_late_trains`, `keep_route`, `keep_endstation`, and `api_url`. It also determines the update interval, encodes the station and optional via stations for the API endpoint, maps the chosen data source to API query parameters, and initializes the base DataUpdateCoordinator with a name and update interval.
+        """
         self.config_entry = config_entry
 
         # Get config from data and options
@@ -154,7 +159,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """
-        Fetches data from the API and processes it based on the configuration.
+        Fetch and return the next departures for the configured station, applying configured filters and transformations.
+        
+        Fetches JSON from the coordinator's API URL, processes the "departures" entries applying configured filters (direction, ignored train types, offset, final-stop exclusion, size limits), adjusts times and delay fields, optionally prunes route/details to reduce payload, and caches the most recent valid result for fallback when no valid departures are available.
+        
+        Returns:
+            list[dict]: A list of processed departure objects limited to the configured `next_departures` count. If no valid departures can be produced, returns the last cached valid list or an empty list.
         """
         _LOGGER.debug("Fetching data for station: %s", self.station)
         async with aiohttp.ClientSession() as session:
