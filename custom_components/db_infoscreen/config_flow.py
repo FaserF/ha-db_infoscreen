@@ -23,7 +23,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None):
         """
         Handle the initial user step of the config flow: validate input, normalize fields, ensure uniqueness, and create or abort a config entry.
-        
+
         Parameters:
         	user_input (dict|None): Form data from the user. Expected keys include:
         		- CONF_STATION: station identifier (required when provided)
@@ -32,7 +32,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         		- CONF_PLATFORMS: optional platform specification
         		- CONF_DATA_SOURCE: optional data source identifier (defaults to "IRIS-TTS")
         		- CONF_CUSTOM_API_URL: optional custom API URL (bypasses MAX_SENSORS limit when present)
-        
+
         Description:
         	- If user_input is None, shows the user form with the configured data schema.
         	- If provided, enforces the MAX_SENSORS limit unless a custom API URL is supplied.
@@ -41,7 +41,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         	- If an existing entry for the same station and data source exists, aborts the flow with reason "already_configured".
         	- Otherwise, selects an unused unique ID (appending a numeric suffix if needed), sets it for the flow, and creates a new config entry.
         	- The created entry's title is derived from station, platforms, via stations, direction, and includes the data source only when multiple entries exist for the station.
-        
+
         Returns:
         	flow_result: The flow result that either shows the form, aborts the flow, or creates a new configuration entry.
         """
@@ -136,11 +136,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def data_schema(self):
         """
         Build the voluptuous Schema used for the integration's user configuration form.
-        
+
         The schema defines all configuration fields presented to the user and their defaults,
         including station selection, polling and display options, data source selection,
         platforms, via stations, direction, and ignored train types.
-        
+
         Returns:
             vol.Schema: A Voluptuous schema mapping configuration keys to validators and defaults.
         """
@@ -173,9 +173,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
         """
         Handle the options flow initial step: show the options form or create an options entry from submitted values.
-        
+
         When `user_input` is provided, parse CONF_VIA_STATIONS as a comma-separated string into a list of trimmed, non-empty station strings and return an options entry containing the processed data. When `user_input` is None, present a form whose schema exposes all configurable options with defaults taken from the existing entry's options (or module defaults).
-        
+
         Returns:
             A Flow result representing either the created options entry (when input was submitted) or the form to display (when no input was provided).
         """
