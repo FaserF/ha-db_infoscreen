@@ -47,14 +47,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             direction   = user_input.get(CONF_DIRECTION, "")
             platforms   = user_input[CONF_PLATFORMS]
             data_source = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
-
             parts = [station]
+
             if via:
-                parts.extend(via)
+                parts.append(f"via={','.join(via)}")
             if direction:
-                parts.append(direction)
+                parts.append(f"dir={direction}")
             if platforms:
-                parts.append(platforms)
+                parts.append(f"plat={platforms}")
             base_unique_id = "_".join(parts)
 
             # Check if same station and same data source already exist
