@@ -23,6 +23,7 @@ CONF_IGNORED_TRAINTYPES = "ignored_train_types"
 CONF_DROP_LATE_TRAINS = "drop_late_trains"
 CONF_KEEP_ROUTE = "keep_route"
 CONF_KEEP_ENDSTATION = "keep_endstation"
+CONF_DEDUPLICATE_DEPARTURES = "deduplicate_departures"
 
 DATA_SOURCE_OPTIONS = [
     "IRIS-TTS", "hafas=1", "AVV (Aachen)", "AVV (Augsburg)", "BART", "BEG", "BLS", "BSVG", "BVG", "bwegt", "CMTA", "DING", "DSB", "IE",

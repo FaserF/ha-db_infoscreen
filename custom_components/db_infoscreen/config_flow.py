@@ -9,7 +9,7 @@ from .const import (
     CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL,
     CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, DATA_SOURCE_OPTIONS,
     CONF_VIA_STATIONS, CONF_DIRECTION, CONF_IGNORED_TRAINTYPES, IGNORED_TRAINTYPES_OPTIONS,
-    CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE, CONF_KEEP_ENDSTATION
+    CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE, CONF_KEEP_ENDSTATION, CONF_DEDUPLICATE_DEPARTURES
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -151,6 +151,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL): cv.positive_int,
                 vol.Optional(CONF_HIDE_LOW_DELAY, default=False): cv.boolean,
                 vol.Optional(CONF_DROP_LATE_TRAINS, default=False): cv.boolean,
+                vol.Optional(CONF_DEDUPLICATE_DEPARTURES, default=False): cv.boolean,
                 vol.Optional(CONF_DETAILED, default=False): cv.boolean,
                 vol.Optional(CONF_PAST_60_MINUTES, default=False): cv.boolean,
                 vol.Optional(CONF_KEEP_ROUTE, default=False): cv.boolean,
@@ -172,12 +173,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """
-        Handle the options flow initial step: show the options form or create an options entry from submitted values.
+        Handle the options flow initial step for the integration.
         
-        When `user_input` is provided, parse CONF_VIA_STATIONS as a comma-separated string into a list of trimmed, non-empty station strings and return an options entry containing the processed data. When `user_input` is None, present a form whose schema exposes all configurable options with defaults taken from the existing entry's options (or module defaults).
+        If `user_input` is provided, normalize `CONF_VIA_STATIONS` from a comma-separated string into a list of trimmed, non-empty station strings and create an options entry using the processed data. If `user_input` is None, show a form whose schema exposes all configurable options with defaults taken from the existing config entry's options or module defaults.
         
         Returns:
-            A Flow result representing either the created options entry (when input was submitted) or the form to display (when no input was provided).
+            A flow result representing the created options entry when input was submitted, or the form to display when no input was provided.
         """
         if user_input is not None:
             # Process comma-separated via stations into list
@@ -213,6 +214,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_DROP_LATE_TRAINS,
                         default=self.config_entry.options.get(
                             CONF_DROP_LATE_TRAINS, False
+                        ),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_DEDUPLICATE_DEPARTURES,
+                        default=self.config_entry.options.get(
+                            CONF_DEDUPLICATE_DEPARTURES, False
                         ),
                     ): cv.boolean,
                     vol.Optional(

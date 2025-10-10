@@ -49,6 +49,7 @@ You can set up one sensor per station, except using different `via_stations` con
 | `update_interval`       | int     | No       | 3       | Time interval (in minutes) to fetch updated departure data. Minimum: 1 minute. |
 | `hide_low_delay`        | boolean | No       | False   | Hide departures with a delay of less than 5 minutes. |
 | `drop_late_trains`      | boolean | No       | False   | Hide past departures that would still be delayed. |
+| `deduplicate_departures`      | boolean | No       | False   | Filter out similar "duplicate" departures. |
 | `detailed`             | boolean | No       | False   | Show additional details about departures. For example: messages, id, stop_id_num, stateless, key, mot |
 | `past_60_minutes`      | boolean | No       | False   | Show departures from the past 60 minutes. |
 | `keep_route`           | boolean | No       | False   | Keep route (stopover) details (all train stations on train route). |

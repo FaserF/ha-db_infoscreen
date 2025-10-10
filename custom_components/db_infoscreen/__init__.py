@@ -12,7 +12,8 @@ from .const import (
     DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL,
     DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES,
     CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, MIN_UPDATE_INTERVAL,
-    CONF_VIA_STATIONS, CONF_DIRECTION, CONF_IGNORED_TRAINTYPES, CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE, CONF_KEEP_ENDSTATION
+    CONF_VIA_STATIONS, CONF_DIRECTION, CONF_IGNORED_TRAINTYPES, CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE,
+    CONF_KEEP_ENDSTATION, CONF_DEDUPLICATE_DEPARTURES
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,9 +51,13 @@ async def update_listener(hass: HomeAssistant, config_entry: config_entries.Conf
 class DBInfoScreenCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
         """
-        Initialize the coordinator for a station: configure runtime options, build the API URL, and start the DataUpdateCoordinator.
-        
-        This constructor reads configuration and options from the provided config entry and sets up coordinator state used when fetching departures. It assigns attributes such as `station`, `next_departures`, `hide_low_delay`, `detailed`, `past_60_minutes`, `data_source`, `offset`, `via_stations`, `direction`, `ignored_train_types`, `drop_late_trains`, `keep_route`, `keep_endstation`, and `api_url`. It also determines the update interval, encodes the station and optional via stations for the API endpoint, maps the chosen data source to API query parameters, and initializes the base DataUpdateCoordinator with a name and update interval.
+        Initialize coordinator state from a config entry, build the API endpoint, and configure the DataUpdateCoordinator.
+
+        Reads runtime configuration and options from the provided config entry to set coordinator attributes (for example: station, next_departures, hide_low_delay, detailed, past_60_minutes, data_source, offset, via_stations, direction, ignored_train_types, drop_late_trains, keep_route, keep_endstation, deduplicate_departures, custom API URL, platforms, admode, and update interval). Constructs the encoded API URL with appropriate query parameters and initializes the base DataUpdateCoordinator with a human-readable name and the computed update interval. Also initializes the coordinator's last-valid-value cache.
+
+        Parameters:
+            hass (HomeAssistant): Home Assistant core instance.
+            config_entry (config_entries.ConfigEntry): Integration config entry providing `data` and `options` used to configure the coordinator.
         """
         self.config_entry = config_entry
 
@@ -72,6 +77,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.drop_late_trains = config.get(CONF_DROP_LATE_TRAINS, False)
         self.keep_route = config.get(CONF_KEEP_ROUTE, False)
         self.keep_endstation = config.get(CONF_KEEP_ENDSTATION, False)
+        self.deduplicate_departures = config.get(CONF_DEDUPLICATE_DEPARTURES, False)
         custom_api_url = config.get(CONF_CUSTOM_API_URL, "")
         platforms = config.get(CONF_PLATFORMS, "")
         admode = config.get(CONF_ADMODE, "")
@@ -159,12 +165,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """
-        Fetch and return the next departures for the configured station, applying configured filters and transformations.
-        
-        Fetches JSON from the coordinator's API URL, processes the "departures" entries applying configured filters (direction, ignored train types, offset, final-stop exclusion, size limits), adjusts times and delay fields, optionally prunes route/details to reduce payload, and caches the most recent valid result for fallback when no valid departures are available.
-        
+        Retrieve and process next departures for the configured station.
+
+        Fetches JSON from the coordinator's API, parses and normalizes departure times, optionally deduplicates entries, applies configured filters (direction, ignored train types, offset, final-stop exclusion, size limits), adjusts departure/arrival times for delays, and prunes detail fields according to configuration. The most recent valid result is cached and used as a fallback when no valid departures can be produced.
+
         Returns:
-            list[dict]: A list of processed departure objects limited to the configured `next_departures` count. If no valid departures can be produced, returns the last cached valid list or an empty list.
+            list[dict]: Processed departure objects limited to the configured `next_departures` count. If no valid departures can be produced, returns the last cached valid list or an empty list.
         """
         _LOGGER.debug("Fetching data for station: %s", self.station)
         async with aiohttp.ClientSession() as session:
@@ -173,15 +179,104 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     response = await session.get(self.api_url)
                     response.raise_for_status()
                     data = await response.json()
-                    if data.get("departures", []) is None:
+
+                    raw_departures = data.get("departures", [])
+                    if raw_departures is None:
                         _LOGGER.warning("Encountered empty departures list, skipping.")
                         return self._last_valid_value or []
+
                     _LOGGER.debug("Data fetched successfully: %s", str(data)[:350] + ("..." if len(str(data)) > 350 else ""))
 
                     # Set last_update timestamp
                     self.last_update = datetime.now()
 
-                    # Filter departures based on the offset and ignored products
+                    # --- PRE-PROCESSING: Parse time for all departures ---
+                    departures_with_time = []
+                    for departure in raw_departures:
+                        if departure is None:
+                            continue
+
+                        departure_time_str = departure.get("scheduledDeparture") or departure.get("sched_dep") or departure.get("scheduledArrival") or departure.get("sched_arr") or departure.get("scheduledTime") or departure.get("dep") or departure.get("datetime")
+
+                        if not departure_time_str:
+                            _LOGGER.warning("No valid departure time found for entry, skipping: %s", departure)
+                            continue
+
+                        departure_time_obj = None
+                        if isinstance(departure_time_str, int):
+                            departure_time_obj = datetime.fromtimestamp(departure_time_str)
+                        else:
+                            try:
+                                departure_time_obj = datetime.strptime(departure_time_str, "%Y-%m-%dT%H:%M:%S")
+                            except ValueError:
+                                try:
+                                    departure_time_obj = datetime.strptime(departure_time_str, "%Y-%m-%dT%H:%M")
+                                except ValueError:
+                                    try:
+                                        now = datetime.now()
+                                        time_candidate = datetime.strptime(departure_time_str, "%H:%M").replace(year=now.year, month=now.month, day=now.day)
+                                        if time_candidate < now - timedelta(minutes=10): # Allow for slight past times
+                                            time_candidate += timedelta(days=1)
+                                        departure_time_obj = time_candidate
+                                    except ValueError:
+                                        _LOGGER.error("Invalid time format, skipping departure: %s", departure_time_str)
+                                        continue
+
+                        departure['departure_datetime'] = departure_time_obj
+                        departures_with_time.append(departure)
+
+                    departures_to_process = departures_with_time
+
+                    # --- DEDUPLICATION STEP ---
+                    if self.deduplicate_departures:
+                        _LOGGER.debug("Deduplication is enabled. Processing departures.")
+                        unique_departures = {}
+
+                        departures_to_process.sort(key=lambda d: d['departure_datetime'])
+
+                        for departure in departures_to_process:
+                            # Use a robust key for identifying a trip
+                            key_line = departure.get("line") or departure.get("train")
+                            key_dest = departure.get("destination")
+                            # The 'key' field seems to be a reliable trip identifier in some sources (like KVV)
+                            key_trip_id = departure.get("key") or departure.get("trainNumber")
+
+                            # If we don't have enough info to build a key, treat it as unique.
+                            if not key_line or not key_dest:
+                                unique_departures[id(departure)] = departure
+                                continue
+
+                            # Build the key. Use trip ID if available, otherwise just line+dest
+                            unique_key = (key_line, key_dest, key_trip_id) if key_trip_id else (key_line, key_dest)
+
+                            # Check if we have already seen a departure for this trip
+                            if unique_key not in unique_departures:
+                                unique_departures[unique_key] = departure
+                            else:
+                                # We have seen this trip. Check the time difference.
+                                existing_departure = unique_departures[unique_key]
+                                time_diff = (departure['departure_datetime'] - existing_departure['departure_datetime']).total_seconds()
+
+                                # If the new one is within 2 minutes, it's a duplicate. We keep the earlier one.
+                                if abs(time_diff) <= 120:
+                                    _LOGGER.debug(
+                                        "Found and filtering out duplicate departure. "
+                                        "Keeping (earlier): %s, Removing (later): %s",
+                                        existing_departure,
+                                        departure
+                                    )
+                                    # Since the list is sorted, the existing one is always earlier.
+                                    # We do nothing and let the later one be discarded.
+                                else:
+                                    # Time difference is too large. This is a different trip that happens to share
+                                    # the same line and destination. Add it with a more specific key to keep it.
+                                    unique_departures[(unique_key, departure['departure_datetime'])] = departure
+
+                        departures_to_process = list(unique_departures.values())
+                        # Re-sort because dictionary values don't guarantee order if we added time-suffixed keys
+                        departures_to_process.sort(key=lambda d: d['departure_datetime'])
+
+                    # --- MAIN FILTERING AND PROCESSING ---
                     filtered_departures = []
                     ignored_train_types = self.ignored_train_types
                     if ignored_train_types:
@@ -193,10 +288,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                     MAX_SIZE_BYTES = 16000
 
-                    for departure in data.get("departures", []):
-                        if departure is None:
-                            _LOGGER.warning("Encountered None in departures list, skipping.")
-                            continue
+                    for departure in departures_to_process:
                         _LOGGER.debug("Processing departure: %s", departure)
 
                         # Direction filter
@@ -226,55 +318,17 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         if train_classes:
                             if trainClasses:
                                 train_type_mapping = {
-                                    "S": "S-Bahn",
-                                    "N": "Regionalbahn (DB)",
-                                    "D": "Regionalbahn",
-                                    "F": "Intercity (Express) / Eurocity",
-                                    "": "Internationale Bahn"
+                                    "S": "S-Bahn", "N": "Regionalbahn (DB)", "D": "Regionalbahn",
+                                    "F": "Intercity (Express) / Eurocity", "": "Internationale Bahn"
                                 }
-                                updated_train_classes = [
-                                    train_type_mapping.get(train_class, train_class) for train_class in train_classes
-                                ]
+                                updated_train_classes = [train_type_mapping.get(tc, tc) for tc in train_classes]
                                 departure["trainClasses"] = updated_train_classes
                                 train_classes = updated_train_classes
                             if any(train_class in ignored_train_types for train_class in train_classes):
                                 _LOGGER.debug("Ignoring departure due to train class: %s", train_classes)
                                 continue
 
-                        # Use scheduledArrival if scheduledDeparture is None or empty
-                        departure_time = departure.get("scheduledDeparture") or departure.get("sched_dep") or departure.get("scheduledArrival") or departure.get("sched_arr") or departure.get("scheduledTime") or departure.get("dep") or departure.get("datetime")
-
-                        # If no valid departure time is found, log a warning and continue to the next departure
-                        if not departure_time:
-                            _LOGGER.warning("No valid departure time found for entry: %s", departure)
-                            continue
-
-                        # Convert the departure time to a datetime object
-                        if isinstance(departure_time, int):  # Unix timestamp case
-                            departure_time = datetime.fromtimestamp(departure_time)
-                        else:  # ISO 8601 string case
-                            try:
-                                # Try ISO with seconds first
-                                departure_time = datetime.strptime(departure_time, "%Y-%m-%dT%H:%M:%S")
-                            except ValueError:
-                                try:
-                                    # Try ISO without seconds
-                                    departure_time = datetime.strptime(departure_time, "%Y-%m-%dT%H:%M")
-                                except ValueError:
-                                    try:
-                                        # Fallback to HH:MM and roll over to next day if needed
-                                        now = datetime.now()
-                                        departure_time_candidate = datetime.strptime(departure_time, "%H:%M").replace(
-                                            year=now.year,
-                                            month=now.month,
-                                            day=now.day,
-                                        )
-                                        if departure_time_candidate < now:
-                                            departure_time_candidate = departure_time_candidate + timedelta(days=1)
-                                        departure_time = departure_time_candidate
-                                    except ValueError:
-                                        _LOGGER.error("Invalid time format: %s", departure_time)
-                                        continue
+                        departure_time = departure['departure_datetime']
 
                         delay_departure = departure.get("delayDeparture") or departure.get("dep_delay") or departure.get("delay")
                         if delay_departure is None:
@@ -282,114 +336,72 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         else:
                             delay_departure = int(delay_departure)
 
-                        if departure_time not in (None, "") and delay_departure is not None:
-                            try:
-                                departure_time_adjusted = departure_time + timedelta(minutes=delay_departure)
-                                _LOGGER.debug("departure_current with added delay: %s", departure_time_adjusted)
-
-                                if departure_time_adjusted.date() == datetime.now().date():
-                                    departure["departure_current"] = departure_time_adjusted.strftime("%H:%M")
-                                else:
-                                    departure["departure_current"] = departure_time_adjusted.strftime("%Y-%m-%dT%H:%M")
-
-                            except ValueError:
-                                _LOGGER.error("Invalid time format for scheduledDeparture: %s", departure_time)
-                        elif delay_departure is None:
-                            _LOGGER.debug("No delay attribute found. Setting departure_current to departure_time: %s", departure_time)
-                            if departure_time.date() == datetime.now().date():
-                                departure["departure_current"] = departure_time.strftime("%H:%M")
-                            else:
-                                departure["departure_current"] = departure_time.strftime("%Y-%m-%dT%H:%M")
-                        else:
-                            _LOGGER.debug("No valid departure_time found. Setting departure_current to None.")
-                            departure["departure_current"] = None
+                        if departure_time and delay_departure is not None:
+                            departure_time_adjusted = departure_time + timedelta(minutes=delay_departure)
+                            departure["departure_current"] = departure_time_adjusted.strftime("%Y-%m-%dT%H:%M") if departure_time_adjusted.date() != datetime.now().date() else departure_time_adjusted.strftime("%H:%M")
 
                         scheduled_arrival = departure.get("scheduledArrival")
                         delay_arrival = departure.get("delayArrival")
                         if delay_arrival is None:
                             delay_arrival = 0
 
-                        if scheduled_arrival not in (None, "") and delay_arrival is not None:
+                        if scheduled_arrival is not None:
                             try:
-                                if "T" in scheduled_arrival:
-                                    arrival_time = datetime.strptime(scheduled_arrival, "%Y-%m-%dT%H:%M")
+                                arrival_time = None
+                                if isinstance(scheduled_arrival, (int, float)):
+                                    arrival_time = datetime.fromtimestamp(int(scheduled_arrival))
+                                elif isinstance(scheduled_arrival, str):
+                                    try:
+                                        arrival_time = datetime.strptime(scheduled_arrival, "%Y-%m-%dT%H:%M:%S")
+                                    except ValueError:
+                                        try:
+                                            arrival_time = datetime.strptime(scheduled_arrival, "%Y-%m-%dT%H:%M")
+                                        except ValueError:
+                                            today = datetime.now()
+                                            arrival_time = datetime.strptime(scheduled_arrival, "%H:%M").replace(
+                                                year=today.year,
+                                                month=today.month,
+                                                day=today.day,
+                                            )
                                 else:
-                                    now = datetime.now()
-                                    arrival_time = datetime.strptime(scheduled_arrival, "%H:%M").replace(
-                                        year=now.year, month=now.month, day=now.day
+                                     _LOGGER.warning(f"Unsupported scheduledArrival type: {type(scheduled_arrival)}")
+
+                                if arrival_time:
+                                    arrival_delay = int(delay_arrival)
+                                    arrival_time_adjusted = arrival_time + timedelta(minutes=arrival_delay)
+                                    today = datetime.now()
+                                    departure["arrival_current"] = (
+                                        arrival_time_adjusted.strftime("%Y-%m-%dT%H:%M")
+                                        if arrival_time_adjusted.date() != today.date()
+                                        else arrival_time_adjusted.strftime("%H:%M")
                                     )
-
-                                arrival_time_adjusted = arrival_time + timedelta(minutes=delay_arrival)
-                                _LOGGER.debug("arrival_current with added delay: %s", arrival_time_adjusted)
-
-                                if arrival_time_adjusted.date() == datetime.now().date():
-                                    departure["arrival_current"] = arrival_time_adjusted.strftime("%H:%M")
-                                else:
-                                    departure["arrival_current"] = arrival_time_adjusted.strftime("%Y-%m-%dT%H:%M")
-
-                            except ValueError:
+                            except (TypeError, ValueError):
                                 _LOGGER.error("Invalid time format for scheduledArrival: %s", scheduled_arrival)
-                        elif delay_arrival is None:
-                            _LOGGER.debug("No delay attribute found. Setting arrival_current to scheduledArrival: %s", scheduled_arrival)
-                            if scheduled_arrival.date() == datetime.now().date():
-                                departure["arrival_current"] = scheduled_arrival.strftime("%H:%M")
-                            else:
-                                departure["arrival_current"] = scheduled_arrival.strftime("%Y-%m-%dT%H:%M")
-                        else:
-                            if not delay_arrival is None:
-                                _LOGGER.debug("No valid scheduledArrival found. Setting arrival_current to departure_current.")
-                                departure["arrival_current"] = departure.get("departure_current")
-                            else:
-                                _LOGGER.debug("No valid scheduledArrival found. Setting arrival_current to None.")
-                                departure["arrival_current"] = None
+                        elif departure.get("departure_current"):
+                            departure["arrival_current"] = departure.get("departure_current")
 
+                        effective_departure_time = departure_time
                         if not self.drop_late_trains:
-                            departure_time += timedelta(minutes=delay_departure or 0)
+                            effective_departure_time += timedelta(minutes=delay_departure or 0)
 
-                        # Apply any delay to the departure time, if applicable
-                        if not self.drop_late_trains:
-                            _LOGGER.debug("Departure time without added delay: %s", departure_time)
-                            if delay_departure is None:
-                                delay_departure = 0  # Set delay to 0 as fallback if no valid delay has been found
-                            departure_time += timedelta(minutes=delay_departure)
-                            _LOGGER.debug("Departure time with added delay: %s", departure_time)
-
-                        # Remove route attributes to lower sensor size limit: https://github.com/FaserF/ha-db_infoscreen/issues/22
+                        # Remove route attributes to lower sensor size limit
                         if not self.detailed:
-                            departure.pop("id", None)
-                            departure.pop("stop_id_num", None)
-                            departure.pop("stateless", None)
-                            departure.pop("key", None)
-                            departure.pop("messages", None)
-                            departure.pop("mot", None)
-
-                            # Remove attributes with None or empty string – except for allowed keys
-                            allowed_null_keys = {
-                                "scheduledDeparture", "scheduledTime", "delay", "delayDeparture",
-                                "scheduledArrival", "arrival_current", "departure_current",
-                                "sched_dep", "sched_arr", "dep", "datetime"
-                            }
-
-                            keys_to_remove = [
-                                key for key, value in departure.items()
-                                if (value is None or (isinstance(value, str) and value.strip() == "")) and key not in allowed_null_keys
-                            ]
-
+                            for key in ["id", "stop_id_num", "stateless", "key", "messages", "mot"]:
+                                departure.pop(key, None)
+                            allowed_null_keys = {"scheduledDeparture", "scheduledTime", "delay", "delayDeparture", "scheduledArrival", "arrival_current", "departure_current", "sched_dep", "sched_arr", "dep", "datetime"}
+                            keys_to_remove = [k for k, v in departure.items() if (v is None or (isinstance(v, str) and not v.strip())) and k not in allowed_null_keys]
                             for key in keys_to_remove:
                                 departure.pop(key)
 
                         if not self.keep_route:
-                            _LOGGER.debug("Removing route attributes because keep_route is False")
-                            departure.pop("route", None)
-                            departure.pop("via", None)
-                            departure.pop("prev_route", None)
-                            departure.pop("next_route", None)
-                        else:
-                            _LOGGER.debug("Keeping route attributes")
+                            for key in ["route", "via", "prev_route", "next_route"]:
+                                departure.pop(key, None)
 
-                        # Calculate the time offset and only add departures that occur after the offset
-                        departure_seconds = (departure_time - datetime.now()).total_seconds()
-                        if departure_seconds >= self.offset:  # Only show departures after the offset
+                        # Remove temporary datetime object
+                        departure.pop('departure_datetime', None)
+
+                        departure_seconds = (effective_departure_time - datetime.now()).total_seconds()
+                        if departure_seconds >= self.offset:
                             filtered_departures.append(departure)
 
                     _LOGGER.debug("Number of departures added to the filtered list: %d", len(filtered_departures))
