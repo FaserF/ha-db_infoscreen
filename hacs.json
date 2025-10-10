@@ -1,5 +1,15 @@
 {
     "name": "db-infoscreen",
     "render_readme": true,
-    "country": ["DE", "AT", "CH", "LU", "IE"]
+    "country": [
+        "DE",
+        "AT",
+        "CH",
+        "DK",
+        "IE",
+        "LU",
+        "PL",
+        "SE",
+        "US"
+    ]
 }
