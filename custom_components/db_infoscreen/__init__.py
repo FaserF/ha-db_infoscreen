@@ -215,7 +215,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     try:
                                         now = datetime.now()
                                         time_candidate = datetime.strptime(departure_time_str, "%H:%M").replace(year=now.year, month=now.month, day=now.day)
-                                        if time_candidate < now - timedelta(minutes=10): # Allow for slight past times
+                                        if time_candidate < now - timedelta(minutes=5): # Allow for slight past times
                                             time_candidate += timedelta(days=1)
                                         departure_time_obj = time_candidate
                                     except ValueError:
@@ -278,13 +278,29 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                     # --- MAIN FILTERING AND PROCESSING ---
                     filtered_departures = []
+
+                    # This mapping is used to normalize train types from the API
+                    train_type_mapping = {
+                        "S": "S-Bahn",
+                        "N": "Regionalbahn (DB)",
+                        "D": "Regionalbahn",
+                        "F": "Intercity (Express) / Eurocity",
+                        "": "Unbekannter Zugtyp" # Also handles unknown types
+                    }
+
+                    # Map the configured ignored train types to the normalized values for correct comparison.
+                    # e.g., if config is ['S'], this becomes {'S-Bahn'}.
                     ignored_train_types = self.ignored_train_types
-                    if ignored_train_types:
-                        if "S" in ignored_train_types and "S-Bahn" not in ignored_train_types:
-                            ignored_train_types.append("S-Bahn")
-                        if "StadtBus" in ignored_train_types and "MetroBus" not in ignored_train_types:
-                            ignored_train_types.append("MetroBus")
-                        _LOGGER.debug("Ignoring products: %s", ignored_train_types)
+                    mapped_ignored_train_types = {train_type_mapping.get(t, t) for t in ignored_train_types}
+
+                    # Some data sources might use other values, ensure compatibility.
+                    if "S" in ignored_train_types:
+                        mapped_ignored_train_types.add("S-Bahn")
+                    if "StadtBus" in ignored_train_types:
+                        mapped_ignored_train_types.add("MetroBus")
+
+                    if mapped_ignored_train_types:
+                        _LOGGER.debug("Ignoring train types (mapped): %s", mapped_ignored_train_types)
 
                     MAX_SIZE_BYTES = 16000
 
@@ -312,21 +328,26 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                 _LOGGER.debug("Skipping departure as %s is the final stop.", self.station)
                                 continue
 
-                        # Check if the train class is in the ignored list
-                        trainClasses = departure.get("trainClasses")
-                        train_classes = trainClasses or departure.get("train_type") or departure.get("type", [])
-                        if train_classes:
-                            if trainClasses:
-                                train_type_mapping = {
-                                    "S": "S-Bahn", "N": "Regionalbahn (DB)", "D": "Regionalbahn",
-                                    "F": "Intercity (Express) / Eurocity", "": "Internationale Bahn"
-                                }
-                                updated_train_classes = [train_type_mapping.get(tc, tc) for tc in train_classes]
-                                departure["trainClasses"] = updated_train_classes
-                                train_classes = updated_train_classes
-                            if any(train_class in ignored_train_types for train_class in train_classes):
-                                _LOGGER.debug("Ignoring departure due to train class: %s", train_classes)
-                                continue
+                        # Get train classes from the departure data.
+                        train_classes = departure.get("trainClasses") or departure.get("train_type") or departure.get("type", [])
+
+                        # If the API returns an empty list, we treat it as an "unknown" type,
+                        # represented by an empty string, so it can be filtered.
+                        if not train_classes and isinstance(train_classes, list):
+                            api_classes_to_process = [""]
+                        else:
+                            api_classes_to_process = train_classes
+
+                        # Normalize the train classes from the API using the mapping.
+                        mapped_api_classes = {train_type_mapping.get(tc, tc) for tc in api_classes_to_process}
+
+                        # Update the departure data with the normalized, more descriptive train classes.
+                        departure["trainClasses"] = list(mapped_api_classes)
+
+                        # Filter if any of the departure's train classes are in the ignored list.
+                        if mapped_ignored_train_types and not mapped_api_classes.isdisjoint(mapped_ignored_train_types):
+                            _LOGGER.debug("Ignoring departure due to train class. Mapped classes: %s", mapped_api_classes)
+                            continue
 
                         departure_time = departure['departure_datetime']
 

@@ -39,5 +39,5 @@ IGNORED_TRAINTYPES_OPTIONS = {
     "N": "Regional Bahn (RB), Regional Express (RE)",
     "D": "Andere Regionalbahn (z.B. BRB, Wiener Bahn)",
     "F": "EuroCity (EC), Intercity Express (ICE), Intercity (IC)",
-    "": "Internationale Bahn (RJ, ECE), unbekannte Linien"
+    "": "Unbekannter Zugtyp"
 }
