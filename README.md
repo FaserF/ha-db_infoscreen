@@ -99,6 +99,7 @@ Supported are only available [Backend Sources from DBF](https://dbf.finalrewind.
       - RMV – Rhein-Main-Verkehrsverbund
       - Rolph – DB Rolph
       - RSAG – Rostocker Straßenbahn Mecklenburg-Vorpommern (rsag-online.de)
+      - RVV – Regensburger Verkehrsverbund
       - SaarVV – Saarländischer Verkehrsverbund DE-SL (saarvv.de)
       - VAG - Freiburger Verkehrs AG
       - VBB – Verkehrsverbund Berlin-Brandenburg (vbb.de)
