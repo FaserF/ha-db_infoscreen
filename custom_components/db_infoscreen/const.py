@@ -28,7 +28,7 @@ CONF_DEDUPLICATE_DEPARTURES = "deduplicate_departures"
 DATA_SOURCE_OPTIONS = [
     "IRIS-TTS", "hafas=1", "AVV (Aachen)", "AVV (Augsburg)", "BART", "BEG", "BLS", "BSVG", "BVG", "bwegt", "CMTA", "DING", "DSB", "IE",
     "KVV", "KVB", "LinzAG", "mobiliteit", "MVV", "NAHSH", "NASA", "NVBW", "NVV", "NWL", "\u00d6BB", "PKP", "Resrobot", "RMV", "Rolph",
-    "RSAG", "SaarVV", "STV", "TPG", "VAG", "VBB", "VBN", "VGN", "VMT", "VMV", "VOS", "VRN", "VRN2", "VRR",
+    "RSAG", "RVV", "SaarVV", "STV", "TPG", "VAG", "VBB", "VBN", "VGN", "VMT", "VMV", "VOS", "VRN", "VRN2", "VRR",
     "VRR2", "VRR3", "VVO", "VVS", "ZVV"
 ]
 
