@@ -152,23 +152,6 @@ Migration from `ha-deutschebahn` to `ha-db_infoscreen` is not directly possible 
 
 ---
 
-#### Example for Using `via_stations`
-
-If you want to see trains departing from Munich Hbf to Augsburg Hbf, you can configure it as follows:
-
-```yaml
-sensor:
-  - platform: db_infoscreen
-    station: "München Hbf"
-    next_departures: 4
-    via_stations: "Augsburg Hbf"
-    platforms: "5,6"
-```
-
-This configuration will display only the relevant departures from Munich to Augsburg, excluding the return trips.
-
----
-
 #### Key Options for "Start to Destination" (Migration)
 
 - **Platform Filter (`platforms`)**:
