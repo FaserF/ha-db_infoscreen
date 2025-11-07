@@ -44,7 +44,7 @@ You can set up one sensor per station, except using different `via_stations` con
 
 | Key                      | Type    | Required | Default | Description |
 |--------------------------|---------|----------|---------|-------------|
-| `station`               | string  | Yes      | -       | The name of the station or Trip number to be tracked. |
+| `station`               | string  | Yes      | -       | The name of the station, Trip number or DS100 ID to be tracked. [This page](https://ds100.frankfurtium.de/dumps/orte_de.html) may help in finding the DS100 ID to avoid issues with special chars (e.g., 'IMH' for 'München Hbf (Sp)'). |
 | `next_departures`       | int     | No       | 4       | Number of upcoming departures to display. Please note that there may be displayed less than your number, due to [storage limitations](https://github.com/FaserF/ha-db_infoscreen/issues/22). |
 | `update_interval`       | int     | No       | 3       | Time interval (in minutes) to fetch updated departure data. Minimum: 1 minute. |
 | `hide_low_delay`        | boolean | No       | False   | Hide departures with a delay of less than 5 minutes. |

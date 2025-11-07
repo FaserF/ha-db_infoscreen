@@ -6,7 +6,7 @@
         "title": "Station konfigurieren",
         "description": "Richten Sie den Abfahrtssensor mit der gewünschten Station und den Optionen ein.",
         "data": {
-          "station": "Stationsname oder Fahrtnummer",
+          "station": "Stationsname, DS100-Code oder Fahrtnummer",
           "next_departures": "Anzahl der nächsten Abfahrten",
           "update_interval": "Update-Intervall (Minuten)",
           "hidelowdelay": "Verzögerungen unterdrücken",
