@@ -131,7 +131,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     def async_get_options_flow(config_entry):
-        return OptionsFlowHandler(config_entry)
+        return OptionsFlowHandler()
 
     def data_schema(self):
         """
@@ -168,9 +168,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
-    def __init__(self, config_entry):
-        self.config_entry = config_entry
-
     async def async_step_init(self, user_input=None):
         """
         Handle the options flow initial step for the integration.
