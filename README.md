@@ -1,238 +1,191 @@
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+<div align="center">
+  <img src="images/logo.png" alt="Logo" width="200px">
+  <h1>DB Infoscreen Home Assistant Sensor 🚆</h1>
+  <p><strong>A comprehensive departure board integration for Home Assistant.</strong></p>
 
-# DB Infoscreen Home Assistant Sensor 🚆
+  [![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+  [![GitHub Release](https://img.shields.io/github/v/release/FaserF/ha-db_infoscreen?style=for-the-badge)](https://github.com/FaserF/ha-db_infoscreen/releases)
+  [![License](https://img.shields.io/github/license/FaserF/ha-db_infoscreen?style=for-the-badge)](LICENSE)
+</div>
 
-The `db-infoscreen` sensor provides **departure times** and detailed train information for a given station. It aggregates data from multiple sources (primarily **Deutsche Bahn IRIS-TTS**) to give you a comprehensive departure board directly in Home Assistant.
+---
 
-<img src="images/logo.png" alt="Logo" width="300px">
-<img src="images/sensor.png" alt="Station Sensor" width="300px">
+The `db-infoscreen` sensor provides detailed **departure times** and train information for a given station directly in Home Assistant. Aggregating data from multiple sources (primarily **Deutsche Bahn IRIS-TTS**), it offers a powerful and comprehensive departure board for stations across Germany and Europe.
 
-## Features ✨
+<div align="center">
+  <img src="images/sensor.png" alt="Station Sensor" width="600px">
+</div>
 
-- ** comprehensive Departure Board**: Next departures, delays, platforms.
-- **Wide Coverage**: Supports DB and many local transport associations (via HAFAS/EFA).
-- **Highly Configurable**: Filter by direction, train type, and more.
-- **Detailed Attributes**: Route info, messages, train composition details.
+## ✨ Features
 
-## Installation 🛠️
+| Feature | Description |
+| :--- | :--- |
+| 📋 **Departure Board** | View next departures, delays, platforms, and train types. |
+| 🌍 **Wide Coverage** | Supports DB and many local transport associations (via HAFAS/EFA). |
+| ⚙️ **Highly Configurable** | Filter by direction, train type, specific platforms, and more. |
+| ℹ️ **Detailed Attributes** | Access route info, warnings, messages, and train composition details. |
+
+---
+
+## 🛠️ Installation
 
 ### 1. Using HACS (Recommended)
 
-This integration is an **official HACS Integration**.
+This integration is available as a default repository in HACS.
 
-1.  Open HACS.
-2.  Search for "db-infoscreen".
+1.  Open **HACS**.
+2.  Search for `db-infoscreen`.
 3.  Click **Download**.
+4.  Restart Home Assistant.
 
-[![Open your Home Assistant instance to install this integration from the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=FaserF&repository=ha-db_infoscreen&category=integration)
+[![Open HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=FaserF&repository=ha-db_infoscreen&category=integration)
 
 > [!TIP]
-> HACS ensures you stay up-to-date with the latest API changes.
+> HACS ensures you stay up-to-date with the latest API changes and bug fixes.
 
 ### 2. Manual Installation
 
 1.  Download the latest [Release](https://github.com/FaserF/ha-db_infoscreen/releases/latest).
 2.  Extract the ZIP file.
-3.  Copy the `db_infoscreen` folder to `<config>/custom_components/`.
+3.  Copy the `db_infoscreen` folder into your `<config>/custom_components/` directory.
+4.  Restart Home Assistant.
 
-## Configuration ⚙️
+---
+
+## ⚙️ Configuration
 
 1.  Go to **Settings** -> **Devices & Services**.
 2.  Click **Add Integration**.
-3.  Search for "db-infoscreen".
+3.  Search for **DB Infoscreen**.
 
-[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=db_infoscreen)
+[![Add Integration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=db_infoscreen)
 
-### Configuration Variables
+### Configuration Options
 
-| Key                      | Type    | Required | Default | Description |
-|--------------------------|---------|----------|---------|-------------|
-| `station`               | string  | Yes      | -       | The name of the station, Trip number or DS100 ID to be tracked. [This page](https://ds100.frankfurtium.de/dumps/orte_de.html) may help in finding the DS100 ID to avoid issues with special chars (e.g., 'IMH' for 'München Hbf (Sp)'). |
-| `next_departures`       | int     | No       | 4       | Number of upcoming departures to display. Please note that there may be displayed less than your number, due to [storage limitations](https://github.com/FaserF/ha-db_infoscreen/issues/22). |
-| `update_interval`       | int     | No       | 3       | Time interval (in minutes) to fetch updated departure data. Minimum: 1 minute. |
-| `hide_low_delay`        | boolean | No       | False   | Hide departures with a delay of less than 5 minutes. |
-| `drop_late_trains`      | boolean | No       | False   | Hide past departures that would still be delayed. |
-| `deduplicate_departures`      | boolean | No       | False   | Filter out similar "duplicate" departures. |
-| `detailed`             | boolean | No       | False   | Show additional details about departures. For example: messages, id, stop_id_num, stateless, key, mot |
-| `past_60_minutes`      | boolean | No       | False   | Show departures from the past 60 minutes. |
-| `keep_route`           | boolean | No       | False   | Keep route (stopover) details (all train stations on train route). |
-| `keep_endstation`      | boolean | No       | False   | Keep departure if station is also endstation. |
-| `custom_api_url`       | string  | No       | -       | Use a custom API URL instead of the default one. |
-| `data_source`          | string  | No       | IRIS-TTS | Choose the data source for fetching departure information. More details can be found below at Data Sources. |
-| `offset`              | string  | No       | 00:00   | Time offset for departure search (HH:MM or HH:MM:SS). |
-| `admode`              | string  | No       | departure preferred | Defines whether to display departure or arrival times. |
-| `platforms`           | string  | No       | -       | Filter by specific platform(s) (comma-separated). |
-| `via_stations`        | string  | No       | -       | Filter by stations where the train must pass through. |
-| `direction`           | string  | No       | -       | Filter departures by direction text. Useful for APIs that do not provide 'via' stations but a 'direction' (may not work for all data sources, e.g., IRIS-TTS). |
-| `ignored_train_types` | list    | No       | []      | List of train types to ignore (may not work for all data sources, e.g., VMT). |
+| Option | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `station` | string | **Yes** | - | Station name, Trip number, or DS100 ID (e.g. `München Hbf` or `MH`). Check [DS100 List](https://ds100.frankfurtium.de/dumps/orte_de.html) for IDs. |
+| `next_departures` | int | No | `4` | Number of upcoming departures to display. Max limited by backend storage. |
+| `update_interval` | int | No | `3` | Fetch interval in minutes. **Minimum: 1 minute**. |
+| `hide_low_delay` | bool | No | `False` | Hide departures with < 5 min delay. |
+| `drop_late_trains` | bool | No | `False` | Hide past departures even if they are delayed. |
+| `deduplicate_departures` | bool | No | `False` | Filter out duplicate entries. |
+| `detailed` | bool | No | `False` | Show extra attributes (messages, ids, keys, etc.). |
+| `past_60_minutes` | bool | No | `False` | Show departures from the past 60 minutes. |
+| `keep_route` | bool | No | `False` | Keep full route (stopover) details in attributes. |
+| `keep_endstation` | bool | No | `False` | Keep departure if station is also the endstation. |
+| `custom_api_url` | string | No | - | Use a private/custom API instance. |
+| `data_source` | string | No | `IRIS-TTS` | Backend source (DB, AVV, etc.). See Data Sources below. |
+| `offset` | string | No | `00:00` | Time offset for search (HH:MM or HH:MM:SS). |
+| `admode` | string | No | `departure` | Display departure or arrival times. |
+| `platforms` | string | No | - | Filter by comma-separated platforms (e.g., `1, 2, 5`). |
+| `via_stations` | string | No | - | Filter by stations the train must pass through. |
+| `direction` | string | No | - | Filter by direction text (API dependent). |
+| `ignored_train_types` | list | No | `[]` | List of train types to ignore. |
 
-#### Warnings and Limitations
-
-- **Sensor limits:** You are limited to adding 30 sensors, if you are not using a custom_api_url. This is due to backend limitations, see [here](https://dbf.finalrewind.org/) under "API".
-- **Storage Limitations:** Certain configurations (e.g., `detailed`, `keep_route`, or many `next_departures`) may quickly lead to reaching storage limitations. See [issue #22](https://github.com/FaserF/ha-db_infoscreen/issues/22) for details.
-- **Data Accuracy:** The accuracy of the departure information depends on the selected `data_source`. Some sources may provide outdated or incomplete data.
-- **Update Interval:** The minimum `update_interval` is 1 minute. A lower interval may cause high API usage and lead to throttling or bans. This is due to backend limitations, see [here](https://dbf.finalrewind.org/) under "API".
-- **Custom API URL:** If using `custom_api_url`, ensure that the API follows the expected response format to avoid errors.
-
-
-#### Data Sources
-Supported are only available [Backend Sources from DBF](https://dbf.finalrewind.org/_backend). There is no way for me to support other sources than that. The mentioned sources there are all using HAFAS or EFA. If you are missing a source that uses HAFAS or EFA, you can create a feature request at [a db-infoscreen - (formerly db-fakedisplay)](https://github.com/derf/db-fakedisplay/tree/main).
-
-
-- **data_source** (optional): Choose the data source for fetching departure information.
-  - The integration supports fetching departure data from various data sources, including:
-    - IRIS-TTS (DB) – Deutsche Bahn AG (db.de) (default and used by most)
-    - Germany (DE)
-      - AVV – Aachener Verkehrsverbund Nordrhein-Westfalen (avv.de)
-      - AVV – Augsburger Verkehrs- und Tarifverbund (avv-augsburg.de)
-      - BEG - Bayrische Eisenbahngesellschaft (beg.bahnland-bayern.de)
-      - BSVG – Braunschweiger Verkehrs-GmbH
-      - BVG – Berliner Verkehrsbetriebe Berlin, Brandenburg (bvg.de)
-      - bwegt - Personennahverkehr in Baden-Württemberg (ehem. 3-Löwen-Takt)
-      - DING – Donau-Iller Nahverkehrsverbund
-      - IRIS-TTS – Deutsche Bahn (Standard)
-      - KVB – Kölner Verkehrs-Betriebe (kvb.koeln)
-      - KVV – Karlsruher Verkehrsverbund Baden-Württemberg
-      - MVV – Münchener Verkehrs- und Tarifverbund Bayern
-      - NAHSH – Nahverkehrsverbund Schleswig-Holstein (nah.sh)
-      - NASA – Personennahverkehr in Sachsen-Anhalt (nasa.de)
-      - NVBW – Nahverkehrsgesellschaft Baden-Württemberg
-      - NVV – Nordhessischer Verkehrsverbund Hessen (nvv.de)
-      - NWL – Nahverkehr Westfalen-Lippe
-      - RMV – Rhein-Main-Verkehrsverbund
-      - Rolph – DB Rolph
-      - RSAG – Rostocker Straßenbahn Mecklenburg-Vorpommern (rsag-online.de)
-      - RVV – Regensburger Verkehrsverbund
-      - SaarVV – Saarländischer Verkehrsverbund DE-SL (saarvv.de)
-      - VAG - Freiburger Verkehrs AG
-      - VBB – Verkehrsverbund Berlin-Brandenburg (vbb.de)
-      - VBN – Verkehrsverbund Bremen/Niedersachsen (vbn.de)
-      - VGN – Verkehrsverbund Großraum Nürnberg Bayern
-      - VMT – Verkehrsverbund Mittelthüringen Thüringen (vmt-thueringen.de)
-      - VMV – Verkehrsgesellschaft Mecklenburg-Vorpommern
-      - VOS – Verkehrsgemeinschaft Osnabrück (vos.info)
-      - VVO – Verkehrsverbund Oberelbe
-      - VRN – Verkehrsverbund Rhein-Neckar
-      - VRN2 – Verkehrsverbund Rhein-Neckar
-      - VRR – Verkehrsverbund Rhein-Ruhr
-      - VRR2 – Verkehrsverbund Rhein-Ruhr
-      - VRR3 – Verkehrsverbund Rhein-Ruhr
-      - VVS – Verkehrs- und Tarifverbund Stuttgart Baden-Württemberg
-    - Austria (AT)
-      - LinzAG – Linz AG
-      - ÖBB – Österreichische Bundesbahnen
-      - STV – Steirischer Verkehrsverbund (verbundlinie.at)
-    - Switzerland (CH)
-      - BLS – BLS AG Kanton Bern, Kanton Luzern (bls.ch)
-      - TPG – Transports publics genevois (tpg.ch)
-      - ZVV – Züricher Verkehrsverbund Kanton Zürich (zvv.ch)
-    - Denmark (DK)
-      - DSB – Rejseplanen (rejseplanen.dk)
-    - Ireland (IE)
-      - IE – Iarnród Éireann Irland, Nordirland (irishrail.ie)
-    - Luxembourg (LU)
-      - mobiliteit – mobilitéits zentral (mobiliteit.lu)
-    - Poland (PL)
-      - PKP - Polskie Koleje Państwowe
-    - Sweden (SE)
-      - Resrobot – Resrobot
-    - USA (US)
-      - BART – Bay Area Rapid Transit California (bart.gov)
-      - CMTA – Capital Metro Austin Public Transport Texas (capmetro.org)
-  - Some stations can be searched via "IRIS-TTS" but need hafas=1 for data retrival, f.e. "Frankenforst Kippekausen, Bergisch Gladbach", choose `hafas=1` in the list to archive this. [GitHub issue about this](https://github.com/FaserF/ha-db_infoscreen/issues/8)
-
-### Migrating from [ha-deutschebahn](https://github.com/FaserF/ha-deutschebahn)
-
-Migration from `ha-deutschebahn` to `ha-db_infoscreen` is not directly possible because the two integrations use different API sources and data structures. The old `ha-deutschebahn` API supported start and destination stations directly, which the new `db_infoscreen` API cannot fully replicate. However, you can still achieve a similar experience with a few workarounds:
-
-#### Options to Achieve a "Start to Destination" Experience:
-
-1. **Use the `platforms` Parameter**
-   You can display only one direction by filtering for specific platforms. For example, show only trains from Munich to Augsburg, and then filter by specific end stations on the way.
-
-2. **Use Two Sensors**
-   To simulate a fixed start-to-destination route, create two sensors for the same station but with different `via_stations`. This will allow you to simulate the direction from the start station to the destination.
+> [!WARNING]
+> **Limitations & Performance**
+> *   **Sensor Limit**: You are limited to **30 sensors** unless using a custom_api_url.
+> *   **Update Interval**: Minimum is 1 minute to prevent API bans/throttling.
+> *   **Storage**: Enabling `detailed`, `keep_route`, or a high number of `next_departures` can hit Home Assistant's state storage limits. See [Issue #22](https://github.com/FaserF/ha-db_infoscreen/issues/22).
+> *   **Data Accuracy**: Depends on the selected `data_source`.
 
 ---
 
-#### Key Options for "Start to Destination" (Migration)
+## 📡 Data Sources
 
-- **Platform Filter (`platforms`)**:
-  Use this parameter to restrict departures to specific platforms. This can help narrow down the direction you want to track.
+This integration allows fetching data from various backend sources via [DBF](https://dbf.finalrewind.org/).
 
-- **Via Stations (`via_stations`)**:
-  To simulate a specific direction, use `via_stations` to filter trains passing through certain intermediate stations.
+<details>
+<summary><strong>👇 Click to expand the full list of supported Data Sources</strong></summary>
 
-- **Use Two Sensors**:
-  If you want to filter departures in a single direction (for example, from Munich to Augsburg), use two sensors with different `via_stations` configurations.
+### Germany (DE)
+*   **IRIS-TTS** (Deutsche Bahn) - *Default / Recommended*
+*   **AVV** (Aachen), **AVV** (Augsburg)
+*   **BEG** (Bayern), **BSVG** (Braunschweig), **BVG** (Berlin/Brandenburg)
+*   **bwegt** (Baden-Württemberg), **DING** (Donau-Iller)
+*   **KVB** (Köln), **KVV** (Karlsruhe), **MVV** (München)
+*   **NAHSH** (Schleswig-Holstein), **NASA** (Sachsen-Anhalt), **NVBW** (BaWü)
+*   **NVV** (Nordhessen), **NWL** (Westfalen-Lippe), **RMV** (Rhein-Main)
+*   **RSAG** (Rostock), **RVV** (Regensburg), **SaarVV** (Saarland)
+*   **VAG** (Freiburg), **VBB** (Berlin-Brandenburg), **VBN** (Bremen/Niedersachsen)
+*   **VGN** (Nürnberg), **VMT** (Mittelthüringen), **VMV** (Mecklenburg-Vorpommern)
+*   **VOS** (Osnabrück), **VVO** (Oberelbe), **VRN** (Rhein-Neckar), **VRR** (Rhein-Ruhr)
+*   **VVS** (Stuttgart)
+
+### International
+*   **Austria (AT)**: LinzAG, ÖBB, STV (Steiermark)
+*   **Switzerland (CH)**: BLS, TPG (Geneva), ZVV (Zürich)
+*   **Denmark (DK)**: DSB (Rejseplanen)
+*   **Ireland (IE)**: Iarnród Éireann
+*   **Luxembourg (LU)**: mobiliteit
+*   **Poland (PL)**: PKP
+*   **Sweden (SE)**: Resrobot
+*   **USA (US)**: BART (California), CMTA (Texas)
+
+> Note: To use HAFAS for stations also found in IRIS-TTS (e.g. "Frankenforst Kippekausen"), choose the specific backend or set `hafas=1`. See [Issue #8](https://github.com/FaserF/ha-db_infoscreen/issues/8).
+
+</details>
 
 ---
 
-#### Further Information
+## 📦 Migration from ha-deutschebahn
 
-All other features of the old `ha-deutschebahn` integration have been ported to `ha-db_infoscreen`. For further discussion, check out the [discussion on GitHub](https://github.com/FaserF/ha-db_infoscreen/issues/4).
-You can also check out some examples in Accessing the data.
+Direct migration is not possible due to API differences. The old integration supported "Start to Destination" routing, which `db-infoscreen` handles differently.
 
+**To replicate "Start -> Destination" behavior:**
+1.  **Via Stations**: Use `via_stations` to filter trains going *through* your destination or key stops.
+2.  **Platforms**: Filter by platform if trains to your destination always use specific tracks.
+3.  **Two Sensors**: Create two sensors (one for Start, one for typical changeover stations) to track complex routes.
 
-## Accessing the data
+---
+
+## 📊 Usage & Examples
 
 ### Automations
+
+**Notify when the next train is delayed:**
+
 ```yaml
 automation:
-  - alias: Notify Train Delay
-    description: "Notify when the next train is delayed by more than 10 minutes."
+  - alias: "Train Delay Notification"
     trigger:
       - platform: template
         value_template: "{{ state_attr('sensor.station_departures', 'next_departures')[0]['delayArrival'] | int > 10 }}"
     action:
-      - service: notify.notify
+      - service: notify.mobile_app
         data:
           message: >
-            The next train to {{ state_attr('sensor.station_departures', 'next_departures')[0]['destination'] }}
-            is delayed by {{ state_attr('sensor.station_departures', 'next_departures')[0]['delayArrival'] }} minutes.
-    mode: single
+            The train to {{ state_attr('sensor.station_departures', 'next_departures')[0]['destination'] }}
+            is delayed by {{ state_attr('sensor.station_departures', 'next_departures')[0]['delayArrival'] }} min.
 ```
 
-### Custom sensor
-Add a custom sensor in your configuration.yaml
+### Custom Template Sensors
+
+**Display next connection in `HH:MM +Delay` format:**
+*(Credit: [kRew94](https://github.com/kRew94) & [kaffeetrinker71](https://github.com/FaserF/ha-db_infoscreen/issues/4#issuecomment-2611684018))*
 
 ```yaml
 sensor:
   - platform: template
     sensors:
-      next_train_departure:
-        friendly_name: "Next Train Departure"
+      next_train_formatted:
+        friendly_name: "Next Train"
         value_template: >
-          {{ state_attr('sensor.station_departures', 'next_departures')[0]['scheduledArrival'] }}
-        icon_template: mdi:train
+          {% set conn = state_attr('sensor.uelzen_departures_via_hannover_hbf', 'next_departures') | selectattr('isCancelled', 'equalto', 0) | list | first %}
+          {% if conn %}
+            {{ conn.train }} at {{ conn.scheduledDeparture }}{% if conn.delayDeparture > 0 %} +{{ conn.delayDeparture }}{% endif %}
+          {% else %}
+            No connection
+          {% endif %}
 ```
+*Result: "ICE 2935 at 07:15 +5"*
 
-#### Community submit by [kRew94](https://github.com/kRew94) (Improved by [kaffeetrinker71](https://github.com/FaserF/ha-db_infoscreen/issues/4#issuecomment-2611684018))
-This is a template sensor which gives the information for a destination in the format "HH:MM +DELAY":
+<details>
+<summary><strong>👇 Advanced: Filter Connections by Destination (Start -> Destination)</strong></summary>
 
-```yaml
-{%- set number = 0 -%}
-{%- set connections = state_attr('sensor.uelzen_departures_via_hannover_hbf', 'next_departures') | selectattr('isCancelled', 'equalto', 0) | list -%}
-{% if connections is not none and connections | length > number %}
-  {% set connection = connections[number] %}
-  {% set product = connection.train %}
-  {% set departure = connection.scheduledDeparture %}
-  {% set delay = connection.delayDeparture | int %}
-  {{ product }} um {{ departure }}{% if delay > 0 %} +{{ delay }}{% endif %}
-{% else %}
-  No data
-{% endif %}
-```
-The result looks like this: "ICE 2935 um 07:15"
-
-### YAML Snippets
-There are some examples that can be used within automations or custom sensors.
-
-#### Community submit by [Kanecaine](https://github.com/Kanecaine)
-I have a sensor for Berlin Central Station and would now like to know which connections there are to Leipzig and should give you the following output:
-IC 495 um 22:28 +1.
-
-[More informations](https://github.com/FaserF/ha-db_infoscreen/issues/4#issuecomment-2605743834).
+*(Credit: [Kanecaine](https://github.com/Kanecaine))*
+This example demonstrates how to filter connections from a station (e.g. Berlin Hbf) to a specific target (e.g. Leipzig Hbf) that must be in the train's route.
 
 ```yaml
 {%- set my_station = "Berlin Hbf" -%}
@@ -259,8 +212,14 @@ IC 495 um 22:28 +1.
 {%- endif -%}
 ```
 
-### JSON Format
-The API returns data in the following json format usually:
+</details>
+
+### JSON Data Structure
+
+The integration attributes provide data in JSON format. Use this to build your own templates.
+
+<details>
+<summary><strong>👇 View JSON Example</strong></summary>
 
 ```json
 {
@@ -280,56 +239,29 @@ The API returns data in the following json format usually:
   ]
 }
 ```
+</details>
 
-There are some differences depending on the stations, for example:
-```json
-{
-  "departures": [
-    {
-      "delay": 0,
-      "destination": "Bensberg, Bergisch Gladbach",
-      "direction": "Bensberg, Bergisch Gladbach",
-      "isCancelled": null,
-      "messages": [],
-      "platform": null,
-      "route": [],
-      "scheduledPlatform": null,
-      "scheduledTime": 1737619740,
-      "time": 1737619740,
-      "train": "STR 1",
-      "trainNumber": "54726",
-      "via": []
-    }
-  ]
-}
-```
+### Frontend Cards
 
-### Lovelace Custom Cards
-There are some lovelace custom cards, which bringt you a better overview on your dashboard. Be sure to check them out.
+For a beautiful dashboard display, check out these custom cards:
 
-#### ha-departureCard
-Check out the card [here](https://github.com/BagelBeef/ha-departureCard/).
+*   [**ha-departureCard**](https://github.com/BagelBeef/ha-departureCard/) by BagelBeef.
+*   [**ha-public-transport-connection-card**](https://github.com/silviokennecke/ha-public-transport-connection-card) (Work in Progress).
 
-#### ha-public-transport-connection-card
-This is currently Work-in-Progress by the maintainer, more informations are [here](https://github.com/silviokennecke/ha-public-transport-connection-card/issues/22).
+---
 
-## Contributing
+## 🐛 Troubleshooting & Support
 
-Contributions are welcome! Please open an issue or submit a pull request if you'd like to help improve this integration.
+*   **Reporting Issues**: Please report bugs on [GitHub Issues](https://github.com/FaserF/ha-db_infoscreen/issues).
+*   **Debug Logging**: To help diagnose issues, enable debug logging in `configuration.yaml`:
 
-## Bug reporting
-Open an issue over at [github issues](https://github.com/FaserF/ha-db_infoscreen/issues). Please prefer sending over a log with debugging enabled.
+    ```yaml
+    logger:
+       logs:
+          custom_components.db_infoscreen: debug
+    ```
 
-To enable debugging enter the following in your configuration.yaml
+## ❤️ Credits
 
-```yaml
-logger:
-    logs:
-        custom_components.db_infoscreen: debug
-```
-
-You can then find the log in the HA settings -> System -> Logs -> Enter "db-infoscreen" in the search bar -> "Load full logs"
-
-## Thanks to
-The data is coming from the [dbf.finalrewind.org](https://dbf.finalrewind.org/) website (if no custom API Server is specified).
-The backend data is coming from [a db-infoscreen - (formerly db-fakedisplay) server](https://github.com/derf/db-fakedisplay/tree/main) - with a huge thanks to [derf](https://github.com/derf) for this great project!
+*   Backend data provided by [**dbf.finalrewind.org**](https://dbf.finalrewind.org/).
+*   Huge thanks to [**derf**](https://github.com/derf) for the underlying [db-fakedisplay](https://github.com/derf/db-fakedisplay) project!

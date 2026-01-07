@@ -331,6 +331,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         # Get train classes from the departure data.
                         train_classes = departure.get("trainClasses") or departure.get("train_type") or departure.get("type", [])
 
+                        if isinstance(train_classes, str):
+                            train_classes = [train_classes]
+
                         # If the API returns an empty list, we treat it as an "unknown" type,
                         # represented by an empty string, so it can be filtered.
                         if not train_classes and isinstance(train_classes, list):
