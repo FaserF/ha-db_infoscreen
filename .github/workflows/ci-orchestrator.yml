@@ -11,7 +11,7 @@ on:
     - cron: '44 12 * * 6'
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   security-events: write
   actions: read
@@ -112,3 +112,16 @@ jobs:
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
+
+  auto-merge:
+    name: Auto Merge Renovate
+    runs-on: ubuntu-latest
+    needs: [lint-test, docker-validation, hassfest, hacs-validation, codeql]
+    if: github.event_name == 'pull_request' && github.actor == 'renovate[bot]'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable Auto Merge
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
