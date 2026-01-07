@@ -1,5 +1,5 @@
 from homeassistant.components.sensor import SensorEntity
-from .const import DOMAIN
+from .const import DOMAIN, CONF_ENABLE_TEXT_VIEW
 import logging
 from datetime import datetime
 
@@ -10,7 +10,14 @@ MAX_LENGTH = 70
 
 class DBInfoSensor(SensorEntity):
     def __init__(
-        self, coordinator, config_entry, station, via_stations, direction, platforms
+        self,
+        coordinator,
+        config_entry,
+        station,
+        via_stations,
+        direction,
+        platforms,
+        enable_text_view,
     ):
         """
         Initialize the DBInfoSensor for a specific station's departure display.
@@ -24,6 +31,7 @@ class DBInfoSensor(SensorEntity):
                 via_stations (list[str] | None): Intermediate stations to include in the display name.
                 direction (str | None): Direction suffix to include in the display name.
                 platforms (str | None): Platform information to include in the display name.
+                enable_text_view (bool): Whether to generate simplified text view for ePaper.
         """
         self.coordinator = coordinator
         self.config_entry = config_entry
@@ -31,6 +39,7 @@ class DBInfoSensor(SensorEntity):
         self.via_stations = via_stations
         self.direction = direction
         self.platforms = platforms
+        self.enable_text_view = enable_text_view
 
         platforms_suffix_name = f" platform {platforms}" if platforms else ""
         via_suffix_name = f" via {' '.join(via_stations)}" if via_stations else ""
@@ -212,7 +221,7 @@ class DBInfoSensor(SensorEntity):
         else:
             last_updated = "Unknown"
 
-        return {
+        attributes = {
             "next_departures": next_departures,
             "station": self.station,
             "via_stations": self.via_stations,
@@ -220,6 +229,33 @@ class DBInfoSensor(SensorEntity):
             "last_updated": last_updated,
             "attribution": attribution,
         }
+
+        if self.enable_text_view:
+            next_departures_text = []
+            for dep in raw_departures:
+                line = dep.get("line", "?")
+                destination = dep.get("destination", "?")
+                platform = dep.get("platform", "?")
+                time = dep.get("time", "?")
+                delay = dep.get("delay", 0)
+
+                # Format time if it is an int/timestamp, otherwise use as is
+                if isinstance(time, int):
+                    time = datetime.fromtimestamp(time).strftime("%H:%M")
+
+                delay_str = ""
+                if delay:
+                    try:
+                        if int(delay) > 0:
+                            delay_str = f" +{delay}"
+                    except (ValueError, TypeError):
+                        pass
+
+                text = f"{line} -> {destination} (Pl {platform}): {time}{delay_str}"
+                next_departures_text.append(text)
+            attributes["next_departures_text"] = next_departures_text
+
+        return attributes
 
     @property
     def available(self):
@@ -259,17 +295,25 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     via_stations = config_entry.data.get("via_stations", [])
     direction = config_entry.data.get("direction", "")
     platforms = config_entry.data.get("platforms", "")
+    enable_text_view = config_entry.options.get(CONF_ENABLE_TEXT_VIEW, False)
 
     _LOGGER.debug(
-        "Setting up DBInfoSensor for station: %s with via_stations: %s and direction: %s",
+        "Setting up DBInfoSensor for station: %s with via_stations: %s, direction: %s, text_view: %s",
         station,
         via_stations,
         direction,
+        enable_text_view,
     )
     async_add_entities(
         [
             DBInfoSensor(
-                coordinator, config_entry, station, via_stations, direction, platforms
+                coordinator,
+                config_entry,
+                station,
+                via_stations,
+                direction,
+                platforms,
+                enable_text_view,
             )
         ]
     )

@@ -60,6 +60,7 @@
           "via_stations": "Only show departures via",
           "direction": "Only show departures in direction",
           "excluded_directions": "Exclude departures in direction",
+          "enable_text_view": "Enable simplified text view (for ePaper)",
           "ignored_train_types": "Do not track specified train types (f.e. ICE)"
         }
       }

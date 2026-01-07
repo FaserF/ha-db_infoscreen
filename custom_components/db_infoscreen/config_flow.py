@@ -30,6 +30,7 @@ from .const import (
     CONF_KEEP_ROUTE,
     CONF_KEEP_ENDSTATION,
     CONF_DEDUPLICATE_DEPARTURES,
+    CONF_ENABLE_TEXT_VIEW,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -257,6 +258,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_DEDUPLICATE_DEPARTURES,
                         default=self.config_entry.options.get(
                             CONF_DEDUPLICATE_DEPARTURES, False
+                        ),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_ENABLE_TEXT_VIEW,
+                        default=self.config_entry.options.get(
+                            CONF_ENABLE_TEXT_VIEW, False
                         ),
                     ): cv.boolean,
                     vol.Optional(

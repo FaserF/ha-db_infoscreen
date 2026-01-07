@@ -60,6 +60,7 @@
           "via_stations": "Zeige nur Abfahrten über",
           "direction": "Zeige nur Abfahrten in Richtung",
           "excluded_directions": "Zeige keine Abfahrten in Richtung",
+          "enable_text_view": "Aktiviere vereinfachte Textansicht (für ePaper)",
           "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)"
         }
       }

@@ -83,6 +83,7 @@ This integration is available as a default repository in HACS.
 | `direction` | string | No | - | Filter by direction text (API dependent). |
 | `excluded_directions` | string | No | - | Exclude departures with specific direction (substring match). |
 | `ignored_train_types` | list | No | `[]` | List of train types to ignore. |
+| `enable_text_view` | bool | No | `False` | Enable simplified text view for ePaper displays. |
 
 > [!WARNING]
 > **Limitations & Performance**

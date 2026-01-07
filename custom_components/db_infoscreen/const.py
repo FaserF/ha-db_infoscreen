@@ -25,6 +25,7 @@ CONF_DROP_LATE_TRAINS = "drop_late_trains"
 CONF_KEEP_ROUTE = "keep_route"
 CONF_KEEP_ENDSTATION = "keep_endstation"
 CONF_DEDUPLICATE_DEPARTURES = "deduplicate_departures"
+CONF_ENABLE_TEXT_VIEW = "enable_text_view"
 
 TRAIN_TYPE_MAPPING = {
     "S": "S-Bahn",
