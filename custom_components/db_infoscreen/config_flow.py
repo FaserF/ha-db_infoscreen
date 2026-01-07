@@ -43,30 +43,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
     async def async_step_user(self, user_input=None):
-        """
-        Handle the initial user step of the config flow: validate input, normalize fields, ensure uniqueness, and create or abort a config entry.
-
-        Parameters:
-                user_input (dict|None): Form data from the user. Expected keys include:
-                        - CONF_STATION: station identifier (required when provided)
-                        - CONF_VIA_STATIONS: comma-separated string of intermediate stations
-                        - CONF_DIRECTION: optional direction string
-                        - CONF_PLATFORMS: optional platform specification
-                        - CONF_DATA_SOURCE: optional data source identifier (defaults to "IRIS-TTS")
-                        - CONF_CUSTOM_API_URL: optional custom API URL (bypasses MAX_SENSORS limit when present)
-
-        Description:
-                - If user_input is None, shows the user form with the configured data schema.
-                - If provided, enforces the MAX_SENSORS limit unless a custom API URL is supplied.
-                - Normalizes CONF_VIA_STATIONS into a list of trimmed station strings.
-                - Builds a base unique ID from station, via stations, direction, and platforms.
-                - If an existing entry for the same station and data source exists, aborts the flow with reason "already_configured".
-                - Otherwise, selects an unused unique ID (appending a numeric suffix if needed), sets it for the flow, and creates a new config entry.
-                - The created entry's title is derived from station, platforms, via stations, direction, and includes the data source only when multiple entries exist for the station.
-
-        Returns:
-                flow_result: The flow result that either shows the form, aborts the flow, or creates a new configuration entry.
-        """
+        """Handle the initial user step."""
         errors = {}
 
         if user_input is not None:
@@ -76,7 +53,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors["base"] = "max_sensors_reached"
                     return self.async_show_form(
                         step_id="user",
-                        data_schema=self.data_schema(),
+                        data_schema=self.user_data_schema(),
                         errors=errors,
                     )
 
@@ -90,7 +67,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             station = user_input[CONF_STATION]
             via = user_input[CONF_VIA_STATIONS]
             direction = user_input.get(CONF_DIRECTION, "")
-            platforms = user_input[CONF_PLATFORMS]
+            platforms = user_input.get(CONF_PLATFORMS, "")
             data_source = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
             parts = [station]
 
@@ -118,7 +95,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
                     return self.async_abort(reason="already_configured")
 
-            # Find a free unique ID by appending a numeric suffix if needed
+            # Find a free unique ID
             suffix = 1
             unique_id_candidate = base_unique_id
             used_ids = {e.unique_id for e in same_station_entries}
@@ -130,7 +107,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(unique_id_candidate)
             _LOGGER.debug("Creating new sensor with unique_id: %s", unique_id_candidate)
 
-            # Build display title (append data source only if there are multiple for this station)
+            # Build display title
             title_parts = [station]
             if platforms:
                 title_parts.append(f"platform {platforms}")
@@ -150,7 +127,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=self.data_schema(),
+            data_schema=self.user_data_schema(),
             errors=errors,
         )
 
@@ -158,48 +135,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry):
         return OptionsFlowHandler(config_entry)
 
-    def data_schema(self):
-        """
-        Build the voluptuous Schema used for the integration's user configuration form.
-
-        The schema defines all configuration fields presented to the user and their defaults,
-        including station selection, polling and display options, data source selection,
-        platforms, via stations, direction, and ignored train types.
-
-        Returns:
-            vol.Schema: A Voluptuous schema mapping configuration keys to validators and defaults.
-        """
+    def user_data_schema(self):
+        """Build the schema for the initial user step (simplified)."""
         return vol.Schema(
             {
                 vol.Required(CONF_STATION): cv.string,
-                vol.Optional(
-                    CONF_NEXT_DEPARTURES, default=DEFAULT_NEXT_DEPARTURES
-                ): cv.positive_int,
-                vol.Optional(
-                    CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL
-                ): cv.positive_int,
-                vol.Optional(CONF_HIDE_LOW_DELAY, default=False): cv.boolean,
-                vol.Optional(CONF_DROP_LATE_TRAINS, default=False): cv.boolean,
-                vol.Optional(CONF_DEDUPLICATE_DEPARTURES, default=False): cv.boolean,
-                vol.Optional(CONF_DETAILED, default=False): cv.boolean,
-                vol.Optional(CONF_PAST_60_MINUTES, default=False): cv.boolean,
-                vol.Optional(CONF_KEEP_ROUTE, default=False): cv.boolean,
-                vol.Optional(CONF_KEEP_ENDSTATION, default=False): cv.boolean,
-                vol.Optional(CONF_CUSTOM_API_URL, default=""): cv.string,
                 vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(
                     DATA_SOURCE_OPTIONS
                 ),
-                vol.Optional(CONF_OFFSET, default=DEFAULT_OFFSET): cv.string,
-                vol.Optional(CONF_PLATFORMS, default=""): cv.string,
-                vol.Optional(CONF_ADMODE, default="preferred departure"): vol.In(
-                    ["preferred departure", "arrival", "departure"]
-                ),
-                vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
-                vol.Optional(CONF_DIRECTION, default=""): cv.string,
-                vol.Optional(CONF_EXCLUDED_DIRECTIONS, default=""): cv.string,
-                vol.Optional(CONF_IGNORED_TRAINTYPES, default=[]): cv.multi_select(
-                    IGNORED_TRAINTYPES_OPTIONS
-                ),
+                vol.Optional(
+                    CONF_NEXT_DEPARTURES, default=DEFAULT_NEXT_DEPARTURES
+                ): cv.positive_int,
             }
         )
 
@@ -210,24 +156,24 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
-        """
-        Handle the options flow initial step for the integration.
+        """Handle the options flow menu."""
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=[
+                "general_options",
+                "filter_options",
+                "display_options",
+                "advanced_options",
+            ],
+        )
 
-        If `user_input` is provided, normalize `CONF_VIA_STATIONS` from a comma-separated string into a list of trimmed, non-empty station strings and create an options entry using the processed data. If `user_input` is None, show a form whose schema exposes all configurable options with defaults taken from the existing config entry's options or module defaults.
-
-        Returns:
-            A flow result representing the created options entry when input was submitted, or the form to display when no input was provided.
-        """
+    async def async_step_general_options(self, user_input=None):
+        """Handle general options."""
         if user_input is not None:
-            # Process comma-separated via stations into list
-            via_raw = user_input.get(CONF_VIA_STATIONS, "")
-            user_input[CONF_VIA_STATIONS] = [
-                s.strip() for s in via_raw.split(",") if s.strip()
-            ]
-            return self.async_create_entry(title="", data=user_input)
+            return self.async_update_options(user_input)
 
         return self.async_show_form(
-            step_id="init",
+            step_id="general_options",
             data_schema=vol.Schema(
                 {
                     vol.Optional(
@@ -243,75 +189,34 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         ),
                     ): cv.positive_int,
                     vol.Optional(
-                        CONF_HIDE_LOW_DELAY,
-                        default=self.config_entry.options.get(
-                            CONF_HIDE_LOW_DELAY, False
-                        ),
-                    ): cv.boolean,
-                    vol.Optional(
-                        CONF_DROP_LATE_TRAINS,
-                        default=self.config_entry.options.get(
-                            CONF_DROP_LATE_TRAINS, False
-                        ),
-                    ): cv.boolean,
-                    vol.Optional(
-                        CONF_DEDUPLICATE_DEPARTURES,
-                        default=self.config_entry.options.get(
-                            CONF_DEDUPLICATE_DEPARTURES, False
-                        ),
-                    ): cv.boolean,
-                    vol.Optional(
-                        CONF_ENABLE_TEXT_VIEW,
-                        default=self.config_entry.options.get(
-                            CONF_ENABLE_TEXT_VIEW, False
-                        ),
-                    ): cv.boolean,
-                    vol.Optional(
-                        CONF_DETAILED,
-                        default=self.config_entry.options.get(CONF_DETAILED, False),
-                    ): cv.boolean,
-                    vol.Optional(
-                        CONF_PAST_60_MINUTES,
-                        default=self.config_entry.options.get(
-                            CONF_PAST_60_MINUTES, False
-                        ),
-                    ): cv.boolean,
-                    vol.Optional(
-                        CONF_KEEP_ROUTE,
-                        default=self.config_entry.options.get(CONF_KEEP_ROUTE, False),
-                    ): cv.boolean,
-                    vol.Optional(
-                        CONF_KEEP_ENDSTATION,
-                        default=self.config_entry.options.get(
-                            CONF_KEEP_ENDSTATION, False
-                        ),
-                    ): cv.boolean,
-                    vol.Optional(
-                        CONF_CUSTOM_API_URL,
-                        default=self.config_entry.options.get(CONF_CUSTOM_API_URL, ""),
-                    ): cv.string,
-                    vol.Optional(
-                        CONF_DATA_SOURCE,
-                        default=self.config_entry.options.get(
-                            CONF_DATA_SOURCE, "IRIS-TTS"
-                        ),
-                    ): vol.In(DATA_SOURCE_OPTIONS),
-                    vol.Optional(
                         CONF_OFFSET,
                         default=self.config_entry.options.get(
                             CONF_OFFSET, DEFAULT_OFFSET
                         ),
                     ): cv.string,
+                }
+            ),
+        )
+
+    async def async_step_filter_options(self, user_input=None):
+        """Handle filter options."""
+        if user_input is not None:
+            # Process via_stations from string to list if necessary
+            if CONF_VIA_STATIONS in user_input:
+                via_raw = user_input.get(CONF_VIA_STATIONS, "")
+                user_input[CONF_VIA_STATIONS] = [
+                    s.strip() for s in via_raw.split(",") if s.strip()
+                ]
+            return self.async_update_options(user_input)
+
+        return self.async_show_form(
+            step_id="filter_options",
+            data_schema=vol.Schema(
+                {
                     vol.Optional(
                         CONF_PLATFORMS,
                         default=self.config_entry.options.get(CONF_PLATFORMS, ""),
                     ): cv.string,
-                    vol.Optional(
-                        CONF_ADMODE,
-                        default=self.config_entry.options.get(
-                            CONF_ADMODE, "preferred departure"
-                        ),
-                    ): vol.In(["preferred departure", "arrival", "departure"]),
                     vol.Optional(
                         CONF_VIA_STATIONS,
                         default=", ".join(
@@ -337,3 +242,95 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 }
             ),
         )
+
+    async def async_step_display_options(self, user_input=None):
+        """Handle display options."""
+        if user_input is not None:
+            return self.async_update_options(user_input)
+
+        return self.async_show_form(
+            step_id="display_options",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_DETAILED,
+                        default=self.config_entry.options.get(CONF_DETAILED, False),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_ENABLE_TEXT_VIEW,
+                        default=self.config_entry.options.get(
+                            CONF_ENABLE_TEXT_VIEW, False
+                        ),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_ADMODE,
+                        default=self.config_entry.options.get(
+                            CONF_ADMODE, "preferred departure"
+                        ),
+                    ): vol.In(["preferred departure", "arrival", "departure"]),
+                    vol.Optional(
+                        CONF_HIDE_LOW_DELAY,
+                        default=self.config_entry.options.get(
+                            CONF_HIDE_LOW_DELAY, False
+                        ),
+                    ): cv.boolean,
+                }
+            ),
+        )
+
+    async def async_step_advanced_options(self, user_input=None):
+        """Handle advanced options."""
+        if user_input is not None:
+            return self.async_update_options(user_input)
+
+        return self.async_show_form(
+            step_id="advanced_options",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_CUSTOM_API_URL,
+                        default=self.config_entry.options.get(CONF_CUSTOM_API_URL, ""),
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_DEDUPLICATE_DEPARTURES,
+                        default=self.config_entry.options.get(
+                            CONF_DEDUPLICATE_DEPARTURES, False
+                        ),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_KEEP_ROUTE,
+                        default=self.config_entry.options.get(CONF_KEEP_ROUTE, False),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_KEEP_ENDSTATION,
+                        default=self.config_entry.options.get(
+                            CONF_KEEP_ENDSTATION, False
+                        ),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_DROP_LATE_TRAINS,
+                        default=self.config_entry.options.get(
+                            CONF_DROP_LATE_TRAINS, False
+                        ),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_PAST_60_MINUTES,
+                        default=self.config_entry.options.get(
+                            CONF_PAST_60_MINUTES, False
+                        ),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_DATA_SOURCE,
+                        default=self.config_entry.options.get(
+                            CONF_DATA_SOURCE, "IRIS-TTS"
+                        ),
+                    ): vol.In(DATA_SOURCE_OPTIONS),
+                }
+            ),
+        )
+
+    def async_update_options(self, user_input):
+        """Helper to update options."""
+        new_options = self.config_entry.options.copy()
+        new_options.update(user_input)
+        return self.async_create_entry(title="", data=new_options)

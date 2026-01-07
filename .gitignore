@@ -1,3 +1,5 @@
 # Ignore folders.
 megalinter-reports/
 github_conf/
+/custom_components/db_infoscreen/__pycache__
+/tests/__pycache__

@@ -49,6 +49,10 @@ jobs:
           black --check .
           ruff check .
 
+      - name: Run Tests
+        run: |
+          pytest
+
 
 
   hassfest:

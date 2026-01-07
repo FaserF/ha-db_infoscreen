@@ -40,29 +40,29 @@
     "flow_title": "Station Abfahrtssensor Optionen ändern",
     "step": {
       "init": {
-        "title": "Optionen ändern",
-        "description": "Passen Sie die Einstellungen des Sensors nach Bedarf an.",
-        "data": {
-          "next_departures": "Anzahl der nächsten Abfahrten",
-          "update_interval": "Update-Intervall (Minuten)",
-          "hidelowdelay": "Verzögerungen unterdrücken",
-          "drop_late_trains": "Blende Züge aus, deren Abfahrt in der Vergangenheit ist, aber mit Verspätung innerhalb der Zeit wäre.",
-          "deduplicate_departures": "Ähnliche \"doppelte\" Abfahrten herausfiltern",
-          "detailed": "Detaillierte Informationen",
-          "past_60_minutes": "Abfahrten der letzten 60 Minuten einbeziehen",
-          "keep_route": "Behalte Routendetails (alle Zwischenstopp Bahnhöfe auf der Zugstrecke)",
-          "keep_endstation": "Behalte Abfahrt, auch wenn die Endstation diese Station ist.",
-          "custom_api_url": "Benutzerdefinierte API-URL",
-          "data_source": "Datenquelle",
-          "offset": "Offset-Zeit",
-          "admode": "Bevorzugte Zeitdarstellung (Abfahrt / Ankunft)",
-          "platforms": "Gleise",
-          "via_stations": "Zeige nur Abfahrten über",
-          "direction": "Zeige nur Abfahrten in Richtung",
-          "excluded_directions": "Zeige keine Abfahrten in Richtung",
-          "enable_text_view": "Aktiviere vereinfachte Textansicht (für ePaper)",
-          "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)"
+        "title": "Optionen Menü",
+        "menu_options": {
+          "general_options": "Allgemeine Einstellungen",
+          "filter_options": "Filter Einstellungen",
+          "display_options": "Anzeige Einstellungen",
+          "advanced_options": "Erweiterte Einstellungen"
         }
+      },
+      "general_options": {
+        "title": "Allgemeine Einstellungen",
+        "description": "Konfigurieren Sie grundlegende Update- und Abfrageeinstellungen."
+      },
+      "filter_options": {
+        "title": "Filter Einstellungen",
+        "description": "Filtern Sie Abfahrten nach Richtung, Gleis oder Zugtyp."
+      },
+      "display_options": {
+        "title": "Anzeige Einstellungen",
+        "description": "Konfigurieren Sie, wie die Daten angezeigt werden."
+      },
+      "advanced_options": {
+        "title": "Erweite Einstellungen",
+        "description": "Erweiterte Konfiguration für API und Datenverarbeitung."
       }
     }
   }
