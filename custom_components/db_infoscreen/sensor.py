@@ -7,20 +7,23 @@ _LOGGER = logging.getLogger(__name__)
 
 MAX_LENGTH = 70
 
+
 class DBInfoSensor(SensorEntity):
-    def __init__(self, coordinator, config_entry, station, via_stations, direction, platforms):
+    def __init__(
+        self, coordinator, config_entry, station, via_stations, direction, platforms
+    ):
         """
         Initialize the DBInfoSensor for a specific station's departure display.
 
         Constructs the entity name from station, optional platforms, via_stations, and direction (truncating to 70 characters), sets a unique_id based on the config entry, sets a train icon, initializes the last-valid value cache, and logs initialization details.
 
         Parameters:
-        	coordinator: Data update coordinator providing sensor data and metadata.
-        	config_entry: Config entry containing entry_id and stored config.
-        	station (str): Station name used in the sensor display name.
-        	via_stations (list[str] | None): Intermediate stations to include in the display name.
-        	direction (str | None): Direction suffix to include in the display name.
-        	platforms (str | None): Platform information to include in the display name.
+                coordinator: Data update coordinator providing sensor data and metadata.
+                config_entry: Config entry containing entry_id and stored config.
+                station (str): Station name used in the sensor display name.
+                via_stations (list[str] | None): Intermediate stations to include in the display name.
+                direction (str | None): Direction suffix to include in the display name.
+                platforms (str | None): Platform information to include in the display name.
         """
         self.coordinator = coordinator
         self.config_entry = config_entry
@@ -65,13 +68,21 @@ class DBInfoSensor(SensorEntity):
         elif isinstance(departure_time, str):
             try:
                 departure_time = datetime.strptime(departure_time, "%Y-%m-%d %H:%M:%S")
-                _LOGGER.debug("Converted departure time from string: %s", departure_time)
+                _LOGGER.debug(
+                    "Converted departure time from string: %s", departure_time
+                )
             except ValueError:
                 try:
-                    departure_time = datetime.strptime(f"{datetime.now().date()} {departure_time}", "%Y-%m-%d %H:%M")
-                    _LOGGER.debug("Converted departure time from time string: %s", departure_time)
+                    departure_time = datetime.strptime(
+                        f"{datetime.now().date()} {departure_time}", "%Y-%m-%d %H:%M"
+                    )
+                    _LOGGER.debug(
+                        "Converted departure time from time string: %s", departure_time
+                    )
                 except ValueError:
-                    _LOGGER.warning("Unable to parse departure time from string: %s", departure_time)
+                    _LOGGER.warning(
+                        "Unable to parse departure time from string: %s", departure_time
+                    )
                     return None
 
         if isinstance(departure_time, datetime):
@@ -91,18 +102,22 @@ class DBInfoSensor(SensorEntity):
         if self.coordinator.data:
             try:
                 # Try to get the scheduled departure time
-                departure_time = self.coordinator.data[0].get("scheduledDeparture") \
-                    or self.coordinator.data[0].get("sched_dep") \
-                    or self.coordinator.data[0].get("scheduledArrival") \
-                    or self.coordinator.data[0].get("sched_arr") \
-                    or self.coordinator.data[0].get("scheduledTime") \
-                    or self.coordinator.data[0].get("dep") \
+                departure_time = (
+                    self.coordinator.data[0].get("scheduledDeparture")
+                    or self.coordinator.data[0].get("sched_dep")
+                    or self.coordinator.data[0].get("scheduledArrival")
+                    or self.coordinator.data[0].get("sched_arr")
+                    or self.coordinator.data[0].get("scheduledTime")
+                    or self.coordinator.data[0].get("dep")
                     or self.coordinator.data[0].get("datetime")
+                )
 
                 # Get the delay in departure, if available
-                delay_departure = self.coordinator.data[0].get("delayDeparture") \
-                    or self.coordinator.data[0].get("dep_delay") \
+                delay_departure = (
+                    self.coordinator.data[0].get("delayDeparture")
+                    or self.coordinator.data[0].get("dep_delay")
                     or self.coordinator.data[0].get("delay", 0)
+                )
 
                 _LOGGER.debug("Raw departure time: %s", departure_time)
 
@@ -135,7 +150,7 @@ class DBInfoSensor(SensorEntity):
                     "No data received for station: %s, via_stations: %s. Keeping previous value: %s.",
                     self.station,
                     self.via_stations,
-                    self._last_valid_value
+                    self._last_valid_value,
                 )
                 return self._last_valid_value
             else:
@@ -143,7 +158,7 @@ class DBInfoSensor(SensorEntity):
                 _LOGGER.warning(
                     "No data received for station: %s, via_stations: %s. No previous value available.",
                     self.station,
-                    self.via_stations
+                    self.via_stations,
                 )
                 return "No Data"
 
@@ -178,10 +193,16 @@ class DBInfoSensor(SensorEntity):
             # without affecting the cached data in the coordinator.
             dep_copy = departure.copy()
 
-            if 'scheduledTime' in dep_copy and isinstance(dep_copy['scheduledTime'], int):
-                dep_copy['scheduledTime'] = datetime.fromtimestamp(dep_copy['scheduledTime']).strftime('%Y-%m-%d %H:%M:%S')
-            if 'time' in dep_copy and isinstance(dep_copy['time'], int):
-                dep_copy['time'] = datetime.fromtimestamp(dep_copy['time']).strftime('%Y-%m-%d %H:%M:%S')
+            if "scheduledTime" in dep_copy and isinstance(
+                dep_copy["scheduledTime"], int
+            ):
+                dep_copy["scheduledTime"] = datetime.fromtimestamp(
+                    dep_copy["scheduledTime"]
+                ).strftime("%Y-%m-%d %H:%M:%S")
+            if "time" in dep_copy and isinstance(dep_copy["time"], int):
+                dep_copy["time"] = datetime.fromtimestamp(dep_copy["time"]).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
 
             next_departures.append(dep_copy)
 
@@ -202,17 +223,30 @@ class DBInfoSensor(SensorEntity):
 
     @property
     def available(self):
-        return self.coordinator.last_update_success if hasattr(self.coordinator, "last_update_success") else False
+        return (
+            self.coordinator.last_update_success
+            if hasattr(self.coordinator, "last_update_success")
+            else False
+        )
 
     async def async_update(self):
         _LOGGER.debug("Sensor update triggered but not forcing refresh.")
 
     async def async_added_to_hass(self):
-        _LOGGER.debug("Sensor added to Home Assistant for station: %s, via_stations: %s", self.station, self.via_stations)
+        _LOGGER.debug(
+            "Sensor added to Home Assistant for station: %s, via_stations: %s",
+            self.station,
+            self.via_stations,
+        )
         self.async_on_remove(
             self.coordinator.async_add_listener(self.async_write_ha_state)
         )
-        _LOGGER.debug("Listener attached for station: %s, via_stations: %s", self.station, self.via_stations)
+        _LOGGER.debug(
+            "Listener attached for station: %s, via_stations: %s",
+            self.station,
+            self.via_stations,
+        )
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """
@@ -226,5 +260,16 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     direction = config_entry.data.get("direction", "")
     platforms = config_entry.data.get("platforms", "")
 
-    _LOGGER.debug("Setting up DBInfoSensor for station: %s with via_stations: %s and direction: %s", station, via_stations, direction)
-    async_add_entities([DBInfoSensor(coordinator, config_entry, station, via_stations, direction, platforms)])
+    _LOGGER.debug(
+        "Setting up DBInfoSensor for station: %s with via_stations: %s and direction: %s",
+        station,
+        via_stations,
+        direction,
+    )
+    async_add_entities(
+        [
+            DBInfoSensor(
+                coordinator, config_entry, station, via_stations, direction, platforms
+            )
+        ]
+    )
