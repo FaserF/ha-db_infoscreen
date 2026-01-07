@@ -13,7 +13,8 @@ from .const import (
     DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES,
     CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, MIN_UPDATE_INTERVAL,
     CONF_VIA_STATIONS, CONF_DIRECTION, CONF_EXCLUDED_DIRECTIONS, CONF_IGNORED_TRAINTYPES, CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE,
-    CONF_KEEP_ENDSTATION, CONF_DEDUPLICATE_DEPARTURES
+    CONF_VIA_STATIONS, CONF_DIRECTION, CONF_EXCLUDED_DIRECTIONS, CONF_IGNORED_TRAINTYPES, CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE,
+    CONF_KEEP_ENDSTATION, CONF_DEDUPLICATE_DEPARTURES, TRAIN_TYPE_MAPPING
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -294,20 +295,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     # --- MAIN FILTERING AND PROCESSING ---
                     filtered_departures = []
 
-                    # This mapping is used to normalize train types from the API
-                    train_type_mapping = {
-                        "S": "S-Bahn",
-                        "N": "Regionalbahn (DB)",
-                        "D": "Regionalbahn",
-                        "F": "Intercity (Express) / Eurocity",
-                        "Unknown": "Unbekannter Zugtyp",
-                        "": "Unbekannter Zugtyp" # Also handles unknown types
-                    }
-
                     # Map the configured ignored train types to the normalized values for correct comparison.
                     # e.g., if config is ['S'], this becomes {'S-Bahn'}.
                     ignored_train_types = self.ignored_train_types
-                    mapped_ignored_train_types = {train_type_mapping.get(t, t) for t in ignored_train_types}
+                    mapped_ignored_train_types = {TRAIN_TYPE_MAPPING.get(t, t) for t in ignored_train_types}
 
                     # Some data sources might use other values, ensure compatibility.
                     if "S" in ignored_train_types:
@@ -358,7 +349,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             api_classes_to_process = train_classes
 
                         # Normalize the train classes from the API using the mapping.
-                        mapped_api_classes = {train_type_mapping.get(tc, tc) for tc in api_classes_to_process}
+                        mapped_api_classes = {TRAIN_TYPE_MAPPING.get(tc, tc) for tc in api_classes_to_process}
 
                         # Update the departure data with the normalized, more descriptive train classes.
                         departure["trainClasses"] = list(mapped_api_classes)

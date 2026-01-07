@@ -23,6 +23,7 @@
           "platforms": "Platforms",
           "via_stations": "Only show departures via",
           "direction": "Only show departures in direction",
+          "excluded_directions": "Exclude departures in direction",
           "ignored_train_types": "Do not track specified train types (f.e. ICE)"
         }
       }
@@ -58,6 +59,7 @@
           "platforms": "Platforms",
           "via_stations": "Only show departures via",
           "direction": "Only show departures in direction",
+          "excluded_directions": "Exclude departures in direction",
           "ignored_train_types": "Do not track specified train types (f.e. ICE)"
         }
       }

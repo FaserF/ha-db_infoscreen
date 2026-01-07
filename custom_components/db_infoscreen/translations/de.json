@@ -23,6 +23,7 @@
           "platforms": "Gleise",
           "via_stations": "Zeige nur Abfahrten über",
           "direction": "Zeige nur Abfahrten in Richtung",
+          "excluded_directions": "Zeige keine Abfahrten in Richtung",
           "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)"
         }
       }
@@ -58,6 +59,7 @@
           "platforms": "Gleise",
           "via_stations": "Zeige nur Abfahrten über",
           "direction": "Zeige nur Abfahrten in Richtung",
+          "excluded_directions": "Zeige keine Abfahrten in Richtung",
           "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)"
         }
       }

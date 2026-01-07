@@ -169,12 +169,21 @@ class DBInfoSensor(SensorEntity):
         full_api_url = getattr(self.coordinator, "api_url", "dbf.finalrewind.org")
         attribution = f"Data provided by API {full_api_url}"
 
-        next_departures = self.coordinator.data or []
-        for departure in next_departures:
-            if 'scheduledTime' in departure and isinstance(departure['scheduledTime'], int):
-                departure['scheduledTime'] = datetime.fromtimestamp(departure['scheduledTime']).strftime('%Y-%m-%d %H:%M:%S')
-            if 'time' in departure and isinstance(departure['time'], int):
-                departure['time'] = datetime.fromtimestamp(departure['time']).strftime('%Y-%m-%d %H:%M:%S')
+        # Create a deep copy or new list of dicts to avoid mutating the coordinator data
+        raw_departures = self.coordinator.data or []
+        next_departures = []
+
+        for departure in raw_departures:
+            # Create a shallow copy of the departure so we can modify fields for display
+            # without affecting the cached data in the coordinator.
+            dep_copy = departure.copy()
+
+            if 'scheduledTime' in dep_copy and isinstance(dep_copy['scheduledTime'], int):
+                dep_copy['scheduledTime'] = datetime.fromtimestamp(dep_copy['scheduledTime']).strftime('%Y-%m-%d %H:%M:%S')
+            if 'time' in dep_copy and isinstance(dep_copy['time'], int):
+                dep_copy['time'] = datetime.fromtimestamp(dep_copy['time']).strftime('%Y-%m-%d %H:%M:%S')
+
+            next_departures.append(dep_copy)
 
         last_updated = getattr(self.coordinator, "last_update", None)
         if last_updated:

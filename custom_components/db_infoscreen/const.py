@@ -26,6 +26,15 @@ CONF_KEEP_ROUTE = "keep_route"
 CONF_KEEP_ENDSTATION = "keep_endstation"
 CONF_DEDUPLICATE_DEPARTURES = "deduplicate_departures"
 
+TRAIN_TYPE_MAPPING = {
+    "S": "S-Bahn",
+    "N": "Regionalbahn (DB)",
+    "D": "Regionalbahn",
+    "F": "Intercity (Express) / Eurocity",
+    "Unknown": "Unbekannter Zugtyp",
+    "": "Unbekannter Zugtyp"
+}
+
 DATA_SOURCE_OPTIONS = [
     "IRIS-TTS", "hafas=1", "AVV (Aachen)", "AVV (Augsburg)", "BART", "BEG", "BLS", "BSVG", "BVG", "bwegt", "CMTA", "DING", "DSB", "IE",
     "KVV", "KVB", "LinzAG", "mobiliteit", "MVV", "NAHSH", "NASA", "NVBW", "NVV", "NWL", "\u00d6BB", "PKP", "Resrobot", "RMV", "Rolph",
