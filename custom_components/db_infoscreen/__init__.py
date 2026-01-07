@@ -25,21 +25,8 @@ from .const import (
     CONF_PLATFORMS,
     CONF_ADMODE,
     MIN_UPDATE_INTERVAL,
-    CONF_VIA_STATIONS,
-    CONF_DIRECTION,
-    CONF_EXCLUDED_DIRECTIONS,
-    CONF_IGNORED_TRAINTYPES,
-    CONF_DROP_LATE_TRAINS,
-    CONF_KEEP_ROUTE,
-    CONF_VIA_STATIONS,
-    CONF_DIRECTION,
-    CONF_EXCLUDED_DIRECTIONS,
-    CONF_IGNORED_TRAINTYPES,
-    CONF_DROP_LATE_TRAINS,
-    CONF_KEEP_ROUTE,
-    CONF_KEEP_ENDSTATION,
-    CONF_DEDUPLICATE_DEPARTURES,
-    TRAIN_TYPE_MAPPING,
+    CONF_VIA_STATIONS, CONF_DIRECTION, CONF_EXCLUDED_DIRECTIONS, CONF_IGNORED_TRAINTYPES, CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE,
+    CONF_KEEP_ENDSTATION, CONF_DEDUPLICATE_DEPARTURES, TRAIN_TYPE_MAPPING,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -88,7 +75,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         """
         Initialize coordinator state from a config entry, build the API endpoint, and configure the DataUpdateCoordinator.
 
-        Reads runtime configuration and options from the provided config entry to set coordinator attributes (for example: station, next_departures, hide_low_delay, detailed, past_60_minutes, data_source, offset, via_stations, direction, ignored_train_types, drop_late_trains, keep_route, keep_endstation, deduplicate_departures, custom API URL, platforms, admode, and update interval). Constructs the encoded API URL with appropriate query parameters and initializes the base DataUpdateCoordinator with a human-readable name and the computed update interval. Also initializes the coordinator's last-valid-value cache.
+        Reads runtime configuration and options from the provided config entry to set coordinator attributes (for example: station, next_departures, hide_low_delay, detailed, past_60_minutes, data_source, offset, via_stations, direction, ignored_train_types, drop_late_trains, final-stop exclusion, size limits), adjusts departure/arrival times for delays, and prunes detail fields according to configuration. The most recent valid result is cached and used as a fallback when no valid departures can be produced.
 
         Parameters:
             hass (HomeAssistant): Home Assistant core instance.
@@ -108,7 +95,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.offset = self.convert_offset_to_seconds(
             config.get(CONF_OFFSET, DEFAULT_OFFSET)
         )
-        self.via_stations = config.get(CONF_VIA_STATIONS, [])
         self.via_stations = config.get(CONF_VIA_STATIONS, [])
         self.direction = config.get(CONF_DIRECTION, "")
         self.excluded_directions = config.get(CONF_EXCLUDED_DIRECTIONS, "")
