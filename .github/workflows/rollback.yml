@@ -1,0 +1,36 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to rollback (e.g. 2024.1.1)'
+        required: true
+        type: string
+
+jobs:
+  rollback:
+    name: Rollback Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Delete Release and Tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete ${{ inputs.version }} --cleanup-tag -y || echo "Release/Tag not found"
+
+      - name: Delete Docker Image
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Note: Deleting packages via API is complex and restricted.
+          # This step acts as a placeholder reminder to manually clean up GHCR if needed,
+          # or implementation would require a dedicated PAT with delete:packages scope.
+          echo "Please manually ensure the Docker image for ${{ inputs.version }} is deleted/untagged if necessary."

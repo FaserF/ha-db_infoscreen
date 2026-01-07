@@ -1,0 +1,15 @@
+{
+  "name": "ha-db_infoscreen",
+  "version": "1.0.0",
+  "description": "DB Infoscreen Home Assistant Sensor",
+  "scripts": {
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3",
+    "@typescript-eslint/parser": "^6.19.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0"
+  },
+  "private": true
+}

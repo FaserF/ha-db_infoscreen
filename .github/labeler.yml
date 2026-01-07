@@ -1,0 +1,15 @@
+frontend:
+- changed-files:
+  - any-glob-to-any-file: '**/*.{js,ts,tsx,jsx,json,css,scss,html}'
+
+backend:
+- changed-files:
+  - any-glob-to-any-file: '**/*.{py,yaml,yml}'
+
+docker:
+- changed-files:
+  - any-glob-to-any-file: '**/Dockerfile'
+
+documentation:
+- changed-files:
+  - any-glob-to-any-file: '**/*.md'
