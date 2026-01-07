@@ -285,6 +285,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         "N": "Regionalbahn (DB)",
                         "D": "Regionalbahn",
                         "F": "Intercity (Express) / Eurocity",
+                        "Unknown": "Unbekannter Zugtyp",
                         "": "Unbekannter Zugtyp" # Also handles unknown types
                     }
 
