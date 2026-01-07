@@ -39,6 +39,19 @@
   "options": {
     "flow_title": "Station Abfahrtssensor Optionen ändern",
     "step": {
+      "user": {
+        "title": "DB Infoscreen hinzufügen",
+        "description": "Konfigurieren Sie Ihre Verbindung.",
+        "data": {
+          "station": "Bahnhofsname / ID",
+          "data_source": "Datenquelle",
+          "next_departures": "Anzahl der nächsten Abfahrten",
+          "via_stations": "Via Stationen (kommagetrennt)",
+          "direction": "Richtung",
+          "platforms": "Gleise (kommagetrennt)",
+          "custom_api_url": "Benutzerdefinierte API-URL"
+        }
+      },
       "init": {
         "title": "Optionen Menü",
         "menu_options": {
@@ -50,19 +63,46 @@
       },
       "general_options": {
         "title": "Allgemeine Einstellungen",
-        "description": "Konfigurieren Sie grundlegende Update- und Abfrageeinstellungen."
+        "description": "Konfigurieren Sie grundlegende Update-Einstellungen.",
+        "data": {
+          "next_departures": "Anzahl der nächsten Abfahrten",
+          "update_interval": "Update-Intervall (Minuten)",
+          "offset": "Offset-Zeit (HH:MM)"
+        }
       },
       "filter_options": {
         "title": "Filter Einstellungen",
-        "description": "Filtern Sie Abfahrten nach Richtung, Gleis oder Zugtyp."
+        "description": "Filtern Sie Abfahrten nach Richtung, Gleis oder Zugart.",
+        "data": {
+          "platforms": "Gleise",
+          "via_stations": "Via Stationen",
+          "direction": "Richtung",
+          "excluded_directions": "Ausgeschlossene Richtungen",
+          "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)"
+        }
       },
       "display_options": {
         "title": "Anzeige Einstellungen",
-        "description": "Konfigurieren Sie, wie die Daten angezeigt werden."
+        "description": "Konfigurieren Sie die Anzeige.",
+        "data": {
+          "detailed": "Detaillierte Informationen",
+          "enable_text_view": "Aktiviere vereinfachte Textansicht (für ePaper)",
+          "admode": "Bevorzugte Zeitdarstellung",
+          "hidelowdelay": "Verzögerungen unterdrücken"
+        }
       },
       "advanced_options": {
-        "title": "Erweite Einstellungen",
-        "description": "Erweiterte Konfiguration für API und Datenverarbeitung."
+        "title": "Erweiterte Einstellungen",
+        "description": "Erweiterte Konfiguration für API und Datenverarbeitung.",
+        "data": {
+          "custom_api_url": "Benutzerdefinierte API-URL",
+          "deduplicate_departures": "Ähnliche \"doppelte\" Abfahrten herausfiltern",
+          "keep_route": "Behalte Routendetails",
+          "keep_endstation": "Behalte Endstation",
+          "drop_late_trains": "Blende Züge aus, deren Abfahrt in der Vergangenheit ist",
+          "past_60_minutes": "Abfahrten der letzten 60 Minuten einbeziehen",
+          "data_source": "Datenquelle"
+        }
       }
     }
   }

@@ -3,3 +3,14 @@ megalinter-reports/
 github_conf/
 /custom_components/db_infoscreen/__pycache__
 /tests/__pycache__
+/custom_components/__pycache__
+/test_config/.storage
+test_config/home-assistant.log
+test_config/home-assistant.log.1
+test_config/home-assistant.log.fault
+test_config/home-assistant_v2.db
+test_config/home-assistant_v2.db-shm
+test_config/home-assistant_v2.db-wal
+/test_config/blueprints
+test_config/.HA_VERSION
+test_config/.ha_run.lock

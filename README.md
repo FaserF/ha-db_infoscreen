@@ -62,28 +62,44 @@ This integration is available as a default repository in HACS.
 
 ### Configuration Options
 
-| Option | Type | Required | Default | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `station` | string | **Yes** | - | Station name, Trip number, or DS100 ID (e.g. `München Hbf` or `MH`). Check [DS100 List](https://ds100.frankfurtium.de/dumps/orte_de.html) for IDs. |
-| `next_departures` | int | No | `4` | Number of upcoming departures to display. Max limited by backend storage. |
-| `update_interval` | int | No | `3` | Fetch interval in minutes. **Minimum: 1 minute**. |
-| `hide_low_delay` | bool | No | `False` | Hide departures with < 5 min delay. |
-| `drop_late_trains` | bool | No | `False` | Hide past departures even if they are delayed. |
-| `deduplicate_departures` | bool | No | `False` | Filter out duplicate entries. |
-| `detailed` | bool | No | `False` | Show extra attributes (messages, ids, keys, etc.). |
-| `past_60_minutes` | bool | No | `False` | Show departures from the past 60 minutes. |
-| `keep_route` | bool | No | `False` | Keep full route (stopover) details in attributes. |
-| `keep_endstation` | bool | No | `False` | Keep departure if station is also the endstation. |
-| `custom_api_url` | string | No | - | Use a private/custom API instance. |
-| `data_source` | string | No | `IRIS-TTS` | Backend source (DB, AVV, etc.). See Data Sources below. |
-| `offset` | string | No | `00:00` | Time offset for search (HH:MM or HH:MM:SS). |
-| `admode` | string | No | `departure` | Display departure or arrival times. |
-| `platforms` | string | No | - | Filter by comma-separated platforms (e.g., `1, 2, 5`). |
-| `via_stations` | string | No | - | Filter by stations the train must pass through. |
-| `direction` | string | No | - | Filter by direction text (API dependent). |
-| `excluded_directions` | string | No | - | Exclude departures with specific direction (substring match). |
-| `ignored_train_types` | list | No | `[]` | List of train types to ignore. |
-| `enable_text_view` | bool | No | `False` | Enable simplified text view for ePaper displays. |
+**Initial Setup**:
+When adding the integration, you will be asked for the most important settings:
+
+| Option | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `station` | string | **Yes** | Station name, Trip number, or DS100 ID (e.g. `München Hbf` or `MH`). Check [DS100 List](https://ds100.frankfurtium.de/dumps/orte_de.html) for IDs. |
+| `data_source` | string | No | Backend source (DB, AVV, etc.). Default: `IRIS-TTS`. |
+| `next_departures` | int | No | Number of upcoming departures to display. Default: `4`. |
+| `platforms` | string | No | Filter by comma-separated platforms (e.g., `1, 2, 5`). |
+| `via_stations` | string | No | Filter by stations the train must pass through. |
+| `direction` | string | No | Filter by direction text (API dependent). |
+
+**Options Menu (Configure)**:
+All other settings are available via the **Configure** button on the integration entry. They are grouped into:
+
+*   **General**: Update Interval, Offset, Count.
+*   **Filter**: Directions, Train Types (e.g. ICE), Exclusions.
+*   **Display**: Text View, Mode (Departure/Arrival), Detailed Info.
+*   **Advanced**: Custom API URL, Deduplication, Route Details.
+
+#### Full Options List
+
+| Option | Default | Description |
+| :--- | :--- | :--- |
+| `update_interval` | `3` | Fetch interval in minutes. **Minimum: 1 minute**. |
+| `hide_low_delay` | `False` | Hide departures with < 5 min delay. |
+| `drop_late_trains` | `False` | Hide past departures even if they are delayed. |
+| `deduplicate_departures` | `False` | Filter out duplicate entries. |
+| `detailed` | `False` | Show extra attributes (messages, ids, keys, etc.). |
+| `past_60_minutes` | `False` | Show departures from the past 60 minutes. |
+| `keep_route` | `False` | Keep full route (stopover) details in attributes. |
+| `keep_endstation` | `False` | Keep departure if station is also the endstation. |
+| `custom_api_url` | - | Use a private/custom API instance. |
+| `offset` | `00:00` | Time offset for search (HH:MM or HH:MM:SS). |
+| `admode` | `departure` | Display departure or arrival times. |
+| `excluded_directions` | - | Exclude departures with specific direction (substring match). |
+| `ignored_train_types` | `[]` | List of train types to ignore. |
+| `enable_text_view` | `False` | Enable simplified text view for ePaper displays. |
 
 > [!WARNING]
 > **Limitations & Performance**

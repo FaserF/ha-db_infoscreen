@@ -39,6 +39,19 @@
   "options": {
     "flow_title": "Modify Station Departure Sensor Options",
     "step": {
+      "user": {
+        "title": "Add DB Infoscreen",
+        "description": "Configure your station connectivity.",
+        "data": {
+          "station": "Station Name / ID",
+          "data_source": "Data Source",
+          "next_departures": "Number of Upcoming Departures",
+          "via_stations": "Via Stations (comma separated)",
+          "direction": "Direction",
+          "platforms": "Platforms (comma separated)",
+          "custom_api_url": "Custom API URL"
+        }
+      },
       "init": {
         "title": "Options Menu",
         "menu_options": {
@@ -50,19 +63,46 @@
       },
       "general_options": {
         "title": "General Settings",
-        "description": "Configure basic update and query settings."
+        "description": "Configure basic update and query settings.",
+        "data": {
+          "next_departures": "Number of Upcoming Departures",
+          "update_interval": "Update Interval (minutes)",
+          "offset": "Offset Time"
+        }
       },
       "filter_options": {
         "title": "Filter Settings",
-        "description": "Filter departures by direction, platform, or train type."
+        "description": "Filter departures by direction, platform, or train type.",
+        "data": {
+          "platforms": "Platforms",
+          "via_stations": "Via Stations",
+          "direction": "Direction",
+          "excluded_directions": "Excluded Directions",
+          "ignored_train_types": "Ignored Train Types"
+        }
       },
       "display_options": {
         "title": "Display Settings",
-        "description": "Configure how the data is displayed."
+        "description": "Configure how the data is displayed.",
+        "data": {
+          "detailed": "Detailed Information",
+          "enable_text_view": "Enable Simplified Text View",
+          "admode": "Display Mode",
+          "hidelowdelay": "Hide Low Delay"
+        }
       },
       "advanced_options": {
         "title": "Advanced Settings",
-        "description": "Advanced configuration for API and data handling."
+        "description": "Advanced configuration for API and data handling.",
+        "data": {
+          "custom_api_url": "Custom API URL",
+          "deduplicate_departures": "Deduplicate Departures",
+          "keep_route": "Keep Route Details",
+          "keep_endstation": "Keep Endstation",
+          "drop_late_trains": "Drop Late Trains",
+          "past_60_minutes": "Include Past 60 Minutes",
+          "data_source": "Data Source"
+        }
       }
     }
   }

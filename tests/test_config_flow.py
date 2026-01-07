@@ -40,14 +40,19 @@ async def test_form_create_entry(hass):
             {
                 CONF_STATION: "München Hbf",
                 CONF_DATA_SOURCE: "IRIS-TTS",
+                CONF_VIA_STATIONS: "Pasing",
+                CONF_DIRECTION: "München-Pasing",
+                CONF_PLATFORMS: "1,2",
             },
         )
         await hass.async_block_till_done()
 
     assert result2["type"] == FlowResultType.CREATE_ENTRY
-    assert result2["title"] == "München Hbf"
+    assert result2["title"] == "München Hbf platform 1,2 via Pasing direction München-Pasing"
     assert result2["data"][CONF_STATION] == "München Hbf"
-    assert result2["data"][CONF_DATA_SOURCE] == "IRIS-TTS"
+    assert "Pasing" in result2["data"][CONF_VIA_STATIONS]
+    assert result2["data"][CONF_DIRECTION] == "München-Pasing"
+    assert result2["data"][CONF_PLATFORMS] == "1,2"
     assert mock_setup_entry.called
 
 
@@ -129,6 +134,46 @@ async def test_options_flow_display(hass, config_entry):
     )
     assert result3["type"] == FlowResultType.CREATE_ENTRY
     assert result3["data"][CONF_ENABLE_TEXT_VIEW] is True
+
+
+async def test_options_flow_filter_and_advanced(hass, config_entry):
+    """Test filter and advanced options to ensure no 500 errors."""
+    config_entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+
+    # Select Filter
+    result2 = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {"next_step_id": "filter_options"},
+    )
+    assert result2["type"] == FlowResultType.FORM
+    assert result2["step_id"] == "filter_options"
+
+    # Save Filter (update some values)
+    result3 = await hass.config_entries.options.async_configure(
+        result2["flow_id"],
+        {"platforms": "1, 2"},
+    )
+    assert result3["type"] == FlowResultType.CREATE_ENTRY
+    assert result3["data"]["platforms"] == "1, 2"
+
+    # Verify Advanced Options load correctly
+    result4 = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result5 = await hass.config_entries.options.async_configure(
+        result4["flow_id"],
+        {"next_step_id": "advanced_options"},
+    )
+    assert result5["type"] == FlowResultType.FORM
+    assert result5["step_id"] == "advanced_options"
+
+    # Save Advanced
+    result6 = await hass.config_entries.options.async_configure(
+        result5["flow_id"],
+        {"custom_api_url": "http://localhost"},
+    )
+    assert result6["type"] == FlowResultType.CREATE_ENTRY
+    assert result6["data"]["custom_api_url"] == "http://localhost"
 
 
 @pytest.fixture
