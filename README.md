@@ -81,6 +81,7 @@ This integration is available as a default repository in HACS.
 | `platforms` | string | No | - | Filter by comma-separated platforms (e.g., `1, 2, 5`). |
 | `via_stations` | string | No | - | Filter by stations the train must pass through. |
 | `direction` | string | No | - | Filter by direction text (API dependent). |
+| `excluded_directions` | string | No | - | Exclude departures with specific direction (substring match). |
 | `ignored_train_types` | list | No | `[]` | List of train types to ignore. |
 
 > [!WARNING]

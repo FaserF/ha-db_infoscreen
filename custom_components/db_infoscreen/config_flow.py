@@ -8,7 +8,7 @@ from .const import (
     DEFAULT_NEXT_DEPARTURES, DEFAULT_UPDATE_INTERVAL, DEFAULT_OFFSET, MAX_SENSORS,
     CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES, CONF_CUSTOM_API_URL,
     CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, DATA_SOURCE_OPTIONS,
-    CONF_VIA_STATIONS, CONF_DIRECTION, CONF_IGNORED_TRAINTYPES, IGNORED_TRAINTYPES_OPTIONS,
+    CONF_VIA_STATIONS, CONF_DIRECTION, CONF_EXCLUDED_DIRECTIONS, CONF_IGNORED_TRAINTYPES, IGNORED_TRAINTYPES_OPTIONS,
     CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE, CONF_KEEP_ENDSTATION, CONF_DEDUPLICATE_DEPARTURES
 )
 
@@ -163,6 +163,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_ADMODE, default="preferred departure"): vol.In(["preferred departure", "arrival", "departure"]),
                 vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
                 vol.Optional(CONF_DIRECTION, default=""): cv.string,
+                vol.Optional(CONF_EXCLUDED_DIRECTIONS, default=""): cv.string,
                 vol.Optional(CONF_IGNORED_TRAINTYPES, default=[]): cv.multi_select(IGNORED_TRAINTYPES_OPTIONS),
             }
         )
@@ -272,6 +273,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(
                         CONF_DIRECTION,
                         default=self.config_entry.options.get(CONF_DIRECTION, ""),
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_EXCLUDED_DIRECTIONS,
+                        default=self.config_entry.options.get(CONF_EXCLUDED_DIRECTIONS, ""),
                     ): cv.string,
                     vol.Optional(
                         CONF_IGNORED_TRAINTYPES,

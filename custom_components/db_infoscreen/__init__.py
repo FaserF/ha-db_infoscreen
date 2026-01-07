@@ -12,7 +12,7 @@ from .const import (
     DOMAIN, CONF_STATION, CONF_NEXT_DEPARTURES, CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL,
     DEFAULT_NEXT_DEPARTURES, DEFAULT_OFFSET, CONF_HIDE_LOW_DELAY, CONF_DETAILED, CONF_PAST_60_MINUTES,
     CONF_CUSTOM_API_URL, CONF_DATA_SOURCE, CONF_OFFSET, CONF_PLATFORMS, CONF_ADMODE, MIN_UPDATE_INTERVAL,
-    CONF_VIA_STATIONS, CONF_DIRECTION, CONF_IGNORED_TRAINTYPES, CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE,
+    CONF_VIA_STATIONS, CONF_DIRECTION, CONF_EXCLUDED_DIRECTIONS, CONF_IGNORED_TRAINTYPES, CONF_DROP_LATE_TRAINS, CONF_KEEP_ROUTE,
     CONF_KEEP_ENDSTATION, CONF_DEDUPLICATE_DEPARTURES
 )
 
@@ -72,7 +72,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.data_source = config.get(CONF_DATA_SOURCE, "IRIS-TTS")
         self.offset = self.convert_offset_to_seconds(config.get(CONF_OFFSET, DEFAULT_OFFSET))
         self.via_stations = config.get(CONF_VIA_STATIONS, [])
+        self.via_stations = config.get(CONF_VIA_STATIONS, [])
         self.direction = config.get(CONF_DIRECTION, "")
+        self.excluded_directions = config.get(CONF_EXCLUDED_DIRECTIONS, "")
         self.ignored_train_types = config.get(CONF_IGNORED_TRAINTYPES, [])
         self.drop_late_trains = config.get(CONF_DROP_LATE_TRAINS, False)
         self.keep_route = config.get(CONF_KEEP_ROUTE, False)
@@ -220,7 +222,20 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                         departure_time_obj = time_candidate
                                     except ValueError:
                                         _LOGGER.error("Invalid time format, skipping departure: %s", departure_time_str)
-                                        continue
+                                        departure_direction,
+                                )
+                                continue
+
+                        # Excluded Direction filter
+                        if self.excluded_directions:
+                            departure_direction = departure.get("direction")
+                            if departure_direction and self.excluded_directions.lower() in departure_direction.lower():
+                                _LOGGER.debug(
+                                    "Skipping departure due to excluded direction match. Excluded: '%s', actual: '%s'",
+                                    self.excluded_directions,
+                                    departure_direction,
+                                )
+                                continue
 
                         departure['departure_datetime'] = departure_time_obj
                         departures_with_time.append(departure)
