@@ -1,5 +1,5 @@
 from homeassistant.components.sensor import SensorEntity
-from .const import DOMAIN, CONF_CUSTOM_API_URL
+from .const import DOMAIN
 import logging
 from datetime import datetime
 
