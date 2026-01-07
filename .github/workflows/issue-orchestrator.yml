@@ -1,0 +1,41 @@
+name: Issue Orchestrator
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  auto-comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment on new issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const labels = issue.labels.map(l => l.name);
+            let body = "Hi @" + issue.user.login + ", thanks for opening this issue! 👋\n\n";
+
+            if (labels.includes('bug')) {
+              body += "⚠️ **Bug Report Received**\n\n";
+              body += "To help us solve this faster, please check:\n";
+              body += "- [ ] Have you provided your `configuration.yaml` or integration config?\n";
+              body += "- [ ] Did you enable debug logging (`custom_components.db_infoscreen: debug`) and include logs?\n";
+              body += "- [ ] Is your Home Assistant version up to date?\n\n";
+              body += "A maintainer will investigate shortly.";
+            } else if (labels.includes('enhancement') || labels.includes('feature request')) {
+              body += "🚀 **Feature Request**\n\n";
+              body += "Thanks for the idea! We'll review it and see how it fits into the roadmap.\n";
+            } else {
+              body += "We have received your issue and will look into it soon.";
+            }
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
