@@ -10,7 +10,23 @@ on:
   schedule:
     - cron: '44 12 * * 6'
 
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+  actions: read
+
 jobs:
+  labeler:
+    name: Label PR
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/labeler@v5
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          configuration-path: .github/labeler.yml
+
   lint-test:
     name: Lint & Test
     runs-on: ubuntu-latest
