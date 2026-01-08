@@ -19,6 +19,7 @@ from custom_components.db_infoscreen.const import (
 )
 
 
+@pytest.mark.asyncio
 async def test_form_user(hass):
     """Test we get the form."""
     result = await hass.config_entries.flow.async_init(
@@ -29,6 +30,7 @@ async def test_form_user(hass):
     assert result["errors"] == {}
 
 
+@pytest.mark.asyncio
 async def test_form_create_entry(hass):
     """Test that validating the user input works and creates an entry."""
     result = await hass.config_entries.flow.async_init(
@@ -62,6 +64,7 @@ async def test_form_create_entry(hass):
     assert mock_setup_entry.called
 
 
+@pytest.mark.asyncio
 async def test_form_duplicate_entry(hass, config_entry):
     """Test we check for duplicate entries."""
     config_entry.add_to_hass(hass)
@@ -82,6 +85,7 @@ async def test_form_duplicate_entry(hass, config_entry):
     assert result2["reason"] == "already_configured"
 
 
+@pytest.mark.asyncio
 async def test_options_flow(hass, config_entry):
     """Test options flow menu."""
     config_entry.add_to_hass(hass)
@@ -95,6 +99,7 @@ async def test_options_flow(hass, config_entry):
     assert "advanced_options" in result["menu_options"]
 
 
+@pytest.mark.asyncio
 async def test_options_flow_general(hass, config_entry):
     """Test general options."""
     config_entry.add_to_hass(hass)
@@ -119,6 +124,7 @@ async def test_options_flow_general(hass, config_entry):
     assert result3["data"][CONF_UPDATE_INTERVAL] == 5
 
 
+@pytest.mark.asyncio
 async def test_options_flow_display(hass, config_entry):
     """Test display options inc. enable_text_view."""
     config_entry.add_to_hass(hass)
@@ -142,6 +148,7 @@ async def test_options_flow_display(hass, config_entry):
     assert result3["data"][CONF_ENABLE_TEXT_VIEW] is True
 
 
+@pytest.mark.asyncio
 async def test_options_flow_filter_and_advanced(hass, config_entry):
     """Test filter and advanced options to ensure no 500 errors."""
     config_entry.add_to_hass(hass)
