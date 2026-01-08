@@ -13,6 +13,9 @@ from custom_components.db_infoscreen.const import (
     CONF_UPDATE_INTERVAL,
     DEFAULT_NEXT_DEPARTURES,
     CONF_ENABLE_TEXT_VIEW,
+    CONF_VIA_STATIONS,
+    CONF_DIRECTION,
+    CONF_PLATFORMS,
 )
 
 
