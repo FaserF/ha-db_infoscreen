@@ -48,7 +48,10 @@ async def test_form_create_entry(hass):
         await hass.async_block_till_done()
 
     assert result2["type"] == FlowResultType.CREATE_ENTRY
-    assert result2["title"] == "München Hbf platform 1,2 via Pasing direction München-Pasing"
+    assert (
+        result2["title"]
+        == "München Hbf platform 1,2 via Pasing direction München-Pasing"
+    )
     assert result2["data"][CONF_STATION] == "München Hbf"
     assert "Pasing" in result2["data"][CONF_VIA_STATIONS]
     assert result2["data"][CONF_DIRECTION] == "München-Pasing"
