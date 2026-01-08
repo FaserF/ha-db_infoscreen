@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pytest
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.db_infoscreen.const import (
     DOMAIN,
@@ -192,7 +193,7 @@ async def test_options_flow_filter_and_advanced(hass, config_entry):
 @pytest.fixture
 def config_entry():
     """Create a mock config entry."""
-    return config_entries.MockConfigEntry(
+    return MockConfigEntry(
         domain=DOMAIN,
         unique_id="München Hbf",
         data={
