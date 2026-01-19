@@ -226,7 +226,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(
                         CONF_PLATFORMS,
                         default=self._config_entry.options.get(
-                            CONF_PLATFORMS, self._config_entry.data.get(CONF_PLATFORMS, "")
+                            CONF_PLATFORMS,
+                            self._config_entry.data.get(CONF_PLATFORMS, ""),
                         ),
                     ): cv.string,
                     vol.Optional(
@@ -241,7 +242,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(
                         CONF_DIRECTION,
                         default=self._config_entry.options.get(
-                            CONF_DIRECTION, self._config_entry.data.get(CONF_DIRECTION, "")
+                            CONF_DIRECTION,
+                            self._config_entry.data.get(CONF_DIRECTION, ""),
                         ),
                     ): cv.string,
                     vol.Optional(
