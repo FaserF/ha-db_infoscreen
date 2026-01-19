@@ -255,10 +255,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ): cv.string,
                     vol.Optional(
                         CONF_IGNORED_TRAINTYPES,
-                        default=self._config_entry.options.get(
-                            CONF_IGNORED_TRAINTYPES,
-                            self._config_entry.data.get(CONF_IGNORED_TRAINTYPES, []),
-                        ),
+                        default=[
+                            "Unbekannter Zugtyp" if t == "" else t
+                            for t in self._config_entry.options.get(
+                                CONF_IGNORED_TRAINTYPES,
+                                self._config_entry.data.get(CONF_IGNORED_TRAINTYPES, []),
+                            )
+                        ],
                     ): cv.multi_select(IGNORED_TRAINTYPES_OPTIONS),
                 }
             ),
