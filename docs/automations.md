@@ -149,3 +149,81 @@ action:
           [0, 255, 0] # Green (Relax)
         {% endif %}
 ```
+
+---
+
+## 🌍 Multi-Source & Complex Configurations
+
+### 8. Regional Train Filter (e.g., ÖBB / SBB)
+If you use the `ÖBB` data source, you might want to filter simply by line name.
+
+```yaml
+alias: "Train: Filter for Railjet (RJX)"
+trigger:
+  - platform: template
+    value_template: >
+      {% set trains = state_attr('sensor.wien_hbf', 'departures') %}
+      {{ trains | selectattr('train', 'search', 'RJX') | list | count > 0 }}
+action:
+  - service: notify.mobile_app_iphone
+    data:
+      message: "Railjet Express is available!"
+```
+
+### 9. "Via" Station Priority
+Sometimes two trains go to the same destination but one takes a faster or specific route (e.g., via Airport).
+
+```yaml
+alias: "Train: Via Airport Alert"
+trigger:
+  - platform: template
+    value_template: >
+      {% set next = state_attr('sensor.frankfurt_hbf', 'departures') | first %}
+      {{ 'Frankfurt Flughafen' in next.via }}
+action:
+  - service: notify.mobile_app_iphone
+    data:
+      title: "✈️ Airport Connection"
+      message: "The next train takes the Airport route. Perfect for your flight!"
+```
+
+### 10. Dashboard Card Swipe (Conditional)
+Hide your departure card if no trains are running (e.g., at night), keeping your dashboard clean.
+
+```yaml
+type: conditional
+conditions:
+  - entity: sensor.frankfurt_hbf
+    state_not: "unavailable"
+  - entity: sensor.frankfurt_hbf
+    state_not: "unknown"
+card:
+  type: markdown
+  content: >
+    ## 🚆 Departures
+    {% for t in state_attr('sensor.frankfurt_hbf', 'departures')[:3] %}
+    - **{{ t.time }}** {{ t.train }} -> {{ t.destination }} (+{{ t.delayDeparture }})
+    {% endfor %}
+```
+
+### 11. Smart Alarm Adjustment
+Use the `android.intent` command to set your phone alarm 30 mins before the train leaves.
+
+```yaml
+alias: "Train: Set Wake Up Alarm"
+trigger:
+  - platform: time
+    at: "06:00:00"
+action:
+  - service: notify.mobile_app_android
+    data:
+      message: "command_activity"
+      data:
+        intent_package_name: "com.google.android.deskclock"
+        intent_action: "android.intent.action.SET_ALARM"
+        intent_extras: >
+          {% set next = state_attr('sensor.frankfurt_hbf', 'departures') | first %}
+          {% set dep_time = as_timestamp(next.scheduledDeparture) %}
+          {% set wake_up = dep_time - (30 * 60) %}
+          hour:{{ wake_up | timestamp_custom('%H') }},minutes:{{ wake_up | timestamp_custom('%M') }},skip_ui:true
+```
