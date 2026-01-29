@@ -155,3 +155,266 @@ async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
         data = await coordinator._async_update_data()
         assert len(data) == 1
         assert data[0]["destination"] == "Valid Train"
+
+
+async def test_coordinator_occupancy(hass, mock_config_entry):
+    """Test parsing occupancy data."""
+    from custom_components.db_infoscreen.const import CONF_SHOW_OCCUPANCY
+    import copy
+
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Test Dest",
+                "train": "ICE 1",
+                "occupancy": {"1": 1, "2": 4},  # 1st class low, 2nd class full
+            }
+        ]
+    }
+
+    # Test Default (Occupancy Disabled)
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value=copy.deepcopy(mock_data))
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 1
+        assert "occupancy" not in data[0]
+
+    # Test Occupancy Enabled
+    mock_config_entry.options[CONF_SHOW_OCCUPANCY] = True
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value=copy.deepcopy(mock_data))
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 1
+        assert data[0]["occupancy"] == {"1": 1, "2": 4}
+
+
+async def test_coordinator_platform_change(hass, mock_config_entry):
+    """Test platform change detection."""
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Changed Platform",
+                "train": "ICE 1",
+                "platform": "5",
+                "scheduledPlatform": "4",
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Same Platform",
+                "train": "ICE 2",
+                "platform": "1",
+                "scheduledPlatform": "1",
+            },
+        ]
+    }
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value=mock_data)
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 2
+        assert data[0]["changed_platform"] is True
+        assert data[1]["changed_platform"] is False
+
+
+async def test_coordinator_wagon_order(hass, mock_config_entry):
+    """Test wagon order and sector extraction."""
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "With Sectors",
+                "train": "ICE 1",
+                "platform": "Gl. 5 A-C",
+                "wagonorder": True,
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "No Sectors",
+                "train": "ICE 2",
+                "platform": "Standard",
+            },
+        ]
+    }
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value=mock_data)
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 2
+
+        # Test 1: Full info
+        assert data[0]["wagon_order"] is True
+        assert data[0]["platform_sectors"] == "A-C"
+
+        # Test 2: Missing info
+        assert "wagon_order" not in data[1]
+        assert "platform_sectors" not in data[1]
+
+
+async def test_coordinator_qos(hass, mock_config_entry):
+    """Test QoS parsing and facilities extraction."""
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "QoS Train",
+                "train": "ICE 1",
+                "qos": {"wifi": True},
+                "messages": {
+                    "qos": [
+                        {"text": "Bistro im Zug geschlossen", "code": "80"},
+                        {"text": "WLAN im gesamten Zug gestört", "code": "82"},
+                    ]
+                },
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "No QoS",
+                "train": "ICE 2",
+            },
+        ]
+    }
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value=mock_data)
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 2
+
+        # Test 1: QoS and Facilities
+        assert data[0]["qos"] == {"wifi": True}
+        assert data[0]["facilities"] == {"bistro": False, "wifi": False}
+
+        # Test 2: No QoS
+        assert "qos" not in data[1]
+        assert "facilities" not in data[1]
+
+
+async def test_coordinator_route_details(hass, mock_config_entry):
+    """Test route details parsing."""
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Route Train",
+                "train": "ICE 1",
+                "route": [
+                    {"name": "Stop A", "arr_delay": 5},
+                    {"name": "Stop B", "dep_delay": 0},
+                    {"name": "Stop C"},  # No delay info
+                ],
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Simple Route",
+                "train": "ICE 2",
+                "route": ["Simple A", "Simple B"],
+            },
+        ]
+    }
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value=mock_data)
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 2
+
+        # Test 1: Detailed Route
+        details = data[0]["route_details"]
+        assert len(details) == 3
+        assert details[0] == {"name": "Stop A", "arr_delay": 5}
+        assert details[1] == {"name": "Stop B", "dep_delay": 0}
+        assert details[2] == {"name": "Stop C"}
+
+        # Test 2: Simple Route
+        simple_details = data[1]["route_details"]
+        assert len(simple_details) == 2
+        assert simple_details[0] == {"name": "Simple A"}
+        assert simple_details[1] == {"name": "Simple B"}
+
+
+async def test_coordinator_trip_id(hass, mock_config_entry):
+    """Test trip ID parsing."""
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "ID Train",
+                "train": "ICE 1",
+                "trainId": "123456789",  # Common field
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "No ID",
+                "train": "ICE 2",
+                # No ID field
+            },
+        ]
+    }
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value=mock_data)
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 2
+
+        # Test 1: Trip ID present
+        assert data[0]["trip_id"] == "123456789"
+
+        # Test 2: Trip ID missing
+        assert data[1]["trip_id"] is None

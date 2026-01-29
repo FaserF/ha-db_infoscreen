@@ -9,8 +9,8 @@
 When you first add a "DB Infoscreen" integration, you meet the setup wizard. This creates the "Base Sensor".
 
 ### 1. Station Selection
--   **What to enter**: You can enter a full name (e.g. `Frankfurt am Main Hbf`), a DS100 ID (e.g. `FF`), or a Trip Number.
--   **DS100 Advantage**: Using a DS100 ID is faster and more precise. It avoids ambiguity when multiple cities have similar station names.
+-   **Search & Select**: Simply type the name of your city (e.g. `Frankfurt`). The integration will search the official database and present a list of stations to choose from.
+-   **Direct Entry**: You can still enter a precise DS100 ID (e.g. `FF`) or EVA ID if you know it.
 
 ### 2. Data Source
 Select the backend provider.
@@ -52,6 +52,7 @@ Once a sensor is created, click **Configure** on the integration card to access 
     -   `Arrival`: Useful if you are using the integration to track when someone is arriving at your station.
 -   **Enable Text View**: A powerful feature for ePaper displays. It compiles the most important info into a single formatted string.
 -   **Hide Low Delay**: Removes delay noise for delays less than 5 minutes.
+-   **Show Occupancy**: Enables fetching of train occupancy data (load factor 1-4) if provided by the API.
 
 ### :material-flask: Advanced Options
 -   **Custom API URL**: Essential if you are hosting your own [db-fakedisplay](https://github.com/derf/db-fakedisplay) instance.

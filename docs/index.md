@@ -23,7 +23,7 @@
 | Component | Status | Latest | Release Date |
 | :--- | :--- | :--- | :--- |
 | **Integration** | ![Active](https://img.shields.io/badge/status-active-success?style=flat-square) | ![GitHub release (latest by date)](https://img.shields.io/github/v/release/FaserF/ha-db_infoscreen?style=flat-square) | ![GitHub Release Date](https://img.shields.io/github/release-date/FaserF/ha-db_infoscreen?style=flat-square) |
-| **Backend API** | ![Upstream](https://img.shields.io/badge/upstream-tracking-blue?style=flat-square) | ![Backend Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FFaserF%2Fha-db_infoscreen%2Fmain%2F.backend_version&query=%24&label=v&style=flat-square) | ![Stable](https://img.shields.io/badge/stable-yes-green?style=flat-square) |
+| **Backend API** | ![Upstream](https://img.shields.io/badge/upstream-tracking-blue?style=flat-square) | ![Backend Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FFaserF%2Fha-db_infoscreen%2Fmain%2F.backend_version&query=%24.version&label=v&style=flat-square) | ![Stable](https://img.shields.io/badge/stable-yes-green?style=flat-square) |
 
 ---
 
@@ -96,7 +96,9 @@ This project is a bridge between the Home Assistant ecosystem and the wider open
 | **Real-time Data** | Live delays, platform changes, and quality notes (e.g., "Train reversed"). |
 | **Global Coverage** | Supports DB (Germany), ÖBB (Austria), SBB (Switzerland), and many local associations. |
 | **Smart Filtering** | Exclude cancelled trains, filter by direction, or show only specific platforms. |
-| **Deep Attributes** | Access route info, warnings, messages, and train composition details. |
+| **Deep Attributes** | Access route info, warnings, messages, train composition (`wagon_order`), and unique `trip_id`. |
+| **Occupancy** | See how full the train is (1-4 scale) before it arrives. |
+| **Station Search** | Integrated search prevents typos by letting you pick from official station names. |
 | **ePaper Ready** | Built-in "Text View" mode for ESPHome/ePaper displays. |
 
 ---

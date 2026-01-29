@@ -45,11 +45,12 @@ jobs:
               console.log('File .backend_version not found');
               return;
             }
-            const version = fs.readFileSync(path, 'utf8').trim();
-            if (!version) {
+            const content = fs.readFileSync(path, 'utf8').trim();
+            if (!content) {
               console.log('File .backend_version is empty');
               return;
             }
+            const version = JSON.parse(content).version;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,

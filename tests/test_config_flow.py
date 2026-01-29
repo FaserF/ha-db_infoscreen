@@ -1,6 +1,6 @@
 """Test the DB Infoscreen config flow."""
 
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, AsyncMock
 import pytest
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
@@ -40,7 +40,13 @@ async def test_form_create_entry(hass):
 
     with patch(
         "custom_components.db_infoscreen.async_setup_entry", return_value=True
-    ) as mock_setup_entry:
+    ) as mock_setup_entry, patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.text = AsyncMock(
+            return_value="<stations><station name='München Hbf' ds100='MH' eva='8000261'/></stations>"
+        )
+        mock_get.return_value.__aenter__.return_value = mock_response
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -74,13 +80,20 @@ async def test_form_duplicate_entry(hass, config_entry):
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_STATION: "München Hbf",
-            CONF_DATA_SOURCE: "IRIS-TTS",
-        },
-    )
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.text = AsyncMock(
+            return_value="<stations><station name='München Hbf' ds100='MH' eva='8000261'/></stations>"
+        )
+        mock_get.return_value.__aenter__.return_value = mock_response
+        result2 = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_STATION: "München Hbf",
+                CONF_DATA_SOURCE: "IRIS-TTS",
+            },
+        )
 
     assert result2["type"] == FlowResultType.ABORT
     assert result2["reason"] == "already_configured"

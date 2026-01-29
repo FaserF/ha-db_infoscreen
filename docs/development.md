@@ -51,9 +51,13 @@ We use GitHub Actions to automate our quality control and deployment.
 
 ### Automated API Validation
 Our `backend-api-update.yml` workflow is a unique "early warning system".
+
 1.  **Renovate** monitors the [db-fakedisplay](https://github.com/derf/db-fakedisplay) project.
+
 2.  When a new backend version is released, Renovate opens a PR updating our `.backend_version`.
+
 3.  The CI automatically runs our stability tests against this new version.
+
 4.  If it passes, we know the integration is safe to use with the new backend.
 
 ### Documentation Deployment

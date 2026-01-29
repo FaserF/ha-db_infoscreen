@@ -98,3 +98,5 @@ IGNORED_TRAINTYPES_OPTIONS = {
     "F": "EuroCity (EC), Intercity Express (ICE), Intercity (IC)",
     "Unbekannter Zugtyp": "Unbekannter Zugtyp",
 }
+
+CONF_SHOW_OCCUPANCY = "show_occupancy"

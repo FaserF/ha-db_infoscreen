@@ -8,6 +8,7 @@ import async_timeout
 import asyncio
 import logging
 import json
+import re
 from urllib.parse import quote, urlencode
 
 from .const import (
@@ -37,6 +38,7 @@ from .const import (
     CONF_DEDUPLICATE_DEPARTURES,
     TRAIN_TYPE_MAPPING,
     CONF_EXCLUDE_CANCELLED,
+    CONF_SHOW_OCCUPANCY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -114,6 +116,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.keep_endstation = config.get(CONF_KEEP_ENDSTATION, False)
         self.deduplicate_departures = config.get(CONF_DEDUPLICATE_DEPARTURES, False)
         self.exclude_cancelled = config.get(CONF_EXCLUDE_CANCELLED, False)
+        self.show_occupancy = config.get(CONF_SHOW_OCCUPANCY, False)
         custom_api_url = config.get(CONF_CUSTOM_API_URL, "")
         platforms = config.get(CONF_PLATFORMS, "")
         admode = config.get(CONF_ADMODE, "")
@@ -565,6 +568,106 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                 departure_time_adjusted.timestamp()
                             )
 
+                        if self.show_occupancy:
+                            occupancy = departure.get("occupancy")
+                            if occupancy:
+                                departure["occupancy"] = occupancy
+                        else:
+                            # Explicitly remove occupancy if disabled
+                            departure.pop("occupancy", None)
+
+                        # Platform change detection
+                        platform = departure.get("platform")
+                        scheduled_platform = departure.get("scheduledPlatform")
+                        if (
+                            platform
+                            and scheduled_platform
+                            and platform != scheduled_platform
+                        ):
+                            departure["changed_platform"] = True
+                        else:
+                            departure["changed_platform"] = False
+
+                        # Wagon Order (Pass-through + Sector Extraction)
+                        if "wagonorder" in departure:
+                            departure["wagon_order"] = departure["wagonorder"]
+
+                        # Extract sectors from platform string (e.g. "5 D-G")
+                        if platform and isinstance(platform, str):
+                            # Matches " D-G", " A", " A-C", with leading space or start
+                            sector_match = re.search(r"\s([A-G](-[A-G])?)$", platform)
+                            if sector_match:
+                                departure["platform_sectors"] = sector_match.group(1)
+
+                        # QoS (Pass-through + Message Parsing)
+                        if "qos" in departure:
+                            departure["qos"] = departure["qos"]
+
+                        # Parse facilities from messages
+                        facilities = {}
+                        msg_texts = []
+                        if "messages" in departure and isinstance(
+                            departure["messages"], dict
+                        ):
+                            for msg_list in departure["messages"].values():
+                                if isinstance(msg_list, list):
+                                    for msg in msg_list:
+                                        if isinstance(msg, dict):
+                                            msg_texts.append(msg.get("text", ""))
+
+                        for text in msg_texts:
+                            lower_text = text.lower()
+                            if "wlan" in lower_text or "wifi" in lower_text:
+                                if (
+                                    "nicht" in lower_text
+                                    or "gestört" in lower_text
+                                    or "ausfall" in lower_text
+                                    or "defekt" in lower_text
+                                ):
+                                    facilities["wifi"] = False
+                            if (
+                                "bistro" in lower_text
+                                or "restaurant" in lower_text
+                                or "catering" in lower_text
+                            ):
+                                if (
+                                    "nicht" in lower_text
+                                    or "gestört" in lower_text
+                                    or "geschlossen" in lower_text
+                                ):
+                                    facilities["bistro"] = False
+
+                        if facilities:
+                            departure["facilities"] = facilities
+
+                        # Real-time Route Progress
+                        route_details = []
+                        if "route" in departure and isinstance(
+                            departure["route"], list
+                        ):
+                            for stop in departure["route"]:
+                                if isinstance(stop, dict):
+                                    stop_name = stop.get("name")
+                                    if stop_name:
+                                        details = {"name": stop_name}
+                                        # Add delay info if available
+                                        if "arr_delay" in stop:
+                                            details["arr_delay"] = stop["arr_delay"]
+                                        if "dep_delay" in stop:
+                                            details["dep_delay"] = stop["dep_delay"]
+                                        route_details.append(details)
+                                elif isinstance(stop, str):
+                                    # Handle simple string list
+                                    route_details.append({"name": stop})
+
+                        if route_details:
+                            departure["route_details"] = route_details
+
+                        # Trip-ID
+                        departure["trip_id"] = departure.get(
+                            "trainId"
+                        ) or departure.get("tripId")
+
                         scheduled_arrival = departure.get("scheduledArrival")
                         delay_arrival = departure.get("delayArrival")
                         if delay_arrival is None:
@@ -696,6 +799,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                 "sched_arr",
                                 "dep",
                                 "datetime",
+                                "trip_id",  # Ensure trip_id is allowed to be None
                             }
                             keys_to_remove = [
                                 k
