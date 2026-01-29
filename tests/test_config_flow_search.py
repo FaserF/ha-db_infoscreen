@@ -74,11 +74,11 @@ async def test_search_multiple_results(hass: HomeAssistant) -> None:
         # Verify result contains dropdown
         assert CONF_STATION in result["data_schema"].schema
 
-        # 3. Select one
+        # 3. Select one (using EVA ID)
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
-                CONF_STATION: "Frankfurt (Oder)",
+                CONF_STATION: "8010113",
             },
         )
 
