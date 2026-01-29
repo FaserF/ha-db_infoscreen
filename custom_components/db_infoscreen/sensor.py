@@ -83,16 +83,36 @@ class DBInfoSensor(SensorEntity):
             except ValueError:
                 try:
                     departure_time = datetime.strptime(
-                        f"{datetime.now().date()} {departure_time}", "%Y-%m-%d %H:%M"
+                        departure_time, "%Y-%m-%dT%H:%M:%S"
                     )
                     _LOGGER.debug(
-                        "Converted departure time from time string: %s", departure_time
+                        "Converted departure time from ISO string: %s", departure_time
                     )
                 except ValueError:
-                    _LOGGER.warning(
-                        "Unable to parse departure time from string: %s", departure_time
-                    )
-                    return None
+                    try:
+                        departure_time = datetime.strptime(
+                            departure_time, "%Y-%m-%dT%H:%M"
+                        )
+                        _LOGGER.debug(
+                            "Converted departure time from ISO short string: %s",
+                            departure_time,
+                        )
+                    except ValueError:
+                        try:
+                            departure_time = datetime.strptime(
+                                f"{datetime.now().date()} {departure_time}",
+                                "%Y-%m-%d %H:%M",
+                            )
+                            _LOGGER.debug(
+                                "Converted departure time from time string: %s",
+                                departure_time,
+                            )
+                        except ValueError:
+                            _LOGGER.warning(
+                                "Unable to parse departure time from string: %s",
+                                departure_time,
+                            )
+                            return None
 
         if isinstance(departure_time, datetime):
             _LOGGER.debug("Checking departure time date: %s", departure_time.date())

@@ -257,9 +257,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         async with aiohttp.ClientSession() as session:
             try:
                 async with async_timeout.timeout(10):
-                    response = await session.get(self.api_url)
-                    response.raise_for_status()
-                    data = await response.json()
+                    async with session.get(self.api_url) as response:
+                        response.raise_for_status()
+                        data = await response.json()
 
                     raw_departures = data.get("departures", [])
                     if raw_departures is None:

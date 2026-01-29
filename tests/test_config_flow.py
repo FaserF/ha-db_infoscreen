@@ -195,8 +195,11 @@ async def test_options_flow_persistence(hass, config_entry):
     """Test that existing config data is preserved in options flow."""
     # Simulate an entry where options are empty but data has VIA set
     # This happens if the user configured it initially via config flow
-    config_entry.data[CONF_VIA_STATIONS] = ["Hagsfeld Jenaer Straße"]
-    config_entry.options = {}
+    hass.config_entries.async_update_entry(
+        config_entry,
+        data={**config_entry.data, CONF_VIA_STATIONS: ["Hagsfeld Jenaer Straße"]},
+        options={},
+    )
 
     config_entry.add_to_hass(hass)
 

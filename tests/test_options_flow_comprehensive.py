@@ -86,7 +86,7 @@ async def test_full_options_lifecycle(hass):
 
     # 5. Verify Fallback logic
     # If we reset options, it should fall back to data
-    config_entry.options = {}
+    hass.config_entries.async_update_entry(config_entry, options={})
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
     result_filter = await hass.config_entries.options.async_configure(
         result["flow_id"],
