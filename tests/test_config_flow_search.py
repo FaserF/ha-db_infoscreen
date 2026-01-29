@@ -41,7 +41,7 @@ async def test_search_single_result(hass: HomeAssistant) -> None:
         )
 
         assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
-        assert result["title"] == "Frankfurt (Main) Hbf (IRIS-TTS)"
+        assert result["title"] == "Frankfurt (Main) Hbf"
         assert result["data"][CONF_STATION] == "Frankfurt (Main) Hbf"
 
 
@@ -83,7 +83,7 @@ async def test_search_multiple_results(hass: HomeAssistant) -> None:
         )
 
         assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
-        assert result["title"] == "Frankfurt (Oder) (IRIS-TTS)"
+        assert result["title"] == "Frankfurt (Oder)"
         assert result["data"][CONF_STATION] == "Frankfurt (Oder)"
 
 
