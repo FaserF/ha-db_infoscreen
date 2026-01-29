@@ -49,7 +49,7 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/FaserF/ha-db_infoscreen
       name: GitHub Repository
-    - icon: simpleicons/buymeacoffee
+    - icon: material/coffee
       link: https://www.buymeacoffee.com/faserf
       name: Buy me a Coffee
     - icon: fontawesome/solid/bug

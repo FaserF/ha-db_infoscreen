@@ -297,9 +297,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             )
                             continue
 
-                        if isinstance(departure_time_str, int):
+                        if isinstance(departure_time_str, (int, float)):
                             departure_time_obj = dt_util.utc_from_timestamp(
-                                departure_time_str
+                                int(departure_time_str)
                             ).astimezone(now.tzinfo)
                         else:
                             # Attempt robust parsing using HA helper
@@ -338,7 +338,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                         minutes=5
                                     ):  # Allow for slight past times
                                         departure_time_obj += timedelta(days=1)
-                                except ValueError:
+                                except (ValueError, TypeError):
                                     _LOGGER.error(
                                         "Invalid time format, skipping departure: %s",
                                         departure_time_str,
@@ -620,7 +620,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                                 minutes=5
                                             ):
                                                 arrival_time += timedelta(days=1)
-                                        except ValueError:
+                                        except (ValueError, TypeError):
                                             _LOGGER.error(
                                                 "Invalid time format for scheduledArrival fallback: %s",
                                                 scheduled_arrival,

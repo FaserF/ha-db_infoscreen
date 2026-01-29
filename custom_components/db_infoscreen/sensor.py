@@ -74,8 +74,8 @@ class DBInfoSensor(SensorEntity):
         now = dt_util.now()
         today = now.date()
 
-        if isinstance(departure_time, int):  # Unix timestamp case
-            departure_time = dt_util.utc_from_timestamp(departure_time).astimezone(
+        if isinstance(departure_time, (int, float)):  # Unix timestamp case
+            departure_time = dt_util.utc_from_timestamp(int(departure_time)).astimezone(
                 now.tzinfo
             )
             _LOGGER.debug("Converted departure time from timestamp: %s", departure_time)
@@ -119,7 +119,7 @@ class DBInfoSensor(SensorEntity):
                         "Converted departure time from fallback HH:MM: %s",
                         departure_time,
                     )
-                except ValueError:
+                except (ValueError, TypeError):
                     _LOGGER.warning(
                         "Unable to parse departure time from string: %s",
                         departure_time,
@@ -238,14 +238,14 @@ class DBInfoSensor(SensorEntity):
             dep_copy = departure.copy()
 
             if "scheduledTime" in dep_copy and isinstance(
-                dep_copy["scheduledTime"], int
+                dep_copy["scheduledTime"], (int, float)
             ):
                 dep_copy["scheduledTime"] = dt_util.as_local(
-                    dt_util.utc_from_timestamp(dep_copy["scheduledTime"])
+                    dt_util.utc_from_timestamp(int(dep_copy["scheduledTime"]))
                 ).strftime("%Y-%m-%d %H:%M:%S")
-            if "time" in dep_copy and isinstance(dep_copy["time"], int):
+            if "time" in dep_copy and isinstance(dep_copy["time"], (int, float)):
                 dep_copy["time"] = dt_util.as_local(
-                    dt_util.utc_from_timestamp(dep_copy["time"])
+                    dt_util.utc_from_timestamp(int(dep_copy["time"]))
                 ).strftime("%Y-%m-%d %H:%M:%S")
 
             next_departures.append(dep_copy)
@@ -275,10 +275,10 @@ class DBInfoSensor(SensorEntity):
                 delay = dep.get("delay", 0)
 
                 # Format time if it is an int/timestamp, otherwise use as is
-                if isinstance(time, int):
-                    time = dt_util.as_local(dt_util.utc_from_timestamp(time)).strftime(
-                        "%H:%M"
-                    )
+                if isinstance(time, (int, float)):
+                    time = dt_util.as_local(
+                        dt_util.utc_from_timestamp(int(time))
+                    ).strftime("%H:%M")
 
                 delay_str = ""
                 if delay:
