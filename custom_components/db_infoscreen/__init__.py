@@ -595,7 +595,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                                 microsecond=parsed_dt.microsecond,
                                             )
                                             # Use a 5-minute grace window to handle next-day rollover
-                                            if arrival_time < now - timedelta(minutes=5):
+                                            if arrival_time < now - timedelta(
+                                                minutes=5
+                                            ):
                                                 arrival_time += timedelta(days=1)
                                         else:
                                             arrival_time = parsed_dt.astimezone(
@@ -614,7 +616,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                                 microsecond=0,
                                             )
                                             # Use a 5-minute grace window to handle next-day rollover
-                                            if arrival_time < now - timedelta(minutes=5):
+                                            if arrival_time < now - timedelta(
+                                                minutes=5
+                                            ):
                                                 arrival_time += timedelta(days=1)
                                         except ValueError:
                                             _LOGGER.error(
