@@ -52,6 +52,7 @@ Once a sensor is created, click **Configure** on the integration card to access 
     -   `Arrival`: Useful if you are using the integration to track when someone is arriving at your station.
 -   **Enable Text View**: A powerful feature for ePaper displays. It compiles the most important info into a single formatted string.
 -   **Hide Low Delay**: Removes delay noise for delays less than 5 minutes.
+-   **Show Occupancy**: Enables fetching of train occupancy data (load factor 1-4) if provided by the API.
 
 ### :material-flask: Advanced Options
 -   **Custom API URL**: Essential if you are hosting your own [db-fakedisplay](https://github.com/derf/db-fakedisplay) instance.

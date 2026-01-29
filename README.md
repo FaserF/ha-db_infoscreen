@@ -23,9 +23,11 @@ The `db-infoscreen` sensor provides detailed **departure times** and train infor
 | Feature | Description |
 | :--- | :--- |
 | 📋 **Departure Board** | View next departures, delays, platforms, and train types. |
+| 👥 **Train Occupancy** | View predicted load factor (1st/2nd class) where available. |
 | 🌍 **Wide Coverage** | Supports DB and many local transport associations (via HAFAS/EFA). |
 | ⚙️ **Highly Configurable** | Filter by direction, train type, specific platforms, and more. |
-| ℹ️ **Detailed Attributes** | Access route info, warnings, messages, and train composition details. |
+| ⚙️ **Highly Configurable** | Filter by direction, train type, specific platforms, and more. |
+| ℹ️ **Detailed Attributes** | Access route info, warnings, platform changes (`changed_platform`), and train composition details. |
 
 ---
 

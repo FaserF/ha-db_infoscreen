@@ -32,6 +32,7 @@ from .const import (
     CONF_DEDUPLICATE_DEPARTURES,
     CONF_ENABLE_TEXT_VIEW,
     CONF_EXCLUDE_CANCELLED,
+    CONF_SHOW_OCCUPANCY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -293,6 +294,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(
                         CONF_HIDE_LOW_DELAY,
                         default=self._get_config_value(CONF_HIDE_LOW_DELAY, False),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_SHOW_OCCUPANCY,
+                        default=self._get_config_value(CONF_SHOW_OCCUPANCY, False),
                     ): cv.boolean,
                 }
             ),

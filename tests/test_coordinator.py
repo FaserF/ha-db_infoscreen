@@ -155,3 +155,84 @@ async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
         data = await coordinator._async_update_data()
         assert len(data) == 1
         assert data[0]["destination"] == "Valid Train"
+
+
+async def test_coordinator_occupancy(hass, mock_config_entry):
+    """Test parsing occupancy data."""
+    from custom_components.db_infoscreen.const import CONF_SHOW_OCCUPANCY
+
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Test Dest",
+                "train": "ICE 1",
+                "occupancy": {"1": 1, "2": 4},  # 1st class low, 2nd class full
+            }
+        ]
+    }
+
+    # Test Default (Occupancy Disabled)
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value=mock_data)
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 1
+        assert "occupancy" not in data[0]
+
+    # Test Occupancy Enabled
+    mock_config_entry.options[CONF_SHOW_OCCUPANCY] = True
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value=mock_data)
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 1
+        assert data[0]["occupancy"] == {"1": 1, "2": 4}
+
+
+async def test_coordinator_platform_change(hass, mock_config_entry):
+    """Test platform change detection."""
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Changed Platform",
+                "train": "ICE 1",
+                "platform": "5",
+                "scheduledPlatform": "4",
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Same Platform",
+                "train": "ICE 2",
+                "platform": "1",
+                "scheduledPlatform": "1",
+            },
+        ]
+    }
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value=mock_data)
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 2
+        assert data[0]["changed_platform"] is True
+        assert data[1]["changed_platform"] is False

@@ -37,6 +37,7 @@ from .const import (
     CONF_DEDUPLICATE_DEPARTURES,
     TRAIN_TYPE_MAPPING,
     CONF_EXCLUDE_CANCELLED,
+    CONF_SHOW_OCCUPANCY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -114,6 +115,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.keep_endstation = config.get(CONF_KEEP_ENDSTATION, False)
         self.deduplicate_departures = config.get(CONF_DEDUPLICATE_DEPARTURES, False)
         self.exclude_cancelled = config.get(CONF_EXCLUDE_CANCELLED, False)
+        self.show_occupancy = config.get(CONF_SHOW_OCCUPANCY, False)
         custom_api_url = config.get(CONF_CUSTOM_API_URL, "")
         platforms = config.get(CONF_PLATFORMS, "")
         admode = config.get(CONF_ADMODE, "")
@@ -564,6 +566,23 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             departure["departure_timestamp"] = int(
                                 departure_time_adjusted.timestamp()
                             )
+
+                        if self.show_occupancy:
+                            occupancy = departure.get("occupancy")
+                            if occupancy:
+                                departure["occupancy"] = occupancy
+
+                        # Platform change detection
+                        platform = departure.get("platform")
+                        scheduled_platform = departure.get("scheduledPlatform")
+                        if (
+                            platform
+                            and scheduled_platform
+                            and platform != scheduled_platform
+                        ):
+                            departure["changed_platform"] = True
+                        else:
+                            departure["changed_platform"] = False
 
                         scheduled_arrival = departure.get("scheduledArrival")
                         delay_arrival = departure.get("delayArrival")
