@@ -273,7 +273,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     )
 
                     # Set last_update timestamp
-                    self.last_update = dt_util.now()
+                    now = dt_util.now()
+                    now_naive = now.replace(tzinfo=None)
+                    today = now.date()
+                    self.last_update = now
 
                     # --- PRE-PROCESSING: Parse time for all departures ---
                     departures_with_time = []
@@ -315,13 +318,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     )
                                 except ValueError:
                                     try:
-                                        now = dt_util.now()
                                         time_candidate = datetime.strptime(
                                             departure_time_str, "%H:%M"
                                         ).replace(
                                             year=now.year, month=now.month, day=now.day
                                         )
-                                        if time_candidate < now - timedelta(
+                                        if time_candidate < now_naive - timedelta(
                                             minutes=5
                                         ):  # Allow for slight past times
                                             time_candidate += timedelta(days=1)
@@ -545,8 +547,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             # Keep existing human-readable time string
                             departure["departure_current"] = (
                                 departure_time_adjusted.strftime("%Y-%m-%dT%H:%M")
-                                if departure_time_adjusted.date()
-                                != datetime.now().date()
+                                if departure_time_adjusted.date() != today
                                 else departure_time_adjusted.strftime("%H:%M")
                             )
                             # Add new machine-readable Unix timestamp
@@ -578,7 +579,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                                 scheduled_arrival, "%Y-%m-%dT%H:%M"
                                             )
                                         except ValueError:
-                                            today = dt_util.now()
                                             arrival_time = datetime.strptime(
                                                 scheduled_arrival, "%H:%M"
                                             ).replace(
@@ -596,11 +596,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     arrival_time_adjusted = arrival_time + timedelta(
                                         minutes=arrival_delay
                                     )
-                                    today = dt_util.now()
                                     # Keep existing human-readable time string
                                     departure["arrival_current"] = (
                                         arrival_time_adjusted.strftime("%Y-%m-%dT%H:%M")
-                                        if arrival_time_adjusted.date() != today.date()
+                                        if arrival_time_adjusted.date() != today
                                         else arrival_time_adjusted.strftime("%H:%M")
                                     )
                                     # Add new machine-readable Unix timestamp
@@ -676,7 +675,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         departure.pop("departure_datetime", None)
 
                         departure_seconds = (
-                            effective_departure_time - dt_util.now().replace(tzinfo=None)
+                            effective_departure_time - now_naive
                         ).total_seconds()
                         if departure_seconds >= self.offset:
                             filtered_departures.append(departure)

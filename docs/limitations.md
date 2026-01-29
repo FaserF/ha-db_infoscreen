@@ -48,7 +48,7 @@ While the backend supports dozens of providers, not all providers offer the same
 -   **Some HAFAS backends**: May only provide basic arrival/departure times without platform info or delay reasons.
 
 ### Routing vs. Departures
-This integration is **not a router**. It will not tell you which train to take to reach a specific destination if that involve changes. It only tells you what is leaving the current station.
+This integration is **not a router**. It will not tell you which train to take to reach a specific destination if that involves changes. It only tells you what is leaving the current station.
 
 ??? info "How to replicate 'Routing'?"
     You can use the **Via Stations** filter to see only trains reaching your destination, but for complex trips with multiple transfers, you are better served by a dedicated routing integration or the official DB Navigator app.

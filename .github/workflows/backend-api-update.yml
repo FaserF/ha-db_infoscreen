@@ -40,7 +40,16 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const version = fs.readFileSync('.backend_version', 'utf8').trim();
+            const path = '.backend_version';
+            if (!fs.existsSync(path)) {
+              console.log('File .backend_version not found');
+              return;
+            }
+            const version = fs.readFileSync(path, 'utf8').trim();
+            if (!version) {
+              console.log('File .backend_version is empty');
+              return;
+            }
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,

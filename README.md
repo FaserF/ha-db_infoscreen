@@ -14,7 +14,6 @@ The `db-infoscreen` sensor provides detailed **departure times** and train infor
 
 📚 **[View the Full Documentation](https://faserf.github.io/ha-db_infoscreen/)**
 
-
 <div align="center">
   <img src="docs/images/sensor.png" alt="Station Sensor" width="600px">
 </div>

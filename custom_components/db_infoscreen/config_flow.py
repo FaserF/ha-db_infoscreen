@@ -61,7 +61,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Process separated via stations into list
             via_raw = user_input.get(CONF_VIA_STATIONS, "")
             user_input[CONF_VIA_STATIONS] = [
-                s.strip() for s in via_raw.split(",") if s.strip()
+                s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
             ]
 
             # Build base unique ID from station, via stations, direction, and platforms
@@ -213,7 +213,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             if CONF_VIA_STATIONS in user_input:
                 via_raw = user_input.get(CONF_VIA_STATIONS, "")
                 user_input[CONF_VIA_STATIONS] = [
-                    s.strip() for s in via_raw.split(",") if s.strip()
+                    s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
                 ]
             return self.async_update_options(user_input)
 

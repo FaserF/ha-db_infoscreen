@@ -2,7 +2,7 @@ from homeassistant.components.sensor import SensorEntity
 from .const import DOMAIN, CONF_ENABLE_TEXT_VIEW
 import logging
 from homeassistant.util import dt as dt_util
-from datetime import datetime, timedelta
+from datetime import datetime
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,8 +71,13 @@ class DBInfoSensor(SensorEntity):
             _LOGGER.debug("Departure time is None")
             return None
 
+        now = dt_util.now()
+        today = now.date()
+
         if isinstance(departure_time, int):  # Unix timestamp case
-            departure_time = datetime.fromtimestamp(departure_time)
+            departure_time = dt_util.as_local(
+                dt_util.utc_from_timestamp(departure_time)
+            )
             _LOGGER.debug("Converted departure time from timestamp: %s", departure_time)
 
         elif isinstance(departure_time, str):
@@ -101,7 +106,7 @@ class DBInfoSensor(SensorEntity):
                     except ValueError:
                         try:
                             departure_time = datetime.strptime(
-                                f"{dt_util.now().date()} {departure_time}",
+                                f"{today} {departure_time}",
                                 "%Y-%m-%d %H:%M",
                             )
                             _LOGGER.debug(
@@ -116,9 +121,12 @@ class DBInfoSensor(SensorEntity):
                             return None
 
         if isinstance(departure_time, datetime):
-            _LOGGER.debug("Checking departure time date: %s", departure_time.date())
-            _LOGGER.debug("Today's date: %s", dt_util.now().date())
-            if departure_time.date() != dt_util.now().date():
+            # Normalize to HA local date for comparison
+            # Note: strptime outputs naive. We assume the string was in local time if no TZ was found.
+            dep_date = departure_time.date()
+            _LOGGER.debug("Checking departure time date: %s", dep_date)
+            _LOGGER.debug("Today's date: %s", today)
+            if dep_date != today:
                 return departure_time.strftime("%Y-%m-%d %H:%M")
             else:
                 return departure_time.strftime("%H:%M")

@@ -31,13 +31,16 @@ def strings_path():
 
 
 def flatten_json(y):
-    """Flatten a nested json dict."""
+    """Flatten a nested json dict, handling lists as well."""
     out = {}
 
     def flatten(x, name=""):
-        if type(x) is dict:
+        if isinstance(x, dict):
             for a in x:
                 flatten(x[a], name + a + ".")
+        elif isinstance(x, list):
+            for i, a in enumerate(x):
+                flatten(a, name + str(i) + ".")
         else:
             out[name[:-1]] = x
 

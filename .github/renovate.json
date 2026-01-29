@@ -44,8 +44,7 @@
   "pip_requirements": {
     "fileMatch": [
       "^requirements.*\\.txt$",
-      "^docs/requirements\\.txt$",
-      "manifest\\.json$"
+      "^docs/requirements\\.txt$"
     ]
   },
   "github-actions": {
