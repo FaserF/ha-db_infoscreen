@@ -56,10 +56,21 @@ The `departures` list contains rich data objects. Here are the keys available fo
 ```yaml
 - type: markdown
   content: >
-    {% set t = state_attr('sensor.frankfurt_hbf', 'departures')[0] %}
-    **Next Train**: {{ t.train }}
-    **Platform**: {{ t.platform }} (Sectors: {{ t.platform_sectors }})
-    **Occupancy**: {{ "🟢" if t.occupancy == 1 else "🔴" }}
+    {% set trains = state_attr('sensor.frankfurt_hbf', 'departures') %}
+    {% if trains %}
+      {% set t = trains[0] %}
+      **Next Train**: {{ t.train }}
+      **Platform**: {{ t.platform }} (Sectors: {{ t.platform_sectors }})
+      **Occupancy**:
+      {% if t.occupancy == 1 %} 🟢 (Low)
+      {% elif t.occupancy == 2 %} 🟡 (Medium)
+      {% elif t.occupancy == 3 %} 🟠 (High)
+      {% elif t.occupancy == 4 %} 🔴 (Full)
+      {% else %} ⚪ (Unknown)
+      {% endif %}
+    {% else %}
+      No departures available.
+    {% endif %}
 ```
 
 ---

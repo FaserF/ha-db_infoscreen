@@ -2,9 +2,12 @@ import logging
 import re
 import xml.etree.ElementTree as ET
 
+import urllib.parse
 import aiohttp
+import async_timeout
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from .const import (
     DOMAIN,
@@ -85,9 +88,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def _async_search_stations(self, query):
         """Search for stations using IRIS API."""
-        url = f"https://iris.noncd.db.de/iris-tts/timetable/station/{query}"
+        url = f"https://iris.noncd.db.de/iris-tts/timetable/station/{urllib.parse.quote(query)}"
         try:
-            async with aiohttp.ClientSession() as session:
+            session = async_get_clientsession(self.hass)
+            async with async_timeout.timeout(10):
                 async with session.get(url) as response:
                     if response.status != 200:
                         return []
@@ -109,21 +113,27 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_select_station(self, user_input=None):
         """Handle station selection step."""
+        stations = self.context.get("stations", [])
         if user_input is not None:
-            # User selected a station
-            selected_station = user_input[CONF_STATION]
-            # Use the stored context to create the entry
-            entry_data = self.context.get("user_input")
-            entry_data[CONF_STATION] = (
-                selected_station  # Update with selected full name
+            # User selected a station via its unique identifier (EVA/DS100)
+            selected_station_id = user_input[CONF_STATION]
+            # Find the full station object
+            selected_station = next(
+                (s for s in stations if s["eva"] == selected_station_id), None
             )
 
-            # Re-run strict validation logic from async_step_user to ensure ID uniqueness
-            return await self._async_create_db_entry(entry_data)
+            if selected_station:
+                # Use the stored context to create the entry
+                entry_data = self.context.get("user_input")
+                # Update with selected full name (and potentially store ID if needed later)
+                entry_data[CONF_STATION] = selected_station["name"]
 
-        # Prepare options
-        stations = self.context.get("stations", [])
-        options = {s["name"]: s["name"] for s in stations}
+                # Re-run strict validation logic from async_step_user to ensure ID uniqueness
+                return await self._async_create_db_entry(entry_data)
+
+        # Prepare options using unique EVA as value and Name as label
+        # This handles multiple stations with the same name correctly
+        options = {s["eva"]: f"{s['name']} ({s['ds100']})" for s in stations}
 
         return self.async_show_form(
             step_id="select_station",
