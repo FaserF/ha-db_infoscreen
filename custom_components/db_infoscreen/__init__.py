@@ -8,6 +8,7 @@ import async_timeout
 import asyncio
 import logging
 import json
+import re
 from urllib.parse import quote, urlencode
 
 from .const import (
@@ -583,6 +584,17 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             departure["changed_platform"] = True
                         else:
                             departure["changed_platform"] = False
+
+                        # Wagon Order (Pass-through + Sector Extraction)
+                        if "wagonorder" in departure:
+                            departure["wagon_order"] = departure["wagonorder"]
+
+                        # Extract sectors from platform string (e.g. "5 D-G")
+                        if platform and isinstance(platform, str):
+                            # Matches " D-G", " A", " A-C", with leading space or start
+                            sector_match = re.search(r"\s([A-G](-[A-G])?)$", platform)
+                            if sector_match:
+                                departure["platform_sectors"] = sector_match.group(1)
 
                         scheduled_arrival = departure.get("scheduledArrival")
                         delay_arrival = departure.get("delayArrival")

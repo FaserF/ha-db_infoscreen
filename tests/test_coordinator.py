@@ -236,3 +236,46 @@ async def test_coordinator_platform_change(hass, mock_config_entry):
         assert len(data) == 2
         assert data[0]["changed_platform"] is True
         assert data[1]["changed_platform"] is False
+
+
+async def test_coordinator_wagon_order(hass, mock_config_entry):
+    """Test wagon order and sector extraction."""
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "With Sectors",
+                "train": "ICE 1",
+                "platform": "Gl. 5 A-C",
+                "wagonorder": True,
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "No Sectors",
+                "train": "ICE 2",
+                "platform": "Standard",
+            },
+        ]
+    }
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value=mock_data)
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 2
+
+        # Test 1: Full info
+        assert data[0]["wagon_order"] is True
+        assert data[0]["platform_sectors"] == "A-C"
+
+        # Test 2: Missing info
+        assert "wagon_order" not in data[1]
+        assert "platform_sectors" not in data[1]
