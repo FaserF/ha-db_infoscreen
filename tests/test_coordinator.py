@@ -192,7 +192,9 @@ async def test_coordinator_occupancy(hass, mock_config_entry):
     with patch("aiohttp.ClientSession.get") as mock_get:
         mock_response = MagicMock()
         mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=mock_data)
+        # Use deepcopy or fresh data to avoid in-place modification issues from previous test run
+        import copy
+        mock_response.json = AsyncMock(return_value=copy.deepcopy(mock_data))
         mock_get.return_value.__aenter__.return_value = mock_response
 
         data = await coordinator._async_update_data()
