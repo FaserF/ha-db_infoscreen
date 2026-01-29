@@ -572,6 +572,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             occupancy = departure.get("occupancy")
                             if occupancy:
                                 departure["occupancy"] = occupancy
+                        else:
+                            departure.pop("occupancy", None)
 
                         # Platform change detection
                         platform = departure.get("platform")
@@ -796,6 +798,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                 "sched_arr",
                                 "dep",
                                 "datetime",
+                                "trip_id",
                             }
                             keys_to_remove = [
                                 k

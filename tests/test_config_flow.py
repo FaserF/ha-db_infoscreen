@@ -40,7 +40,10 @@ async def test_form_create_entry(hass):
 
     with patch(
         "custom_components.db_infoscreen.async_setup_entry", return_value=True
-    ) as mock_setup_entry:
+    ) as mock_setup_entry, patch(
+        "custom_components.db_infoscreen.config_flow.ConfigFlow._async_search_stations",
+        return_value=[{"name": "München Hbf", "ds100": "MH", "eva": "8000261"}],
+    ):
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -74,13 +77,17 @@ async def test_form_duplicate_entry(hass, config_entry):
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    result2 = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_STATION: "München Hbf",
-            CONF_DATA_SOURCE: "IRIS-TTS",
-        },
-    )
+    with patch(
+        "custom_components.db_infoscreen.config_flow.ConfigFlow._async_search_stations",
+        return_value=[{"name": "München Hbf", "ds100": "MH", "eva": "8000261"}],
+    ):
+        result2 = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_STATION: "München Hbf",
+                CONF_DATA_SOURCE: "IRIS-TTS",
+            },
+        )
 
     assert result2["type"] == FlowResultType.ABORT
     assert result2["reason"] == "already_configured"
