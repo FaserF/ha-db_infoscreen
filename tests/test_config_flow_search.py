@@ -1,7 +1,6 @@
 """Test the db_infoscreen config flow station search."""
 
 from unittest.mock import patch, MagicMock, AsyncMock
-import pytest
 from homeassistant import config_entries, data_entry_flow
 from homeassistant.core import HomeAssistant
 

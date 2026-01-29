@@ -65,7 +65,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Search for station
             stations = await self._async_search_stations(user_input[CONF_STATION])
 
-            if no_stations := not stations:
+            if not stations:
                 errors["base"] = "station_not_found"
             elif len(stations) == 1:
                 # Exact match or only one result -> proceed
