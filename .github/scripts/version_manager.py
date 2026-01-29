@@ -38,8 +38,14 @@ def calculate_version(release_type):
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)(?:(b)(\d+)|(-dev)(\d+))?$", current_version)
 
     if match:
-        curr_year, curr_month, curr_patch, b_prefix, b_num, dev_prefix, dev_num = match.groups()
-        curr_year, curr_month, curr_patch = int(curr_year), int(curr_month), int(curr_patch)
+        curr_year, curr_month, curr_patch, b_prefix, b_num, dev_prefix, dev_num = (
+            match.groups()
+        )
+        curr_year, curr_month, curr_patch = (
+            int(curr_year),
+            int(curr_month),
+            int(curr_patch),
+        )
 
         if b_prefix:
             suffix_type = "b"
@@ -76,7 +82,7 @@ def calculate_version(release_type):
 
         # New beta? Increment patch (if stable) and start at b0
         if suffix_type is None:
-             patch += 1
+            patch += 1
         return f"{year}.{month}.{patch}b0"
 
     elif release_type == "nightly" or release_type == "dev":
@@ -86,7 +92,7 @@ def calculate_version(release_type):
 
         # New dev? Increment patch (if stable) and start at dev0
         if suffix_type is None:
-             patch += 1
+            patch += 1
         return f"{year}.{month}.{patch}-dev0"
 
     else:
