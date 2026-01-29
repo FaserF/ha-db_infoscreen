@@ -315,6 +315,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                         second=parsed_dt.second,
                                         microsecond=parsed_dt.microsecond,
                                     )
+                                    # Use a 5-minute grace window to handle next-day rollover
+                                    if departure_time_obj < now - timedelta(minutes=5):
+                                        departure_time_obj += timedelta(days=1)
                                 else:
                                     departure_time_obj = parsed_dt.astimezone(
                                         now.tzinfo
@@ -591,6 +594,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                                 second=parsed_dt.second,
                                                 microsecond=parsed_dt.microsecond,
                                             )
+                                            # Use a 5-minute grace window to handle next-day rollover
+                                            if arrival_time < now - timedelta(minutes=5):
+                                                arrival_time += timedelta(days=1)
                                         else:
                                             arrival_time = parsed_dt.astimezone(
                                                 now.tzinfo
@@ -607,7 +613,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                                 second=0,
                                                 microsecond=0,
                                             )
-                                            if arrival_time <= now:
+                                            # Use a 5-minute grace window to handle next-day rollover
+                                            if arrival_time < now - timedelta(minutes=5):
                                                 arrival_time += timedelta(days=1)
                                         except ValueError:
                                             _LOGGER.error(

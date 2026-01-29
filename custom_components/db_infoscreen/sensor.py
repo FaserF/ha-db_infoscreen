@@ -2,7 +2,7 @@ from homeassistant.components.sensor import SensorEntity
 from .const import DOMAIN, CONF_ENABLE_TEXT_VIEW
 import logging
 from homeassistant.util import dt as dt_util
-from datetime import datetime
+from datetime import datetime, timedelta
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,6 +94,9 @@ class DBInfoSensor(SensorEntity):
                         second=parsed_dt.second,
                         microsecond=parsed_dt.microsecond,
                     )
+                    # Use a 5-minute grace window to handle next-day rollover
+                    if departure_time < now - timedelta(minutes=5):
+                        departure_time += timedelta(days=1)
                 else:
                     departure_time = parsed_dt.astimezone(now.tzinfo)
                 _LOGGER.debug(
@@ -109,6 +112,9 @@ class DBInfoSensor(SensorEntity):
                         second=0,
                         microsecond=0,
                     )
+                    # Use a 5-minute grace window to handle next-day rollover
+                    if departure_time < now - timedelta(minutes=5):
+                        departure_time += timedelta(days=1)
                     _LOGGER.debug(
                         "Converted departure time from fallback HH:MM: %s",
                         departure_time,
