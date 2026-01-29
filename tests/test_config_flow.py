@@ -211,7 +211,7 @@ async def test_options_flow_persistence(hass, config_entry):
     # Submit without changing anything
     result3 = await hass.config_entries.options.async_configure(
         result2["flow_id"],
-        {}, # Empty payload
+        {},  # Empty payload
     )
 
     assert result3["type"] == FlowResultType.CREATE_ENTRY

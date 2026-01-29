@@ -209,8 +209,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         url = f"{url}?{query_string}" if query_string else url
         if self.via_stations:
             encoded_via_stations = [
-                quote_plus(station.strip())
-                for station in self.via_stations
+                quote_plus(station.strip()) for station in self.via_stations
             ]
             via_param = ",".join(encoded_via_stations)
             url += f"?via={via_param}" if "?" not in url else f"&via={via_param}"

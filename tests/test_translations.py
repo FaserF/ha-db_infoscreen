@@ -1,8 +1,10 @@
 """Test the translation files."""
+
 import json
 import os
 import pytest
 from custom_components.db_infoscreen import DOMAIN
+
 
 @pytest.fixture
 def translations_path():
@@ -15,6 +17,7 @@ def translations_path():
         "translations",
     )
 
+
 @pytest.fixture
 def strings_path():
     """Return the path to strings.json."""
@@ -25,6 +28,7 @@ def strings_path():
         DOMAIN,
         "strings.json",
     )
+
 
 def flatten_json(y):
     """Flatten a nested json dict."""
@@ -39,6 +43,7 @@ def flatten_json(y):
 
     flatten(y)
     return out
+
 
 def test_translations_consistency(translations_path, strings_path):
     """Test that all strings in strings.json are present in translations."""

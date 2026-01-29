@@ -229,8 +229,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             ignored_types = []
 
         default_ignored = [
-            "Unbekannter Zugtyp" if t == "" else t
-            for t in ignored_types
+            "Unbekannter Zugtyp" if t == "" else t for t in ignored_types
         ]
 
         return self.async_show_form(

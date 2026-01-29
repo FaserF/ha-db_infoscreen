@@ -1,18 +1,16 @@
 """Tests for the DB Infoscreen sensor."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import timedelta
 import pytest
-from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from custom_components.db_infoscreen.const import (
-    DOMAIN,
     CONF_STATION,
-    CONF_NEXT_DEPARTURES,
-    CONF_UPDATE_INTERVAL,
     CONF_ENABLE_TEXT_VIEW,
 )
+
 
 @pytest.fixture
 def mock_coordinator(hass):
@@ -21,6 +19,7 @@ def mock_coordinator(hass):
     coordinator.hass = hass
     coordinator.data = []
     return coordinator
+
 
 @pytest.fixture
 def mock_config_entry():
@@ -37,6 +36,7 @@ def mock_config_entry():
         CONF_ENABLE_TEXT_VIEW: False,
     }
     return entry
+
 
 async def test_sensor_setup(hass: HomeAssistant):
     """Test setting up the sensor."""
@@ -62,7 +62,10 @@ async def test_sensor_setup(hass: HomeAssistant):
         # or by simulating the component setup.
         pass
 
-async def test_sensor_state_logic(hass: HomeAssistant, mock_coordinator, mock_config_entry):
+
+async def test_sensor_state_logic(
+    hass: HomeAssistant, mock_coordinator, mock_config_entry
+):
     """Test the sensor state and attributes logic."""
     from custom_components.db_infoscreen.sensor import DBInfoSensor
 
@@ -102,7 +105,10 @@ async def test_sensor_state_logic(hass: HomeAssistant, mock_coordinator, mock_co
     assert len(attrs["next_departures"]) == 1
     assert attrs["next_departures"][0]["destination"] == "Hamburg"
 
-async def test_sensor_text_view(hass: HomeAssistant, mock_coordinator, mock_config_entry):
+
+async def test_sensor_text_view(
+    hass: HomeAssistant, mock_coordinator, mock_config_entry
+):
     """Test text view generation."""
     from custom_components.db_infoscreen.sensor import DBInfoSensor
 
@@ -113,7 +119,7 @@ async def test_sensor_text_view(hass: HomeAssistant, mock_coordinator, mock_conf
         [],
         "",
         "",
-        True, # Enable text view
+        True,  # Enable text view
     )
 
     now = dt_util.now()
@@ -122,7 +128,7 @@ async def test_sensor_text_view(hass: HomeAssistant, mock_coordinator, mock_conf
             "line": "ICE 1",
             "destination": "Hamburg",
             "platform": "1",
-            "time": now.timestamp(), # Using timestamp
+            "time": now.timestamp(),  # Using timestamp
             "delay": 0,
         }
     ]

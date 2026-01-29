@@ -1,5 +1,5 @@
 """Tests for stability and security scenarios."""
-from datetime import timedelta
+
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -9,6 +9,7 @@ from custom_components.db_infoscreen.const import (
     CONF_NEXT_DEPARTURES,
     CONF_UPDATE_INTERVAL,
 )
+
 
 @pytest.fixture
 def mock_config_entry():
@@ -22,6 +23,7 @@ def mock_config_entry():
         CONF_NEXT_DEPARTURES: 5,
     }
     return entry
+
 
 async def test_coordinator_handles_api_errors(hass, mock_config_entry):
     """Test that the coordinator handles API errors gracefully without crashing."""
@@ -45,6 +47,7 @@ async def test_coordinator_handles_api_errors(hass, mock_config_entry):
         data = await coordinator._async_update_data()
         assert data == [] or data is None
 
+
 async def test_coordinator_handles_malformed_json(hass, mock_config_entry):
     """Test handling of invalid JSON response."""
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
@@ -59,6 +62,7 @@ async def test_coordinator_handles_malformed_json(hass, mock_config_entry):
         data = await coordinator._async_update_data()
         assert data == [] or data is None
 
+
 async def test_input_sanitization(hass, mock_config_entry):
     """Test that special characters in station names don't crash or cause injection-like issues."""
     # While we use quote_plus, we should verify that extremely weird inputs don't crash the logic
@@ -71,13 +75,16 @@ async def test_input_sanitization(hass, mock_config_entry):
     assert "\n" not in coordinator.api_url
     assert "Karlsruhe" in coordinator.api_url
 
+
 async def test_large_response_handling(hass, mock_config_entry):
     """Test handling of very large responses (DoS protection simulation)."""
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
 
     # Create a massive fake response
     large_data = {
-        "departures": [{"train": f"ICE {i}", "destination": "Berlin"} for i in range(1000)]
+        "departures": [
+            {"train": f"ICE {i}", "destination": "Berlin"} for i in range(1000)
+        ]
     }
 
     with patch("aiohttp.ClientSession.get") as mock_get:
@@ -92,4 +99,4 @@ async def test_large_response_handling(hass, mock_config_entry):
 
         # Just check that it didn't return 1000 items (which would be huge)
         # Default next_departures is 5 (mock) or default 4.
-        assert len(data) <= 100 # Definitely filtered/truncated
+        assert len(data) <= 100  # Definitely filtered/truncated

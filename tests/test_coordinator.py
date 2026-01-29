@@ -1,4 +1,5 @@
 """Test the DB Infoscreen coordinator."""
+
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -16,6 +17,7 @@ from custom_components.db_infoscreen.const import (
     CONF_HIDE_LOW_DELAY,
 )
 
+
 @pytest.fixture
 def mock_config_entry():
     """Create a mock config entry."""
@@ -28,6 +30,7 @@ def mock_config_entry():
         CONF_NEXT_DEPARTURES: 5,
     }
     return entry
+
 
 async def test_coordinator_url_encoding(hass, mock_config_entry):
     """Test correctly encoding of station and via parameters."""
@@ -42,12 +45,13 @@ async def test_coordinator_url_encoding(hass, mock_config_entry):
     # The code manually replaces + with %20 for the station name part effectively.
     # We should verify the final URL.
 
-    expected_station = "Hagsfeld%20Reitschulschlag,%20Karlsruhe" # based on code logic
+    expected_station = "Hagsfeld%20Reitschulschlag,%20Karlsruhe"  # based on code logic
     assert expected_station in coordinator.api_url
 
     # Check VIA encoding: This was the fix. Spaces should be "+" now, not "%20".
     # quote_plus("Hagsfeld Jenaer Straße") -> Hagsfeld+Jenaer+Stra%C3%9Fe
     assert "via=Hagsfeld+Jenaer+Stra%C3%9Fe" in coordinator.api_url
+
 
 async def test_coordinator_options_in_url(hass, mock_config_entry):
     """Test that options are correctly correctly added to the URL."""
@@ -59,16 +63,21 @@ async def test_coordinator_options_in_url(hass, mock_config_entry):
     assert "detailed=1" in coordinator.api_url
     assert "hidelowdelay=1" in coordinator.api_url
 
+
 async def test_coordinator_data_source_params(hass, mock_config_entry):
     """Test that data source mapping works."""
-    mock_config_entry.options[CONF_DATA_SOURCE] = "NVBW" # efa=NVBW
+    mock_config_entry.options[CONF_DATA_SOURCE] = "NVBW"  # efa=NVBW
 
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
     assert "efa=NVBW" in coordinator.api_url
 
-    mock_config_entry.options[CONF_DATA_SOURCE] = "ÖBB" # hafas=ÖBB
+    mock_config_entry.options[CONF_DATA_SOURCE] = "ÖBB"  # hafas=ÖBB
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    assert "hafas=%C3%96BB" in coordinator.api_url or "hafas=\xc3\x96BB" in coordinator.api_url # Check encoding
+    assert (
+        "hafas=%C3%96BB" in coordinator.api_url
+        or "hafas=\xc3\x96BB" in coordinator.api_url
+    )  # Check encoding
+
 
 async def test_coordinator_update_data(hass, mock_config_entry):
     """Test updating data."""
@@ -77,7 +86,9 @@ async def test_coordinator_update_data(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "Test Dest",
                 "train": "ICE 123",
                 "delayDeparture": 0,
@@ -96,6 +107,7 @@ async def test_coordinator_update_data(hass, mock_config_entry):
         assert len(data) == 1
         assert data[0]["destination"] == "Test Dest"
 
+
 async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
     """Test excluding cancelled trains."""
     from custom_components.db_infoscreen.const import CONF_EXCLUDE_CANCELLED
@@ -103,17 +115,21 @@ async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "Valid Train",
                 "train": "ICE 1",
                 "cancelled": False,
             },
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "Cancelled Train",
                 "train": "ICE 2",
                 "cancelled": True,
-            }
+            },
         ]
     }
 
