@@ -96,7 +96,9 @@ This project is a bridge between the Home Assistant ecosystem and the wider open
 | **Real-time Data** | Live delays, platform changes, and quality notes (e.g., "Train reversed"). |
 | **Global Coverage** | Supports DB (Germany), ÖBB (Austria), SBB (Switzerland), and many local associations. |
 | **Smart Filtering** | Exclude cancelled trains, filter by direction, or show only specific platforms. |
-| **Deep Attributes** | Access route info, warnings, messages, and train composition details. |
+| **Deep Attributes** | Access route info, warnings, messages, train composition (`wagon_order`), and unique `trip_id`. |
+| **Occupancy** | See how full the train is (1-4 scale) before it arrives. |
+| **Station Search** | Integrated search prevents typos by letting you pick from official station names. |
 | **ePaper Ready** | Built-in "Text View" mode for ESPHome/ePaper displays. |
 
 ---

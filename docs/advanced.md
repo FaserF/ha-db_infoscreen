@@ -34,6 +34,36 @@ automation:
 
 ---
 
+## 🔍 Attribute Reference
+
+The `departures` list contains rich data object. Here are the keys available for advanced templating:
+
+| Key | Description | Example |
+| :--- | :--- | :--- |
+| `trip_id` | **Unique ID** for this specific train run. Constant even if times change. | `"123456789"` |
+| `train` | Train type and number. | `"ICE 279"` |
+| `destination` | Final destination. | `"Basel SBB"` |
+| `platform` | Current platform. | `"6"` |
+| `scheduledPlatform` | Original platform (check for changes!). | `"5"` |
+| `changed_platform` | **Boolean**. True if `platform` != `scheduledPlatform`. | `true` |
+| `wagon_order` | Link or basic info about wagon order. | `"https://..."` |
+| `platform_sectors` | Extracted sector info for stopping position. | `"A-C"` |
+| `facilities` | **QoS Data**. Dictionary of amenities. | `{"wifi": false, "bistro": true}` |
+| `occupancy` | **Load Factor**. `1` (low) to `4` (full). | `2` |
+| `route_details` | **Real-time Route**. List of stops with delays. | `[{"stop": "Hanau", "delay": 2}, ...]` |
+
+### Example: Wagon Sector & Occupancy
+```yaml
+- type: markdown
+  content: >
+    {% set t = state_attr('sensor.frankfurt_hbf', 'departures')[0] %}
+    **Next Train**: {{ t.train }}
+    **Platform**: {{ t.platform }} (Sectors: {{ t.platform_sectors }})
+    **Occupancy**: {{ "🟢" if t.occupancy == 1 else "🔴" }}
+```
+
+---
+
 ## 📡 Self-Hosting the Backend
 
 If you have a high number of sensors or want maximum privacy, you can host your own instance of the [db-fakedisplay](https://github.com/derf/db-fakedisplay) API.

@@ -9,8 +9,8 @@
 When you first add a "DB Infoscreen" integration, you meet the setup wizard. This creates the "Base Sensor".
 
 ### 1. Station Selection
--   **What to enter**: You can enter a full name (e.g. `Frankfurt am Main Hbf`), a DS100 ID (e.g. `FF`), or a Trip Number.
--   **DS100 Advantage**: Using a DS100 ID is faster and more precise. It avoids ambiguity when multiple cities have similar station names.
+-   **Search & Select**: Simply type the name of your city (e.g. `Frankfurt`). The integration will search the official database and present a list of stations to choose from.
+-   **Direct Entry**: You can still enter a precise DS100 ID (e.g. `FF`) or EVA ID if you know it.
 
 ### 2. Data Source
 Select the backend provider.
