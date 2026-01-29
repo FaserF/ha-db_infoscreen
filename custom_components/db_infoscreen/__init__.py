@@ -1,6 +1,7 @@
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 from datetime import timedelta, datetime
 import aiohttp
 import async_timeout
@@ -272,7 +273,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     )
 
                     # Set last_update timestamp
-                    self.last_update = datetime.now()
+                    self.last_update = dt_util.now()
 
                     # --- PRE-PROCESSING: Parse time for all departures ---
                     departures_with_time = []
@@ -314,7 +315,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     )
                                 except ValueError:
                                     try:
-                                        now = datetime.now()
+                                        now = dt_util.now()
                                         time_candidate = datetime.strptime(
                                             departure_time_str, "%H:%M"
                                         ).replace(
@@ -577,7 +578,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                                 scheduled_arrival, "%Y-%m-%dT%H:%M"
                                             )
                                         except ValueError:
-                                            today = datetime.now()
+                                            today = dt_util.now()
                                             arrival_time = datetime.strptime(
                                                 scheduled_arrival, "%H:%M"
                                             ).replace(
@@ -595,7 +596,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     arrival_time_adjusted = arrival_time + timedelta(
                                         minutes=arrival_delay
                                     )
-                                    today = datetime.now()
+                                    today = dt_util.now()
                                     # Keep existing human-readable time string
                                     departure["arrival_current"] = (
                                         arrival_time_adjusted.strftime("%Y-%m-%dT%H:%M")
@@ -675,7 +676,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         departure.pop("departure_datetime", None)
 
                         departure_seconds = (
-                            effective_departure_time - datetime.now()
+                            effective_departure_time - dt_util.now().replace(tzinfo=None)
                         ).total_seconds()
                         if departure_seconds >= self.offset:
                             filtered_departures.append(departure)

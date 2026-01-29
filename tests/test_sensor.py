@@ -98,6 +98,7 @@ async def test_sensor_state_logic(
     ]
 
     # State should be time + delay
+    # Note: we use dt_util.now() to ensure consistency with the sensor's check against Today.
     assert sensor.native_value == f"{dep_time.strftime('%H:%M')} +5"
 
     # Test attributes

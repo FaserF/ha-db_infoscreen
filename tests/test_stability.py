@@ -39,7 +39,7 @@ async def test_coordinator_handles_api_errors(hass, mock_config_entry):
 
     # Simulate a 500 error
     with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = AsyncMock()
+        mock_response = MagicMock()
         mock_response.status = 500
         mock_response.raise_for_status.side_effect = Exception("HTTP 500")
         mock_get.return_value.__aenter__.return_value = mock_response
@@ -53,10 +53,10 @@ async def test_coordinator_handles_malformed_json(hass, mock_config_entry):
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
 
     with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = AsyncMock()
+        mock_response = MagicMock()
         mock_response.status = 200
-        # json() raises error
-        mock_response.json.side_effect = ValueError("Invalid JSON")
+        # json() is awaited in code, so mock it as AsyncMock or MagicMock returning coroutine
+        mock_response.json = AsyncMock(side_effect=ValueError("Invalid JSON"))
         mock_get.return_value.__aenter__.return_value = mock_response
 
         data = await coordinator._async_update_data()
@@ -88,9 +88,9 @@ async def test_large_response_handling(hass, mock_config_entry):
     }
 
     with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = AsyncMock()
+        mock_response = MagicMock()
         mock_response.status = 200
-        mock_response.json.return_value = large_data
+        mock_response.json = AsyncMock(return_value=large_data)
         mock_get.return_value.__aenter__.return_value = mock_response
 
         # The coordinator has logic to limit JSON size (MAX_SIZE_BYTES = 16000)

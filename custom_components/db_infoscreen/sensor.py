@@ -1,7 +1,8 @@
 from homeassistant.components.sensor import SensorEntity
 from .const import DOMAIN, CONF_ENABLE_TEXT_VIEW
 import logging
-from datetime import datetime
+from homeassistant.util import dt as dt_util
+from datetime import datetime, timedelta
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -100,7 +101,7 @@ class DBInfoSensor(SensorEntity):
                     except ValueError:
                         try:
                             departure_time = datetime.strptime(
-                                f"{datetime.now().date()} {departure_time}",
+                                f"{dt_util.now().date()} {departure_time}",
                                 "%Y-%m-%d %H:%M",
                             )
                             _LOGGER.debug(
@@ -116,8 +117,8 @@ class DBInfoSensor(SensorEntity):
 
         if isinstance(departure_time, datetime):
             _LOGGER.debug("Checking departure time date: %s", departure_time.date())
-            _LOGGER.debug("Today's date: %s", datetime.now().date())
-            if departure_time.date() != datetime.now().date():
+            _LOGGER.debug("Today's date: %s", dt_util.now().date())
+            if departure_time.date() != dt_util.now().date():
                 return departure_time.strftime("%Y-%m-%d %H:%M")
             else:
                 return departure_time.strftime("%H:%M")

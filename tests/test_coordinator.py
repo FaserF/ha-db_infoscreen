@@ -96,7 +96,7 @@ async def test_coordinator_update_data(hass, mock_config_entry):
         ]
     }
 
-    with patch("aiohttp.ClientSession.get", new_callable=AsyncMock) as mock_get:
+    with patch("aiohttp.ClientSession.get") as mock_get:
         mock_response = AsyncMock()
         mock_response.status = 200
         mock_response.json = AsyncMock(return_value=mock_data)
@@ -135,7 +135,7 @@ async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
 
     # Test Default (include cancelled)
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    with patch("aiohttp.ClientSession.get", new_callable=AsyncMock) as mock_get:
+    with patch("aiohttp.ClientSession.get") as mock_get:
         mock_response = AsyncMock()
         mock_response.status = 200
         mock_response.json = AsyncMock(return_value=mock_data)
@@ -147,7 +147,7 @@ async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
     # Test Exclude Cancelled
     mock_config_entry.options[CONF_EXCLUDE_CANCELLED] = True
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    with patch("aiohttp.ClientSession.get", new_callable=AsyncMock) as mock_get:
+    with patch("aiohttp.ClientSession.get") as mock_get:
         mock_response = AsyncMock()
         mock_response.status = 200
         mock_response.json = AsyncMock(return_value=mock_data)

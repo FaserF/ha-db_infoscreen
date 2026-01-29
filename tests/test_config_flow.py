@@ -193,6 +193,8 @@ async def test_options_flow_filter_and_advanced(hass, config_entry):
 @pytest.mark.asyncio
 async def test_options_flow_persistence(hass, config_entry):
     """Test that existing config data is preserved in options flow."""
+    config_entry.add_to_hass(hass)
+
     # Simulate an entry where options are empty but data has VIA set
     # This happens if the user configured it initially via config flow
     hass.config_entries.async_update_entry(
@@ -200,8 +202,6 @@ async def test_options_flow_persistence(hass, config_entry):
         data={**config_entry.data, CONF_VIA_STATIONS: ["Hagsfeld Jenaer Straße"]},
         options={},
     )
-
-    config_entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(config_entry.entry_id)
 
