@@ -596,6 +596,47 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             if sector_match:
                                 departure["platform_sectors"] = sector_match.group(1)
 
+                        # QoS (Pass-through + Message Parsing)
+                        if "qos" in departure:
+                            departure["qos"] = departure["qos"]
+
+                        # Parse facilities from messages
+                        facilities = {}
+                        msg_texts = []
+                        if "messages" in departure and isinstance(
+                            departure["messages"], dict
+                        ):
+                            for msg_list in departure["messages"].values():
+                                if isinstance(msg_list, list):
+                                    for msg in msg_list:
+                                        if isinstance(msg, dict):
+                                            msg_texts.append(msg.get("text", ""))
+
+                        for text in msg_texts:
+                            lower_text = text.lower()
+                            if "wlan" in lower_text or "wifi" in lower_text:
+                                if (
+                                    "nicht" in lower_text
+                                    or "gestört" in lower_text
+                                    or "ausfall" in lower_text
+                                    or "defekt" in lower_text
+                                ):
+                                    facilities["wifi"] = False
+                            if (
+                                "bistro" in lower_text
+                                or "restaurant" in lower_text
+                                or "catering" in lower_text
+                            ):
+                                if (
+                                    "nicht" in lower_text
+                                    or "gestört" in lower_text
+                                    or "geschlossen" in lower_text
+                                ):
+                                    facilities["bistro"] = False
+
+                        if facilities:
+                            departure["facilities"] = facilities
+
                         scheduled_arrival = departure.get("scheduledArrival")
                         delay_arrival = departure.get("delayArrival")
                         if delay_arrival is None:
