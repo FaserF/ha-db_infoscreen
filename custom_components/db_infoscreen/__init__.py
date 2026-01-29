@@ -7,7 +7,7 @@ import aiohttp
 import async_timeout
 import logging
 import json
-from urllib.parse import quote_plus, urlencode
+from urllib.parse import quote, urlencode
 
 from .const import (
     DOMAIN,
@@ -122,11 +122,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         )
 
         station_cleaned = " ".join(self.station.split())
-        encoded_station = (
-            quote_plus(station_cleaned, safe=",-")
-            .replace("+", "%20")
-            .replace(" ", "%20")
-        )
+        encoded_station = quote(station_cleaned, safe=",-")
 
         base_url = custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
         url = f"{base_url}/{encoded_station}.json"
@@ -210,7 +206,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         url = f"{url}?{query_string}" if query_string else url
         if self.via_stations:
             encoded_via_stations = [
-                quote_plus(station.strip()) for station in self.via_stations
+                quote(station.strip()) for station in self.via_stations
             ]
             via_param = ",".join(encoded_via_stations)
             url += f"?via={via_param}" if "?" not in url else f"&via={via_param}"
@@ -568,20 +564,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                         )
                                     )
                                 elif isinstance(scheduled_arrival, str):
-                                    try:
-                                        arrival_time = dt_util.as_local(
-                                            datetime.strptime(
-                                                scheduled_arrival, "%Y-%m-%dT%H:%M:%S"
-                                            )
-                                        )
-                                    except ValueError:
+                                    # Attempt robust parsing using HA helper
+                                    parsed_dt = dt_util.parse_datetime(scheduled_arrival)
+                                    if parsed_dt:
+                                        arrival_time = dt_util.as_local(parsed_dt)
+                                    else:
+                                        # Fallback for HH:MM format (assume today)
                                         try:
-                                            arrival_time = dt_util.as_local(
-                                                datetime.strptime(
-                                                    scheduled_arrival, "%Y-%m-%dT%H:%M"
-                                                )
-                                            )
-                                        except ValueError:
                                             arrival_time = dt_util.as_local(
                                                 datetime.strptime(
                                                     scheduled_arrival, "%H:%M"
@@ -590,6 +579,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                                     month=today.month,
                                                     day=today.day,
                                                 )
+                                            )
+                                        except ValueError:
+                                            _LOGGER.error(
+                                                "Invalid time format for scheduledArrival fallback: %s",
+                                                scheduled_arrival,
                                             )
                                 else:
                                     _LOGGER.warning(

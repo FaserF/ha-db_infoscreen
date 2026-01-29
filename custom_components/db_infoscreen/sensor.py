@@ -85,7 +85,9 @@ class DBInfoSensor(SensorEntity):
             parsed_dt = dt_util.parse_datetime(departure_time)
             if parsed_dt:
                 departure_time = dt_util.as_local(parsed_dt)
-                _LOGGER.debug("Parsed departure time using parse_datetime: %s", departure_time)
+                _LOGGER.debug(
+                    "Parsed departure time using parse_datetime: %s", departure_time
+                )
             else:
                 # Fallback for HH:MM format (assume today)
                 try:
@@ -220,13 +222,13 @@ class DBInfoSensor(SensorEntity):
             if "scheduledTime" in dep_copy and isinstance(
                 dep_copy["scheduledTime"], int
             ):
-                dep_copy["scheduledTime"] = datetime.fromtimestamp(
-                    dep_copy["scheduledTime"]
+                dep_copy["scheduledTime"] = dt_util.as_local(
+                    dt_util.utc_from_timestamp(dep_copy["scheduledTime"])
                 ).strftime("%Y-%m-%d %H:%M:%S")
             if "time" in dep_copy and isinstance(dep_copy["time"], int):
-                dep_copy["time"] = datetime.fromtimestamp(dep_copy["time"]).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
+                dep_copy["time"] = dt_util.as_local(
+                    dt_util.utc_from_timestamp(dep_copy["time"])
+                ).strftime("%Y-%m-%d %H:%M:%S")
 
             next_departures.append(dep_copy)
 
@@ -256,7 +258,9 @@ class DBInfoSensor(SensorEntity):
 
                 # Format time if it is an int/timestamp, otherwise use as is
                 if isinstance(time, int):
-                    time = datetime.fromtimestamp(time).strftime("%H:%M")
+                    time = dt_util.as_local(dt_util.utc_from_timestamp(time)).strftime(
+                        "%H:%M"
+                    )
 
                 delay_str = ""
                 if delay:
