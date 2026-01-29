@@ -194,6 +194,7 @@ async def test_coordinator_occupancy(hass, mock_config_entry):
         mock_response.status = 200
         # Use deepcopy or fresh data to avoid in-place modification issues from previous test run
         import copy
+
         mock_response.json = AsyncMock(return_value=copy.deepcopy(mock_data))
         mock_get.return_value.__aenter__.return_value = mock_response
 
