@@ -49,9 +49,9 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/FaserF/ha-db_infoscreen
       name: GitHub Repository
-    - icon: material/coffee
-      link: https://www.buymeacoffee.com/faserf
-      name: Buy me a Coffee
+    - icon: fontawesome/solid/heart
+      link: https://github.com/sponsors/FaserF
+      name: Sponsor me on GitHub
     - icon: fontawesome/solid/bug
       link: https://github.com/FaserF/ha-db_infoscreen/issues
       name: Report an Issue
