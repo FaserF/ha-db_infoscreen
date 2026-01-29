@@ -33,35 +33,62 @@ def calculate_version(release_type):
     year = now.year
     month = now.month
 
-    # Parse current version
-    match = re.match(r"(\d+)\.(\d+)\.(\d+)(.*)", current_version)
+    # Parse CalVer: YEAR.MONTH.PATCH and suffix
+    # Supports formats like: 2026.1.1, 2026.1.1b1, 2026.1.1-dev1
+    match = re.match(r"^(\d+)\.(\d+)\.(\d+)(?:(b)(\d+)|(-dev)(\d+))?$", current_version)
+
     if match:
-        curr_year, curr_month, curr_patch, suffix = match.groups()
-        curr_year, curr_month, curr_patch = (
-            int(curr_year),
-            int(curr_month),
-            int(curr_patch),
-        )
+        curr_year, curr_month, curr_patch, b_prefix, b_num, dev_prefix, dev_num = match.groups()
+        curr_year, curr_month, curr_patch = int(curr_year), int(curr_month), int(curr_patch)
+
+        if b_prefix:
+            suffix_type = "b"
+            suffix_num = int(b_num)
+        elif dev_prefix:
+            suffix_type = "-dev"
+            suffix_num = int(dev_num)
+        else:
+            suffix_type = None
+            suffix_num = 0
     else:
+        # Fallback for invalid formats
         curr_year, curr_month, curr_patch = 0, 0, 0
+        suffix_type = None
+        suffix_num = 0
 
     # Logic: Reset patch if Year or Month changes
     if year != curr_year or month != curr_month:
         patch = 1
     else:
-        patch = curr_patch + 1
-
-    base_version = f"{year}.{month}.{patch}"
+        patch = curr_patch
 
     if release_type == "stable":
-        return base_version
+        # If we have a suffix, "promoting" means removing the suffix from the current patch
+        if suffix_type is not None:
+            return f"{year}.{month}.{patch}"
+        # Straight increment
+        return f"{year}.{month}.{patch + 1}"
+
     elif release_type == "beta":
-        return f"{base_version}-beta"
-    elif release_type == "nightly":
-        timestamp = now.strftime("%Y%m%d.%H%M")
-        return f"{base_version}-nightly.{timestamp}"
-    elif release_type == "dev":
-        return f"{base_version}-dev"
+        # Already in beta? Increment beta number
+        if suffix_type == "b" and year == curr_year and month == curr_month:
+            return f"{year}.{month}.{patch}b{suffix_num + 1}"
+
+        # New beta? Increment patch (if stable) and start at b0
+        if suffix_type is None:
+             patch += 1
+        return f"{year}.{month}.{patch}b0"
+
+    elif release_type == "nightly" or release_type == "dev":
+        # Already in dev? Increment dev number
+        if suffix_type == "-dev" and year == curr_year and month == curr_month:
+            return f"{year}.{month}.{patch}-dev{suffix_num + 1}"
+
+        # New dev? Increment patch (if stable) and start at dev0
+        if suffix_type is None:
+             patch += 1
+        return f"{year}.{month}.{patch}-dev0"
+
     else:
         raise ValueError(f"Unknown release type: {release_type}")
 

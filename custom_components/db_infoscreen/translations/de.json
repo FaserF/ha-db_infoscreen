@@ -58,7 +58,8 @@
           "general_options": "Allgemeine Einstellungen",
           "filter_options": "Filter Einstellungen",
           "display_options": "Anzeige Einstellungen",
-          "advanced_options": "Erweiterte Einstellungen"
+          "advanced_options": "Erweiterte Einstellungen",
+          "finish": "Speichern und Beenden"
         }
       },
       "general_options": {

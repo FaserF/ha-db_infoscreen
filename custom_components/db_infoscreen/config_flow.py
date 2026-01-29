@@ -158,12 +158,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self._config_entry = config_entry
+        self._options = dict(config_entry.options)
 
     def _get_config_value(self, key, default=None):
-        """Get value from options or fall back to config data."""
-        return self._config_entry.options.get(
-            key, self._config_entry.data.get(key, default)
-        )
+        """Get value from our updated options or fall back to config data."""
+        return self._options.get(key, self._config_entry.data.get(key, default))
 
     async def async_step_init(self, user_input=None):
         """Handle the options flow menu."""
@@ -174,13 +173,15 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 "filter_options",
                 "display_options",
                 "advanced_options",
+                "finish",
             ],
         )
 
     async def async_step_general_options(self, user_input=None):
         """Handle general options."""
         if user_input is not None:
-            return self.async_update_options(user_input)
+            self._options.update(user_input)
+            return await self.async_step_init()
 
         return self.async_show_form(
             step_id="general_options",
@@ -215,7 +216,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 user_input[CONF_VIA_STATIONS] = [
                     s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
                 ]
-            return self.async_update_options(user_input)
+            self._options.update(user_input)
+            return await self.async_step_init()
 
         # Get via_stations list and join for display
         via_stations_list = self._get_config_value(CONF_VIA_STATIONS, [])
@@ -267,7 +269,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_display_options(self, user_input=None):
         """Handle display options."""
         if user_input is not None:
-            return self.async_update_options(user_input)
+            self._options.update(user_input)
+            return await self.async_step_init()
 
         return self.async_show_form(
             step_id="display_options",
@@ -298,7 +301,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_advanced_options(self, user_input=None):
         """Handle advanced options."""
         if user_input is not None:
-            return self.async_update_options(user_input)
+            self._options.update(user_input)
+            return await self.async_step_init()
 
         return self.async_show_form(
             step_id="advanced_options",
@@ -338,8 +342,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             ),
         )
 
-    def async_update_options(self, user_input):
-        """Helper to update options."""
-        new_options = self._config_entry.options.copy()
-        new_options.update(user_input)
-        return self.async_create_entry(title="", data=new_options)
+    async def async_step_finish(self, user_input=None):
+        """Finish and save the options."""
+        return self.async_create_entry(title="", data=self._options)

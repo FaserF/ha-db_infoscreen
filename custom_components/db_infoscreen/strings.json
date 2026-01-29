@@ -58,7 +58,8 @@
           "general_options": "General Settings",
           "filter_options": "Filter Settings",
           "display_options": "Display Settings",
-          "advanced_options": "Advanced Settings"
+          "advanced_options": "Advanced Settings",
+          "finish": "Finish and Save"
         }
       },
       "general_options": {
