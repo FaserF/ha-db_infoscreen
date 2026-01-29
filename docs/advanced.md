@@ -11,6 +11,7 @@ The sensor stores its main payload in the `departures` attribute as a JSON list.
 ### Example: Delay Notification
 Trigger an automation only if the next train toward "Mainz" is delayed by more than 10 minutes.
 
+{% raw %}
 ```yaml
 automation:
   - alias: "Commuter Delay Alert"
@@ -29,6 +30,7 @@ automation:
           title: "🚆 Train Delay!"
           message: "The next train to Mainz is delayed by {{ (state_attr('sensor.my_station', 'departures') | selectattr('destination', 'search', 'Mainz') | first).delayDeparture }} minutes."
 ```
+{% endraw %}
 
 ---
 
