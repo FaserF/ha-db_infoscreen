@@ -163,7 +163,9 @@ Direct migration is not possible due to API differences. The old integration sup
 
 ## 📊 Usage & Examples
 
-### Automations
+For a detailed set of examples including platform change alerts, occupancy warnings, and advanced filtering, check out our **[Automation Cookbook](https://faserf.github.io/ha-db_infoscreen/automations/)**.
+
+### Basic Automations
 
 **Notify when the next train is delayed:**
 

@@ -101,3 +101,6 @@ A unique feature of this project is its tight integration with the upstream back
 -   **Renovate**: Our CI system (Renovate) monitors the `derf/db-fakedisplay` project for releases.
 -   **Automatic Verification**: When a new version is released, Renovate creates a PR to update our tracked version. This triggers our GitHub Actions to run the full suite of stability tests against the new backend logic **before** you even receive an update.
 -   **Reliability**: This ensures that `ha-db_infoscreen` remains compatible with backend changes without manual intervention.
+
+!!! tip "Looking for Automations?"
+    For practical examples of how to use these attributes in your automations, visit the [Automation Cookbook](automations.md).

@@ -59,3 +59,8 @@ Once a sensor is created, click **Configure** on the integration card to access 
 -   **Deduplication**: Filters out redundant entries. Some data sources report the same train twice under different IDs; this keeps your UI clean.
 -   **Keep Route**: Normally, only the destination is stored. Enable this to keep the **entire list of intermediate stops**.
 -   **Past 60 Minutes**: Include trains that have already left in the last hour. Great for "What did I miss?" views.
+
+---
+
+### 🚀 Next Steps
+Now that you have configured your sensors, check out the [Automation Cookbook](automations.md) for inspiration on how to use them!
