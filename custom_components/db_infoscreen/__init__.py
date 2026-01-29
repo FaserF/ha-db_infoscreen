@@ -589,6 +589,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                                 second=0,
                                                 microsecond=0,
                                             )
+                                            if arrival_time <= now:
+                                                arrival_time += timedelta(days=1)
                                         except ValueError:
                                             _LOGGER.error(
                                                 "Invalid time format for scheduledArrival fallback: %s",

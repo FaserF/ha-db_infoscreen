@@ -48,9 +48,8 @@ async def test_coordinator_url_encoding(hass, mock_config_entry):
     expected_station = "Hagsfeld%20Reitschulschlag,%20Karlsruhe"  # based on code logic
     assert expected_station in coordinator.api_url
 
-    # Check VIA encoding: This was the fix. Spaces should be "+" now, not "%20".
-    # quote_plus("Hagsfeld Jenaer Straße") -> Hagsfeld+Jenaer+Stra%C3%9Fe
-    assert "via=Hagsfeld+Jenaer+Stra%C3%9Fe" in coordinator.api_url
+    # Check VIA encoding: This was the fix. Spaces should be "%20" now.
+    assert "via=Hagsfeld%20Jenaer%20Stra%C3%9Fe" in coordinator.api_url
 
 
 async def test_coordinator_options_in_url(hass, mock_config_entry):
