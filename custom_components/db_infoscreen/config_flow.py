@@ -158,6 +158,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         """Initialize options flow."""
         self._config_entry = config_entry
 
+    def _get_config_value(self, key, default=None):
+        """Get value from options or fall back to config data."""
+        return self._config_entry.options.get(
+            key, self._config_entry.data.get(key, default)
+        )
+
     async def async_step_init(self, user_input=None):
         """Handle the options flow menu."""
         return self.async_show_menu(
@@ -181,28 +187,19 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     vol.Optional(
                         CONF_NEXT_DEPARTURES,
-                        default=self._config_entry.options.get(
-                            CONF_NEXT_DEPARTURES,
-                            self._config_entry.data.get(
-                                CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES
-                            ),
+                        default=self._get_config_value(
+                            CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES
                         ),
                     ): cv.positive_int,
                     vol.Optional(
                         CONF_UPDATE_INTERVAL,
-                        default=self._config_entry.options.get(
-                            CONF_UPDATE_INTERVAL,
-                            self._config_entry.data.get(
-                                CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
-                            ),
+                        default=self._get_config_value(
+                            CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
                         ),
                     ): cv.positive_int,
                     vol.Optional(
                         CONF_OFFSET,
-                        default=self._config_entry.options.get(
-                            CONF_OFFSET,
-                            self._config_entry.data.get(CONF_OFFSET, DEFAULT_OFFSET),
-                        ),
+                        default=self._get_config_value(CONF_OFFSET, DEFAULT_OFFSET),
                     ): cv.string,
                 }
             ),
@@ -219,51 +216,45 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 ]
             return self.async_update_options(user_input)
 
+        # Get via_stations list and join for display
+        via_stations_list = self._get_config_value(CONF_VIA_STATIONS, [])
+        if via_stations_list is None:
+            via_stations_list = []
+        via_stations_str = "| ".join(via_stations_list)
+
+        # Get ignored train types
+        ignored_types = self._get_config_value(CONF_IGNORED_TRAINTYPES, [])
+        if ignored_types is None:
+            ignored_types = []
+
+        default_ignored = [
+            "Unbekannter Zugtyp" if t == "" else t
+            for t in ignored_types
+        ]
+
         return self.async_show_form(
             step_id="filter_options",
             data_schema=vol.Schema(
                 {
                     vol.Optional(
                         CONF_PLATFORMS,
-                        default=self._config_entry.options.get(
-                            CONF_PLATFORMS,
-                            self._config_entry.data.get(CONF_PLATFORMS, ""),
-                        ),
+                        default=self._get_config_value(CONF_PLATFORMS, ""),
                     ): cv.string,
                     vol.Optional(
                         CONF_VIA_STATIONS,
-                        default="| ".join(
-                            self._config_entry.options.get(
-                                CONF_VIA_STATIONS,
-                                self._config_entry.data.get(CONF_VIA_STATIONS, []),
-                            )
-                        ),
+                        default=via_stations_str,
                     ): cv.string,
                     vol.Optional(
                         CONF_DIRECTION,
-                        default=self._config_entry.options.get(
-                            CONF_DIRECTION,
-                            self._config_entry.data.get(CONF_DIRECTION, ""),
-                        ),
+                        default=self._get_config_value(CONF_DIRECTION, ""),
                     ): cv.string,
                     vol.Optional(
                         CONF_EXCLUDED_DIRECTIONS,
-                        default=self._config_entry.options.get(
-                            CONF_EXCLUDED_DIRECTIONS,
-                            self._config_entry.data.get(CONF_EXCLUDED_DIRECTIONS, ""),
-                        ),
+                        default=self._get_config_value(CONF_EXCLUDED_DIRECTIONS, ""),
                     ): cv.string,
                     vol.Optional(
                         CONF_IGNORED_TRAINTYPES,
-                        default=[
-                            "Unbekannter Zugtyp" if t == "" else t
-                            for t in self._config_entry.options.get(
-                                CONF_IGNORED_TRAINTYPES,
-                                self._config_entry.data.get(
-                                    CONF_IGNORED_TRAINTYPES, []
-                                ),
-                            )
-                        ],
+                        default=default_ignored,
                     ): cv.multi_select(IGNORED_TRAINTYPES_OPTIONS),
                 }
             ),
@@ -280,33 +271,21 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     vol.Optional(
                         CONF_DETAILED,
-                        default=self._config_entry.options.get(
-                            CONF_DETAILED,
-                            self._config_entry.data.get(CONF_DETAILED, False),
-                        ),
+                        default=self._get_config_value(CONF_DETAILED, False),
                     ): cv.boolean,
                     vol.Optional(
                         CONF_ENABLE_TEXT_VIEW,
-                        default=self._config_entry.options.get(
-                            CONF_ENABLE_TEXT_VIEW,
-                            self._config_entry.data.get(CONF_ENABLE_TEXT_VIEW, False),
-                        ),
+                        default=self._get_config_value(CONF_ENABLE_TEXT_VIEW, False),
                     ): cv.boolean,
                     vol.Optional(
                         CONF_ADMODE,
-                        default=self._config_entry.options.get(
-                            CONF_ADMODE,
-                            self._config_entry.data.get(
-                                CONF_ADMODE, "preferred departure"
-                            ),
+                        default=self._get_config_value(
+                            CONF_ADMODE, "preferred departure"
                         ),
                     ): vol.In(["preferred departure", "arrival", "departure"]),
                     vol.Optional(
                         CONF_HIDE_LOW_DELAY,
-                        default=self._config_entry.options.get(
-                            CONF_HIDE_LOW_DELAY,
-                            self._config_entry.data.get(CONF_HIDE_LOW_DELAY, False),
-                        ),
+                        default=self._get_config_value(CONF_HIDE_LOW_DELAY, False),
                     ): cv.boolean,
                 }
             ),
@@ -323,54 +302,33 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     vol.Optional(
                         CONF_CUSTOM_API_URL,
-                        default=self._config_entry.options.get(
-                            CONF_CUSTOM_API_URL,
-                            self._config_entry.data.get(CONF_CUSTOM_API_URL, ""),
-                        ),
+                        default=self._get_config_value(CONF_CUSTOM_API_URL, ""),
                     ): cv.string,
                     vol.Optional(
                         CONF_DEDUPLICATE_DEPARTURES,
-                        default=self._config_entry.options.get(
-                            CONF_DEDUPLICATE_DEPARTURES,
-                            self._config_entry.data.get(
-                                CONF_DEDUPLICATE_DEPARTURES, False
-                            ),
+                        default=self._get_config_value(
+                            CONF_DEDUPLICATE_DEPARTURES, False
                         ),
                     ): cv.boolean,
                     vol.Optional(
                         CONF_KEEP_ROUTE,
-                        default=self._config_entry.options.get(
-                            CONF_KEEP_ROUTE,
-                            self._config_entry.data.get(CONF_KEEP_ROUTE, False),
-                        ),
+                        default=self._get_config_value(CONF_KEEP_ROUTE, False),
                     ): cv.boolean,
                     vol.Optional(
                         CONF_KEEP_ENDSTATION,
-                        default=self._config_entry.options.get(
-                            CONF_KEEP_ENDSTATION,
-                            self._config_entry.data.get(CONF_KEEP_ENDSTATION, False),
-                        ),
+                        default=self._get_config_value(CONF_KEEP_ENDSTATION, False),
                     ): cv.boolean,
                     vol.Optional(
                         CONF_DROP_LATE_TRAINS,
-                        default=self._config_entry.options.get(
-                            CONF_DROP_LATE_TRAINS,
-                            self._config_entry.data.get(CONF_DROP_LATE_TRAINS, False),
-                        ),
+                        default=self._get_config_value(CONF_DROP_LATE_TRAINS, False),
                     ): cv.boolean,
                     vol.Optional(
                         CONF_PAST_60_MINUTES,
-                        default=self._config_entry.options.get(
-                            CONF_PAST_60_MINUTES,
-                            self._config_entry.data.get(CONF_PAST_60_MINUTES, False),
-                        ),
+                        default=self._get_config_value(CONF_PAST_60_MINUTES, False),
                     ): cv.boolean,
                     vol.Optional(
                         CONF_DATA_SOURCE,
-                        default=self._config_entry.options.get(
-                            CONF_DATA_SOURCE,
-                            self._config_entry.data.get(CONF_DATA_SOURCE, "IRIS-TTS"),
-                        ),
+                        default=self._get_config_value(CONF_DATA_SOURCE, "IRIS-TTS"),
                     ): vol.In(DATA_SOURCE_OPTIONS),
                 }
             ),
