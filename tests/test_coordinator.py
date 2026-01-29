@@ -326,3 +326,54 @@ async def test_coordinator_qos(hass, mock_config_entry):
         # Test 2: No QoS
         assert "qos" not in data[1]
         assert "facilities" not in data[1]
+
+
+async def test_coordinator_route_details(hass, mock_config_entry):
+    """Test route details parsing."""
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Route Train",
+                "train": "ICE 1",
+                "route": [
+                    {"name": "Stop A", "arr_delay": 5},
+                    {"name": "Stop B", "dep_delay": 0},
+                    {"name": "Stop C"},  # No delay info
+                ],
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Simple Route",
+                "train": "ICE 2",
+                "route": ["Simple A", "Simple B"],
+            },
+        ]
+    }
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value=mock_data)
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 2
+
+        # Test 1: Detailed Route
+        details = data[0]["route_details"]
+        assert len(details) == 3
+        assert details[0] == {"name": "Stop A", "arr_delay": 5}
+        assert details[1] == {"name": "Stop B", "dep_delay": 0}
+        assert details[2] == {"name": "Stop C"}
+
+        # Test 2: Simple Route
+        simple_details = data[1]["route_details"]
+        assert len(simple_details) == 2
+        assert simple_details[0] == {"name": "Simple A"}
+        assert simple_details[1] == {"name": "Simple B"}

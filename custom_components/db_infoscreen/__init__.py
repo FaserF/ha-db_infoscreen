@@ -637,6 +637,29 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         if facilities:
                             departure["facilities"] = facilities
 
+                        # Real-time Route Progress
+                        route_details = []
+                        if "route" in departure and isinstance(
+                            departure["route"], list
+                        ):
+                            for stop in departure["route"]:
+                                if isinstance(stop, dict):
+                                    stop_name = stop.get("name")
+                                    if stop_name:
+                                        details = {"name": stop_name}
+                                        # Add delay info if available
+                                        if "arr_delay" in stop:
+                                            details["arr_delay"] = stop["arr_delay"]
+                                        if "dep_delay" in stop:
+                                            details["dep_delay"] = stop["dep_delay"]
+                                        route_details.append(details)
+                                elif isinstance(stop, str):
+                                    # Handle simple string list
+                                    route_details.append({"name": stop})
+
+                        if route_details:
+                            departure["route_details"] = route_details
+
                         scheduled_arrival = departure.get("scheduledArrival")
                         delay_arrival = departure.get("delayArrival")
                         if delay_arrival is None:
