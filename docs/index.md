@@ -99,10 +99,11 @@ This project is a bridge between the Home Assistant ecosystem and the wider open
 | **Deep Attributes** | Access route info, warnings, messages, train composition (`wagon_order`), and unique `trip_id`. |
 | **Occupancy** | See how full the train is (1-4 scale) before it arrives. |
 | **Station Search** | Integrated search prevents typos by letting you pick from official station names. |
+| **Example Automations** | [Cookbook](automations.md) with alerts for platform changes, cancellations, and more. |
 | **ePaper Ready** | Built-in "Text View" mode for ESPHome/ePaper displays. |
 
 ---
 
 ## 🚀 Getting Started
 
-[Install with HACS](installation.md){ .md-button .md-button--primary } [View Settings](configuration.md){ .md-button }
+[Install with HACS](installation.md){ .md-button .md-button--primary } [View Settings](configuration.md){ .md-button } [Example Automations](automations.md){ .md-button }

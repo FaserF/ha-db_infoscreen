@@ -24,7 +24,8 @@
           "via_stations": "Zeige nur Abfahrten über",
           "direction": "Zeige nur Abfahrten in Richtung",
           "excluded_directions": "Zeige keine Abfahrten in Richtung",
-          "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)"
+          "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)",
+          "show_occupancy": "Auslastungsinformationen anzeigen"
         }
       }
     },
@@ -90,7 +91,8 @@
           "detailed": "Detaillierte Informationen",
           "enable_text_view": "Aktiviere vereinfachte Textansicht (für ePaper)",
           "admode": "Bevorzugte Zeitdarstellung",
-          "hidelowdelay": "Verzögerungen unterdrücken"
+          "hidelowdelay": "Verzögerungen unterdrücken",
+          "show_occupancy": "Auslastungsinformationen anzeigen"
         }
       },
       "advanced_options": {

@@ -24,7 +24,8 @@
           "via_stations": "Only show departures via",
           "direction": "Only show departures in direction",
           "excluded_directions": "Exclude departures in direction",
-          "ignored_train_types": "Do not track specified train types (f.e. ICE)"
+          "ignored_train_types": "Do not track specified train types (f.e. ICE)",
+          "show_occupancy": "Show Occupancy Information"
         }
       }
     },
@@ -90,7 +91,8 @@
           "detailed": "Detailed Information",
           "enable_text_view": "Enable Simplified Text View",
           "admode": "Display Mode",
-          "hidelowdelay": "Hide Low Delay"
+          "hidelowdelay": "Hide Low Delay",
+          "show_occupancy": "Show Occupancy Information"
         }
       },
       "advanced_options": {
