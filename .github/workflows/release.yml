@@ -44,7 +44,7 @@ jobs:
           git push origin main
 
       - name: Generate Release Notes
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: inputs.release_type != 'nightly'
         with:
           tag_name: ${{ steps.version.outputs.version }}
