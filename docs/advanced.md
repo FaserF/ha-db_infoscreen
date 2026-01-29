@@ -36,7 +36,7 @@ automation:
 
 ## 🔍 Attribute Reference
 
-The `departures` list contains rich data object. Here are the keys available for advanced templating:
+The `departures` list contains rich data objects. Here are the keys available for advanced templating:
 
 | Key | Description | Example |
 | :--- | :--- | :--- |

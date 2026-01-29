@@ -14,16 +14,26 @@ alias: "Train: Platform Change Alert"
 trigger:
   - platform: template
     value_template: >
-      {% set next_train = state_attr('sensor.frankfurt_hbf', 'departures') | first %}
-      {{ next_train.changed_platform is defined and next_train.changed_platform }}
+      {% set trains = state_attr('sensor.frankfurt_hbf', 'departures') %}
+      {% if trains %}
+        {% set next_train = trains[0] %}
+        {{ next_train.changed_platform is defined and next_train.changed_platform }}
+      {% else %}
+        false
+      {% endif %}
 action:
   - service: notify.mobile_app_iphone
     data:
       title: "📢 Platform Change!"
       message: >
-        Your train {{ state_attr('sensor.frankfurt_hbf', 'departures')[0].train }}
-        is now departing from Platform {{ state_attr('sensor.frankfurt_hbf', 'departures')[0].platform }}!
-        (Scheduled: {{ state_attr('sensor.frankfurt_hbf', 'departures')[0].scheduledPlatform }})
+        {% set trains = state_attr('sensor.frankfurt_hbf', 'departures') %}
+        {% if trains %}
+          Your train {{ trains[0].train }}
+          is now departing from Platform {{ trains[0].platform }}!
+          (Scheduled: {{ trains[0].scheduledPlatform }})
+        {% else %}
+          Check DB App!
+        {% endif %}
 ```
 
 ### 2. High Occupancy Warning
@@ -140,9 +150,20 @@ action:
       entity_id: light.hallway
     data:
       rgb_color: >
-        {% set delay = state_attr('sensor.frankfurt_hbf', 'departures')[0].delayDeparture | int %}
-        {% if delay < 5 %}
-          [255, 0, 0]  # Red (Run!)
+      rgb_color: >
+        {% set trains = state_attr('sensor.frankfurt_hbf', 'departures') %}
+        {% if trains %}
+          {% set delay = trains[0].delayDeparture | int %}
+          {% if delay < 5 %}
+            [255, 0, 0]  # Red (Run!)
+          {% elif delay < 10 %}
+            [255, 255, 0] # Yellow
+          {% else %}
+            [0, 255, 0] # Green (Relax)
+          {% endif %}
+        {% else %}
+          [255, 255, 255] # White (No Info)
+        {% endif %}
         {% elif delay < 10 %}
           [255, 255, 0] # Yellow
         {% else %}

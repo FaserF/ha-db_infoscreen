@@ -103,7 +103,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             }
                         )
                     return stations
-        except Exception:
+        except Exception as err:
+            _LOGGER.error("Error searching stations: %s", err)
             return []
 
     async def async_step_select_station(self, user_input=None):
