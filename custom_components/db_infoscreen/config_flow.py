@@ -1,5 +1,8 @@
 import logging
 import re
+import xml.etree.ElementTree as ET
+
+import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
 import homeassistant.helpers.config_validation as cv
@@ -59,78 +62,142 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         errors=errors,
                     )
 
-            # Process separated via stations into list
-            via_raw = user_input.get(CONF_VIA_STATIONS, "")
-            user_input[CONF_VIA_STATIONS] = [
-                s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
-            ]
+            # Search for station
+            stations = await self._async_search_stations(user_input[CONF_STATION])
 
-            # Build base unique ID from station, via stations, direction, and platforms
-            station = user_input[CONF_STATION]
-            via = user_input[CONF_VIA_STATIONS]
-            direction = user_input.get(CONF_DIRECTION, "")
-            platforms = user_input.get(CONF_PLATFORMS, "")
-            data_source = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
-            parts = [station]
-
-            if via:
-                parts.append(f"via={','.join(via)}")
-            if direction:
-                parts.append(f"dir={direction}")
-            if platforms:
-                parts.append(f"plat={platforms}")
-            base_unique_id = "_".join(parts)
-
-            # Check if same station and same data source already exist
-            existing_entries = self.hass.config_entries.async_entries(DOMAIN)
-            same_station_entries = [
-                e
-                for e in existing_entries
-                if re.match(rf"^{re.escape(base_unique_id)}(_\d+)?$", e.unique_id or "")
-            ]
-
-            for entry in same_station_entries:
-                if entry.data.get(CONF_DATA_SOURCE) == data_source:
-                    await self.async_set_unique_id(entry.unique_id)
-                    _LOGGER.info(
-                        "Aborting: configuration for this station and data source already exists."
-                    )
-                    return self.async_abort(reason="already_configured")
-
-            # Find a free unique ID
-            suffix = 1
-            unique_id_candidate = base_unique_id
-            used_ids = {e.unique_id for e in same_station_entries}
-
-            while unique_id_candidate in used_ids:
-                suffix += 1
-                unique_id_candidate = f"{base_unique_id}_{suffix}"
-
-            await self.async_set_unique_id(unique_id_candidate)
-            _LOGGER.debug("Creating new sensor with unique_id: %s", unique_id_candidate)
-
-            # Build display title
-            title_parts = [station]
-            if platforms:
-                title_parts.append(f"platform {platforms}")
-            if via:
-                title_parts.append(f"via {' '.join(via)}")
-            if direction:
-                title_parts.append(f"direction {direction}")
-            if same_station_entries:
-                title_parts.append(f"({data_source})")
-
-            full_title = " ".join(title_parts)
-
-            return self.async_create_entry(
-                title=full_title,
-                data=user_input,
-            )
+            if no_stations := not stations:
+                errors["base"] = "station_not_found"
+            elif len(stations) == 1:
+                # Exact match or only one result -> proceed
+                user_input[CONF_STATION] = stations[0]["name"]
+                return await self._async_create_db_entry(user_input)
+            else:
+                # Multiple results -> let user select
+                self.context["stations"] = stations
+                self.context["user_input"] = user_input
+                return await self.async_step_select_station()
 
         return self.async_show_form(
             step_id="user",
             data_schema=self.user_data_schema(),
             errors=errors,
+        )
+
+    async def _async_search_stations(self, query):
+        """Search for stations using IRIS API."""
+        url = f"https://iris.noncd.db.de/iris-tts/timetable/station/{query}"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status != 200:
+                        return []
+                    data = await response.text()
+                    root = ET.fromstring(data)
+                    stations = []
+                    for station in root.findall("station"):
+                        stations.append(
+                            {
+                                "name": station.get("name"),
+                                "ds100": station.get("ds100"),
+                                "eva": station.get("eva"),
+                            }
+                        )
+                    return stations
+        except Exception:
+            return []
+
+    async def async_step_select_station(self, user_input=None):
+        """Handle station selection step."""
+        if user_input is not None:
+            # User selected a station
+            selected_station = user_input[CONF_STATION]
+            # Use the stored context to create the entry
+            entry_data = self.context.get("user_input")
+            entry_data[CONF_STATION] = (
+                selected_station  # Update with selected full name
+            )
+
+            # Re-run strict validation logic from async_step_user to ensure ID uniqueness
+            return await self._async_create_db_entry(entry_data)
+
+        # Prepare options
+        stations = self.context.get("stations", [])
+        options = {s["name"]: s["name"] for s in stations}
+
+        return self.async_show_form(
+            step_id="select_station",
+            data_schema=vol.Schema({vol.Required(CONF_STATION): vol.In(options)}),
+        )
+
+
+    async def _async_create_db_entry(self, user_input):
+        # Process separated via stations into list
+        via_raw = user_input.get(CONF_VIA_STATIONS, "")
+        if isinstance(via_raw, str):
+            user_input[CONF_VIA_STATIONS] = [
+                s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
+            ]
+
+        # Build base unique ID from station, via stations, direction, and platforms
+        station = user_input[CONF_STATION]
+        via = user_input[CONF_VIA_STATIONS]
+        direction = user_input.get(CONF_DIRECTION, "")
+        platforms = user_input.get(CONF_PLATFORMS, "")
+        data_source = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
+        parts = [station]
+
+        if via:
+            parts.append(f"via={','.join(via)}")
+        if direction:
+            parts.append(f"dir={direction}")
+        if platforms:
+            parts.append(f"plat={platforms}")
+        base_unique_id = "_".join(parts)
+
+        # Check if same station and same data source already exist
+        existing_entries = self.hass.config_entries.async_entries(DOMAIN)
+        same_station_entries = [
+            e
+            for e in existing_entries
+            if re.match(rf"^{re.escape(base_unique_id)}(_\d+)?$", e.unique_id or "")
+        ]
+
+        for entry in same_station_entries:
+            if entry.data.get(CONF_DATA_SOURCE) == data_source:
+                await self.async_set_unique_id(entry.unique_id)
+                _LOGGER.info(
+                    "Aborting: configuration for this station and data source already exists."
+                )
+                return self.async_abort(reason="already_configured")
+
+        # Find a free unique ID
+        suffix = 1
+        unique_id_candidate = base_unique_id
+        used_ids = {e.unique_id for e in same_station_entries}
+
+        while unique_id_candidate in used_ids:
+            suffix += 1
+            unique_id_candidate = f"{base_unique_id}_{suffix}"
+
+        await self.async_set_unique_id(unique_id_candidate)
+        _LOGGER.debug("Creating new sensor with unique_id: %s", unique_id_candidate)
+
+        # Build display title
+        title_parts = [station]
+        if platforms:
+            title_parts.append(f"platform {platforms}")
+        if via:
+            title_parts.append(f"via {' '.join(via)}")
+        if direction:
+            title_parts.append(f"direction {direction}")
+        if same_station_entries:
+            title_parts.append(f"({data_source})")
+
+        full_title = " ".join(title_parts)
+
+        return self.async_create_entry(
+            title=full_title,
+            data=user_input,
         )
 
     @staticmethod
@@ -182,7 +249,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         """Handle general options."""
         if user_input is not None:
             self._options.update(user_input)
-            return await self.async_step_init()
+            return self.async_create_entry(title="", data=self._options)
 
         return self.async_show_form(
             step_id="general_options",
@@ -218,7 +285,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
                 ]
             self._options.update(user_input)
-            return await self.async_step_init()
+            return self.async_create_entry(title="", data=self._options)
 
         # Get via_stations list and join for display
         via_stations_list = self._get_config_value(CONF_VIA_STATIONS, [])
@@ -271,7 +338,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         """Handle display options."""
         if user_input is not None:
             self._options.update(user_input)
-            return await self.async_step_init()
+            return self.async_create_entry(title="", data=self._options)
 
         return self.async_show_form(
             step_id="display_options",
@@ -307,7 +374,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         """Handle advanced options."""
         if user_input is not None:
             self._options.update(user_input)
-            return await self.async_step_init()
+            return self.async_create_entry(title="", data=self._options)
 
         return self.async_show_form(
             step_id="advanced_options",
