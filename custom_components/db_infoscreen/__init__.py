@@ -5,6 +5,7 @@ from homeassistant.util import dt as dt_util
 from datetime import timedelta, datetime
 import aiohttp
 import async_timeout
+import asyncio
 import logging
 import json
 from urllib.parse import quote, urlencode
@@ -304,18 +305,20 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             # Attempt robust parsing using HA helper
                             parsed_dt = dt_util.parse_datetime(departure_time_str)
                             if parsed_dt:
+                                if parsed_dt.tzinfo is None:
+                                    parsed_dt = parsed_dt.replace(tzinfo=now.tzinfo)
                                 departure_time_obj = dt_util.as_local(parsed_dt)
                             else:
                                 # Fallback for HH:MM format (assume today)
                                 try:
-                                    departure_time_obj = dt_util.as_local(
-                                        datetime.strptime(
-                                            departure_time_str, "%H:%M"
-                                        ).replace(
-                                            year=now.year,
-                                            month=now.month,
-                                            day=now.day,
-                                        )
+                                    temp_dt = datetime.strptime(
+                                        departure_time_str, "%H:%M"
+                                    )
+                                    departure_time_obj = now.replace(
+                                        hour=temp_dt.hour,
+                                        minute=temp_dt.minute,
+                                        second=0,
+                                        microsecond=0,
                                     )
                                     if departure_time_obj < now - timedelta(
                                         minutes=5
@@ -565,20 +568,26 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     )
                                 elif isinstance(scheduled_arrival, str):
                                     # Attempt robust parsing using HA helper
-                                    parsed_dt = dt_util.parse_datetime(scheduled_arrival)
+                                    parsed_dt = dt_util.parse_datetime(
+                                        scheduled_arrival
+                                    )
                                     if parsed_dt:
+                                        if parsed_dt.tzinfo is None:
+                                            parsed_dt = parsed_dt.replace(
+                                                tzinfo=now.tzinfo
+                                            )
                                         arrival_time = dt_util.as_local(parsed_dt)
                                     else:
                                         # Fallback for HH:MM format (assume today)
                                         try:
-                                            arrival_time = dt_util.as_local(
-                                                datetime.strptime(
-                                                    scheduled_arrival, "%H:%M"
-                                                ).replace(
-                                                    year=today.year,
-                                                    month=today.month,
-                                                    day=today.day,
-                                                )
+                                            temp_dt = datetime.strptime(
+                                                scheduled_arrival, "%H:%M"
+                                            )
+                                            arrival_time = now.replace(
+                                                hour=temp_dt.hour,
+                                                minute=temp_dt.minute,
+                                                second=0,
+                                                microsecond=0,
                                             )
                                         except ValueError:
                                             _LOGGER.error(
@@ -697,7 +706,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             "Departures fetched but all were filtered out. Using cached data."
                         )
                         return self._last_valid_value or []
+            except asyncio.TimeoutError:
+                _LOGGER.error("Timeout fetching data from %s", self.api_url)
+                return self._last_valid_value or []
+            except aiohttp.ClientError as e:
+                _LOGGER.error("Client error fetching data from %s: %s", self.api_url, e)
+                return self._last_valid_value or []
+            except json.JSONDecodeError as e:
+                _LOGGER.error("JSON decode error from %s: %s", self.api_url, e)
+                return self._last_valid_value or []
             except Exception as e:
-                _LOGGER.error("Error fetching data: %s", e)
-                _LOGGER.info("Trying to use last valid data: %s", e)
+                _LOGGER.error("Unexpected error fetching data: %s", e)
                 return self._last_valid_value or []

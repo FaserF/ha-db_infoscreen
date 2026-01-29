@@ -84,6 +84,8 @@ class DBInfoSensor(SensorEntity):
             # Attempt robust parsing using HA helper
             parsed_dt = dt_util.parse_datetime(departure_time)
             if parsed_dt:
+                if parsed_dt.tzinfo is None:
+                    parsed_dt = parsed_dt.replace(tzinfo=now.tzinfo)
                 departure_time = dt_util.as_local(parsed_dt)
                 _LOGGER.debug(
                     "Parsed departure time using parse_datetime: %s", departure_time
@@ -91,11 +93,12 @@ class DBInfoSensor(SensorEntity):
             else:
                 # Fallback for HH:MM format (assume today)
                 try:
-                    departure_time = dt_util.as_local(
-                        datetime.strptime(
-                            f"{today} {departure_time}",
-                            "%Y-%m-%d %H:%M",
-                        )
+                    temp_dt = datetime.strptime(departure_time, "%H:%M")
+                    departure_time = now.replace(
+                        hour=temp_dt.hour,
+                        minute=temp_dt.minute,
+                        second=0,
+                        microsecond=0,
                     )
                     _LOGGER.debug(
                         "Converted departure time from fallback HH:MM: %s",
