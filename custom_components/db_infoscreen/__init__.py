@@ -1,12 +1,14 @@
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 from datetime import timedelta, datetime
 import aiohttp
 import async_timeout
+import asyncio
 import logging
 import json
-from urllib.parse import quote_plus, urlencode
+from urllib.parse import quote, urlencode
 
 from .const import (
     DOMAIN,
@@ -34,6 +36,7 @@ from .const import (
     CONF_KEEP_ENDSTATION,
     CONF_DEDUPLICATE_DEPARTURES,
     TRAIN_TYPE_MAPPING,
+    CONF_EXCLUDE_CANCELLED,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -110,6 +113,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.keep_route = config.get(CONF_KEEP_ROUTE, False)
         self.keep_endstation = config.get(CONF_KEEP_ENDSTATION, False)
         self.deduplicate_departures = config.get(CONF_DEDUPLICATE_DEPARTURES, False)
+        self.exclude_cancelled = config.get(CONF_EXCLUDE_CANCELLED, False)
         custom_api_url = config.get(CONF_CUSTOM_API_URL, "")
         platforms = config.get(CONF_PLATFORMS, "")
         admode = config.get(CONF_ADMODE, "")
@@ -119,11 +123,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         )
 
         station_cleaned = " ".join(self.station.split())
-        encoded_station = (
-            quote_plus(station_cleaned, safe=",-")
-            .replace("+", "%20")
-            .replace(" ", "%20")
-        )
+        encoded_station = quote(station_cleaned, safe=",-")
 
         base_url = custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
         url = f"{base_url}/{encoded_station}.json"
@@ -207,10 +207,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         url = f"{url}?{query_string}" if query_string else url
         if self.via_stations:
             encoded_via_stations = [
-                quote_plus(station.strip(), safe="-")
-                .replace("+", "%20")
-                .replace(" ", "%20")
-                for station in self.via_stations
+                quote(station.strip()) for station in self.via_stations
             ]
             via_param = ",".join(encoded_via_stations)
             url += f"?via={via_param}" if "?" not in url else f"&via={via_param}"
@@ -258,9 +255,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         async with aiohttp.ClientSession() as session:
             try:
                 async with async_timeout.timeout(10):
-                    response = await session.get(self.api_url)
-                    response.raise_for_status()
-                    data = await response.json()
+                    async with session.get(self.api_url) as response:
+                        response.raise_for_status()
+                        data = await response.json()
 
                     raw_departures = data.get("departures", [])
                     if raw_departures is None:
@@ -273,7 +270,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     )
 
                     # Set last_update timestamp
-                    self.last_update = datetime.now()
+                    now = dt_util.now()
+                    today = now.date()
+                    self.last_update = now
 
                     # --- PRE-PROCESSING: Parse time for all departures ---
                     departures_with_time = []
@@ -298,40 +297,53 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             )
                             continue
 
-                        departure_time_obj = None
                         if isinstance(departure_time_str, int):
-                            departure_time_obj = datetime.fromtimestamp(
+                            departure_time_obj = dt_util.utc_from_timestamp(
                                 departure_time_str
-                            )
+                            ).astimezone(now.tzinfo)
                         else:
-                            try:
-                                departure_time_obj = datetime.strptime(
-                                    departure_time_str, "%Y-%m-%dT%H:%M:%S"
-                                )
-                            except ValueError:
-                                try:
-                                    departure_time_obj = datetime.strptime(
-                                        departure_time_str, "%Y-%m-%dT%H:%M"
+                            # Attempt robust parsing using HA helper
+                            parsed_dt = dt_util.parse_datetime(departure_time_str)
+                            if parsed_dt:
+                                if parsed_dt.tzinfo is None:
+                                    departure_time_obj = now.replace(
+                                        year=parsed_dt.year,
+                                        month=parsed_dt.month,
+                                        day=parsed_dt.day,
+                                        hour=parsed_dt.hour,
+                                        minute=parsed_dt.minute,
+                                        second=parsed_dt.second,
+                                        microsecond=parsed_dt.microsecond,
                                     )
+                                    # Use a 5-minute grace window to handle next-day rollover
+                                    if departure_time_obj < now - timedelta(minutes=5):
+                                        departure_time_obj += timedelta(days=1)
+                                else:
+                                    departure_time_obj = parsed_dt.astimezone(
+                                        now.tzinfo
+                                    )
+                            else:
+                                # Fallback for HH:MM format (assume today)
+                                try:
+                                    temp_dt = datetime.strptime(
+                                        departure_time_str, "%H:%M"
+                                    )
+                                    departure_time_obj = now.replace(
+                                        hour=temp_dt.hour,
+                                        minute=temp_dt.minute,
+                                        second=0,
+                                        microsecond=0,
+                                    )
+                                    if departure_time_obj < now - timedelta(
+                                        minutes=5
+                                    ):  # Allow for slight past times
+                                        departure_time_obj += timedelta(days=1)
                                 except ValueError:
-                                    try:
-                                        now = datetime.now()
-                                        time_candidate = datetime.strptime(
-                                            departure_time_str, "%H:%M"
-                                        ).replace(
-                                            year=now.year, month=now.month, day=now.day
-                                        )
-                                        if time_candidate < now - timedelta(
-                                            minutes=5
-                                        ):  # Allow for slight past times
-                                            time_candidate += timedelta(days=1)
-                                        departure_time_obj = time_candidate
-                                    except ValueError:
-                                        _LOGGER.error(
-                                            "Invalid time format, skipping departure: %s",
-                                            departure_time_str,
-                                        )
-                                        continue
+                                    _LOGGER.error(
+                                        "Invalid time format, skipping departure: %s",
+                                        departure_time_str,
+                                    )
+                                    continue
 
                         # Excluded Direction filter
                         if self.excluded_directions:
@@ -478,6 +490,14 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                 )
                                 continue
 
+                        if self.exclude_cancelled:
+                            if departure.get("cancelled", False):
+                                _LOGGER.debug(
+                                    "Skipping cancelled departure: %s",
+                                    departure,
+                                )
+                                continue
+
                         # Get train classes from the departure data.
                         train_classes = (
                             departure.get("trainClasses")
@@ -537,8 +557,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             # Keep existing human-readable time string
                             departure["departure_current"] = (
                                 departure_time_adjusted.strftime("%Y-%m-%dT%H:%M")
-                                if departure_time_adjusted.date()
-                                != datetime.now().date()
+                                if departure_time_adjusted.date() != today
                                 else departure_time_adjusted.strftime("%H:%M")
                             )
                             # Add new machine-readable Unix timestamp
@@ -556,27 +575,55 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             try:
                                 arrival_time = None
                                 if isinstance(scheduled_arrival, (int, float)):
-                                    arrival_time = datetime.fromtimestamp(
+                                    arrival_time = dt_util.utc_from_timestamp(
                                         int(scheduled_arrival)
-                                    )
+                                    ).astimezone(now.tzinfo)
                                 elif isinstance(scheduled_arrival, str):
-                                    try:
-                                        arrival_time = datetime.strptime(
-                                            scheduled_arrival, "%Y-%m-%dT%H:%M:%S"
-                                        )
-                                    except ValueError:
-                                        try:
-                                            arrival_time = datetime.strptime(
-                                                scheduled_arrival, "%Y-%m-%dT%H:%M"
+                                    # Attempt robust parsing using HA helper
+                                    parsed_dt = dt_util.parse_datetime(
+                                        scheduled_arrival
+                                    )
+                                    if parsed_dt:
+                                        if parsed_dt.tzinfo is None:
+                                            arrival_time = now.replace(
+                                                year=parsed_dt.year,
+                                                month=parsed_dt.month,
+                                                day=parsed_dt.day,
+                                                hour=parsed_dt.hour,
+                                                minute=parsed_dt.minute,
+                                                second=parsed_dt.second,
+                                                microsecond=parsed_dt.microsecond,
                                             )
-                                        except ValueError:
-                                            today = datetime.now()
-                                            arrival_time = datetime.strptime(
+                                            # Use a 5-minute grace window to handle next-day rollover
+                                            if arrival_time < now - timedelta(
+                                                minutes=5
+                                            ):
+                                                arrival_time += timedelta(days=1)
+                                        else:
+                                            arrival_time = parsed_dt.astimezone(
+                                                now.tzinfo
+                                            )
+                                    else:
+                                        # Fallback for HH:MM format (assume today)
+                                        try:
+                                            temp_dt = datetime.strptime(
                                                 scheduled_arrival, "%H:%M"
-                                            ).replace(
-                                                year=today.year,
-                                                month=today.month,
-                                                day=today.day,
+                                            )
+                                            arrival_time = now.replace(
+                                                hour=temp_dt.hour,
+                                                minute=temp_dt.minute,
+                                                second=0,
+                                                microsecond=0,
+                                            )
+                                            # Use a 5-minute grace window to handle next-day rollover
+                                            if arrival_time < now - timedelta(
+                                                minutes=5
+                                            ):
+                                                arrival_time += timedelta(days=1)
+                                        except ValueError:
+                                            _LOGGER.error(
+                                                "Invalid time format for scheduledArrival fallback: %s",
+                                                scheduled_arrival,
                                             )
                                 else:
                                     _LOGGER.warning(
@@ -588,11 +635,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     arrival_time_adjusted = arrival_time + timedelta(
                                         minutes=arrival_delay
                                     )
-                                    today = datetime.now()
                                     # Keep existing human-readable time string
                                     departure["arrival_current"] = (
                                         arrival_time_adjusted.strftime("%Y-%m-%dT%H:%M")
-                                        if arrival_time_adjusted.date() != today.date()
+                                        if arrival_time_adjusted.date() != today
                                         else arrival_time_adjusted.strftime("%H:%M")
                                     )
                                     # Add new machine-readable Unix timestamp
@@ -668,7 +714,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         departure.pop("departure_datetime", None)
 
                         departure_seconds = (
-                            effective_departure_time - datetime.now()
+                            effective_departure_time - now
                         ).total_seconds()
                         if departure_seconds >= self.offset:
                             filtered_departures.append(departure)
@@ -691,7 +737,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             "Departures fetched but all were filtered out. Using cached data."
                         )
                         return self._last_valid_value or []
+            except asyncio.TimeoutError:
+                _LOGGER.error("Timeout fetching data from %s", self.api_url)
+                return self._last_valid_value or []
+            except aiohttp.ClientError as e:
+                _LOGGER.error("Client error fetching data from %s: %s", self.api_url, e)
+                return self._last_valid_value or []
+            except json.JSONDecodeError as e:
+                _LOGGER.error("JSON decode error from %s: %s", self.api_url, e)
+                return self._last_valid_value or []
             except Exception as e:
-                _LOGGER.error("Error fetching data: %s", e)
-                _LOGGER.info("Trying to use last valid data: %s", e)
+                _LOGGER.error("Unexpected error fetching data: %s", e)
                 return self._last_valid_value or []

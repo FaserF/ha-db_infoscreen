@@ -1,7 +1,8 @@
 from homeassistant.components.sensor import SensorEntity
 from .const import DOMAIN, CONF_ENABLE_TEXT_VIEW
 import logging
-from datetime import datetime
+from homeassistant.util import dt as dt_util
+from datetime import datetime, timedelta
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -70,34 +71,68 @@ class DBInfoSensor(SensorEntity):
             _LOGGER.debug("Departure time is None")
             return None
 
+        now = dt_util.now()
+        today = now.date()
+
         if isinstance(departure_time, int):  # Unix timestamp case
-            departure_time = datetime.fromtimestamp(departure_time)
+            departure_time = dt_util.utc_from_timestamp(departure_time).astimezone(
+                now.tzinfo
+            )
             _LOGGER.debug("Converted departure time from timestamp: %s", departure_time)
 
         elif isinstance(departure_time, str):
-            try:
-                departure_time = datetime.strptime(departure_time, "%Y-%m-%d %H:%M:%S")
-                _LOGGER.debug(
-                    "Converted departure time from string: %s", departure_time
-                )
-            except ValueError:
-                try:
-                    departure_time = datetime.strptime(
-                        f"{datetime.now().date()} {departure_time}", "%Y-%m-%d %H:%M"
+            # Attempt robust parsing using HA helper
+            parsed_dt = dt_util.parse_datetime(departure_time)
+            if parsed_dt:
+                if parsed_dt.tzinfo is None:
+                    departure_time = now.replace(
+                        year=parsed_dt.year,
+                        month=parsed_dt.month,
+                        day=parsed_dt.day,
+                        hour=parsed_dt.hour,
+                        minute=parsed_dt.minute,
+                        second=parsed_dt.second,
+                        microsecond=parsed_dt.microsecond,
                     )
+                    # Use a 5-minute grace window to handle next-day rollover
+                    if departure_time < now - timedelta(minutes=5):
+                        departure_time += timedelta(days=1)
+                else:
+                    departure_time = parsed_dt.astimezone(now.tzinfo)
+                _LOGGER.debug(
+                    "Parsed departure time using parse_datetime: %s", departure_time
+                )
+            else:
+                # Fallback for HH:MM format (assume today)
+                try:
+                    temp_dt = datetime.strptime(departure_time, "%H:%M")
+                    departure_time = now.replace(
+                        hour=temp_dt.hour,
+                        minute=temp_dt.minute,
+                        second=0,
+                        microsecond=0,
+                    )
+                    # Use a 5-minute grace window to handle next-day rollover
+                    if departure_time < now - timedelta(minutes=5):
+                        departure_time += timedelta(days=1)
                     _LOGGER.debug(
-                        "Converted departure time from time string: %s", departure_time
+                        "Converted departure time from fallback HH:MM: %s",
+                        departure_time,
                     )
                 except ValueError:
                     _LOGGER.warning(
-                        "Unable to parse departure time from string: %s", departure_time
+                        "Unable to parse departure time from string: %s",
+                        departure_time,
                     )
                     return None
 
         if isinstance(departure_time, datetime):
-            _LOGGER.debug("Checking departure time date: %s", departure_time.date())
-            _LOGGER.debug("Today's date: %s", datetime.now().date())
-            if departure_time.date() != datetime.now().date():
+            # Normalize to HA local date for comparison
+            # Note: strptime outputs naive. We assume the string was in local time if no TZ was found.
+            dep_date = departure_time.date()
+            _LOGGER.debug("Checking departure time date: %s", dep_date)
+            _LOGGER.debug("Today's date: %s", today)
+            if dep_date != today:
                 return departure_time.strftime("%Y-%m-%d %H:%M")
             else:
                 return departure_time.strftime("%H:%M")
@@ -205,13 +240,13 @@ class DBInfoSensor(SensorEntity):
             if "scheduledTime" in dep_copy and isinstance(
                 dep_copy["scheduledTime"], int
             ):
-                dep_copy["scheduledTime"] = datetime.fromtimestamp(
-                    dep_copy["scheduledTime"]
+                dep_copy["scheduledTime"] = dt_util.as_local(
+                    dt_util.utc_from_timestamp(dep_copy["scheduledTime"])
                 ).strftime("%Y-%m-%d %H:%M:%S")
             if "time" in dep_copy and isinstance(dep_copy["time"], int):
-                dep_copy["time"] = datetime.fromtimestamp(dep_copy["time"]).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
+                dep_copy["time"] = dt_util.as_local(
+                    dt_util.utc_from_timestamp(dep_copy["time"])
+                ).strftime("%Y-%m-%d %H:%M:%S")
 
             next_departures.append(dep_copy)
 
@@ -241,7 +276,9 @@ class DBInfoSensor(SensorEntity):
 
                 # Format time if it is an int/timestamp, otherwise use as is
                 if isinstance(time, int):
-                    time = datetime.fromtimestamp(time).strftime("%H:%M")
+                    time = dt_util.as_local(dt_util.utc_from_timestamp(time)).strftime(
+                        "%H:%M"
+                    )
 
                 delay_str = ""
                 if delay:
