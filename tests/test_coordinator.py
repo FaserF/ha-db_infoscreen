@@ -377,3 +377,43 @@ async def test_coordinator_route_details(hass, mock_config_entry):
         assert len(simple_details) == 2
         assert simple_details[0] == {"name": "Simple A"}
         assert simple_details[1] == {"name": "Simple B"}
+
+
+async def test_coordinator_trip_id(hass, mock_config_entry):
+    """Test trip ID parsing."""
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "ID Train",
+                "train": "ICE 1",
+                "trainId": "123456789",  # Common field
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "No ID",
+                "train": "ICE 2",
+                # No ID field
+            },
+        ]
+    }
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value=mock_data)
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 2
+
+        # Test 1: Trip ID present
+        assert data[0]["trip_id"] == "123456789"
+
+        # Test 2: Trip ID missing
+        assert data[1]["trip_id"] is None

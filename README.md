@@ -27,7 +27,7 @@ The `db-infoscreen` sensor provides detailed **departure times** and train infor
 | 🌍 **Wide Coverage** | Supports DB and many local transport associations (via HAFAS/EFA). |
 | ⚙️ **Highly Configurable** | Filter by direction, train type, specific platforms, and more. |
 | ⚙️ **Highly Configurable** | Filter by direction, train type, specific platforms, and more. |
-| ℹ️ **Detailed Attributes** | Access route info, warnings, platform changes (`changed_platform`), wagon order (`wagon_order`), sector info (`platform_sectors`), facilities (`facilities`), and real-time route progress (`route_details`). |
+| ℹ️ **Detailed Attributes** | Access route info, warnings, platform changes (`changed_platform`), wagon order (`wagon_order`), sector info (`platform_sectors`), facilities (`facilities`), real-time route progress (`route_details`), and unique trip ID (`trip_id`). |
 
 ---
 

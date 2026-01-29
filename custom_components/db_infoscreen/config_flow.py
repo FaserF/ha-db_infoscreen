@@ -129,7 +129,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({vol.Required(CONF_STATION): vol.In(options)}),
         )
 
-
     async def _async_create_db_entry(self, user_input):
         # Process separated via stations into list
         via_raw = user_input.get(CONF_VIA_STATIONS, "")

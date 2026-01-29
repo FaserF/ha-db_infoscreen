@@ -660,6 +660,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         if route_details:
                             departure["route_details"] = route_details
 
+                        # Trip-ID
+                        departure["trip_id"] = departure.get(
+                            "trainId"
+                        ) or departure.get("tripId")
+
                         scheduled_arrival = departure.get("scheduledArrival")
                         delay_arrival = departure.get("delayArrival")
                         if delay_arrival is None:
