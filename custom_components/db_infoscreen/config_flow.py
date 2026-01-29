@@ -3,7 +3,6 @@ import re
 import xml.etree.ElementTree as ET
 
 import urllib.parse
-import aiohttp
 import async_timeout
 import voluptuous as vol
 from homeassistant import config_entries

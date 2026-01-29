@@ -10,7 +10,7 @@
         "^\\.backend_version$"
       ],
       "matchStrings": [
-        "^(?<currentValue>.*)$"
+        "\"version\":\\s*\"(?<currentValue>.*)\""
       ],
       "datasourceTemplate": "github-tags",
       "depNameTemplate": "derf/db-fakedisplay",
