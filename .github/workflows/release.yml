@@ -40,7 +40,7 @@ jobs:
           git config user.email "actions@github.com"
           git commit -am "chore(release): bump version to ${{ steps.version.outputs.version }}"
           git tag ${{ steps.version.outputs.version }}
-          git pushorigin ${{ steps.version.outputs.version }}
+          git push origin ${{ steps.version.outputs.version }}
           git push origin main
 
       - name: Generate Release Notes
