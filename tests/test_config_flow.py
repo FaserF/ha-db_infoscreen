@@ -1,6 +1,6 @@
 """Test the DB Infoscreen config flow."""
 
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, AsyncMock
 import pytest
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
@@ -40,10 +40,13 @@ async def test_form_create_entry(hass):
 
     with patch(
         "custom_components.db_infoscreen.async_setup_entry", return_value=True
-    ) as mock_setup_entry, patch(
-        "custom_components.db_infoscreen.config_flow.ConfigFlow._async_search_stations",
-        return_value=[{"name": "München Hbf", "ds100": "MH", "eva": "8000261"}],
-    ):
+    ) as mock_setup_entry, patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.text = AsyncMock(
+            return_value="<stations><station name='München Hbf' ds100='MH' eva='8000261'/></stations>"
+        )
+        mock_get.return_value.__aenter__.return_value = mock_response
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
@@ -77,10 +80,13 @@ async def test_form_duplicate_entry(hass, config_entry):
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
 
-    with patch(
-        "custom_components.db_infoscreen.config_flow.ConfigFlow._async_search_stations",
-        return_value=[{"name": "München Hbf", "ds100": "MH", "eva": "8000261"}],
-    ):
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.text = AsyncMock(
+            return_value="<stations><station name='München Hbf' ds100='MH' eva='8000261'/></stations>"
+        )
+        mock_get.return_value.__aenter__.return_value = mock_response
         result2 = await hass.config_entries.flow.async_configure(
             result["flow_id"],
             {
