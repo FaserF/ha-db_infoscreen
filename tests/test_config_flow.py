@@ -190,6 +190,38 @@ async def test_options_flow_filter_and_advanced(hass, config_entry):
     assert result6["data"]["custom_api_url"] == "http://localhost"
 
 
+@pytest.mark.asyncio
+async def test_options_flow_persistence(hass, config_entry):
+    """Test that existing config data is preserved in options flow."""
+    # Simulate an entry where options are empty but data has VIA set
+    # This happens if the user configured it initially via config flow
+    config_entry.data[CONF_VIA_STATIONS] = ["Hagsfeld Jenaer Straße"]
+    config_entry.options = {}
+
+    config_entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+
+    # Select Filter Options
+    result2 = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {"next_step_id": "filter_options"},
+    )
+
+    # Submit without changing anything
+    result3 = await hass.config_entries.options.async_configure(
+        result2["flow_id"],
+        {}, # Empty payload
+    )
+
+    assert result3["type"] == FlowResultType.CREATE_ENTRY
+    # The new options should now contain the value from data
+    data = result3["data"]
+
+    assert CONF_VIA_STATIONS in data
+    assert data[CONF_VIA_STATIONS] == ["Hagsfeld Jenaer Straße"]
+
+
 @pytest.fixture
 def config_entry():
     """Create a mock config entry."""
