@@ -298,16 +298,27 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             continue
 
                         if isinstance(departure_time_str, int):
-                            departure_time_obj = dt_util.as_local(
-                                dt_util.utc_from_timestamp(departure_time_str)
-                            )
+                            departure_time_obj = dt_util.utc_from_timestamp(
+                                departure_time_str
+                            ).astimezone(now.tzinfo)
                         else:
                             # Attempt robust parsing using HA helper
                             parsed_dt = dt_util.parse_datetime(departure_time_str)
                             if parsed_dt:
                                 if parsed_dt.tzinfo is None:
-                                    parsed_dt = parsed_dt.replace(tzinfo=now.tzinfo)
-                                departure_time_obj = dt_util.as_local(parsed_dt)
+                                    departure_time_obj = now.replace(
+                                        year=parsed_dt.year,
+                                        month=parsed_dt.month,
+                                        day=parsed_dt.day,
+                                        hour=parsed_dt.hour,
+                                        minute=parsed_dt.minute,
+                                        second=parsed_dt.second,
+                                        microsecond=parsed_dt.microsecond,
+                                    )
+                                else:
+                                    departure_time_obj = parsed_dt.astimezone(
+                                        now.tzinfo
+                                    )
                             else:
                                 # Fallback for HH:MM format (assume today)
                                 try:
@@ -561,11 +572,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             try:
                                 arrival_time = None
                                 if isinstance(scheduled_arrival, (int, float)):
-                                    arrival_time = dt_util.as_local(
-                                        dt_util.utc_from_timestamp(
-                                            int(scheduled_arrival)
-                                        )
-                                    )
+                                    arrival_time = dt_util.utc_from_timestamp(
+                                        int(scheduled_arrival)
+                                    ).astimezone(now.tzinfo)
                                 elif isinstance(scheduled_arrival, str):
                                     # Attempt robust parsing using HA helper
                                     parsed_dt = dt_util.parse_datetime(
@@ -573,10 +582,19 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     )
                                     if parsed_dt:
                                         if parsed_dt.tzinfo is None:
-                                            parsed_dt = parsed_dt.replace(
-                                                tzinfo=now.tzinfo
+                                            arrival_time = now.replace(
+                                                year=parsed_dt.year,
+                                                month=parsed_dt.month,
+                                                day=parsed_dt.day,
+                                                hour=parsed_dt.hour,
+                                                minute=parsed_dt.minute,
+                                                second=parsed_dt.second,
+                                                microsecond=parsed_dt.microsecond,
                                             )
-                                        arrival_time = dt_util.as_local(parsed_dt)
+                                        else:
+                                            arrival_time = parsed_dt.astimezone(
+                                                now.tzinfo
+                                            )
                                     else:
                                         # Fallback for HH:MM format (assume today)
                                         try:

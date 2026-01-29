@@ -75,8 +75,8 @@ class DBInfoSensor(SensorEntity):
         today = now.date()
 
         if isinstance(departure_time, int):  # Unix timestamp case
-            departure_time = dt_util.as_local(
-                dt_util.utc_from_timestamp(departure_time)
+            departure_time = dt_util.utc_from_timestamp(departure_time).astimezone(
+                now.tzinfo
             )
             _LOGGER.debug("Converted departure time from timestamp: %s", departure_time)
 
@@ -85,8 +85,17 @@ class DBInfoSensor(SensorEntity):
             parsed_dt = dt_util.parse_datetime(departure_time)
             if parsed_dt:
                 if parsed_dt.tzinfo is None:
-                    parsed_dt = parsed_dt.replace(tzinfo=now.tzinfo)
-                departure_time = dt_util.as_local(parsed_dt)
+                    departure_time = now.replace(
+                        year=parsed_dt.year,
+                        month=parsed_dt.month,
+                        day=parsed_dt.day,
+                        hour=parsed_dt.hour,
+                        minute=parsed_dt.minute,
+                        second=parsed_dt.second,
+                        microsecond=parsed_dt.microsecond,
+                    )
+                else:
+                    departure_time = parsed_dt.astimezone(now.tzinfo)
                 _LOGGER.debug(
                     "Parsed departure time using parse_datetime: %s", departure_time
                 )
