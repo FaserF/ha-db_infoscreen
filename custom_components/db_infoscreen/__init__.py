@@ -274,7 +274,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                     # Set last_update timestamp
                     now = dt_util.now()
-                    now_naive = now.replace(tzinfo=None)
                     today = now.date()
                     self.last_update = now
 
@@ -301,39 +300,37 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             )
                             continue
 
-                        departure_time_obj = None
                         if isinstance(departure_time_str, int):
-                            departure_time_obj = datetime.fromtimestamp(
-                                departure_time_str
+                            departure_time_obj = dt_util.as_local(
+                                dt_util.utc_from_timestamp(departure_time_str)
                             )
                         else:
-                            try:
-                                departure_time_obj = datetime.strptime(
-                                    departure_time_str, "%Y-%m-%dT%H:%M:%S"
-                                )
-                            except ValueError:
+                            # Attempt robust parsing using HA helper
+                            parsed_dt = dt_util.parse_datetime(departure_time_str)
+                            if parsed_dt:
+                                departure_time_obj = dt_util.as_local(parsed_dt)
+                            else:
+                                # Fallback for HH:MM format (assume today)
                                 try:
-                                    departure_time_obj = datetime.strptime(
-                                        departure_time_str, "%Y-%m-%dT%H:%M"
-                                    )
-                                except ValueError:
-                                    try:
-                                        time_candidate = datetime.strptime(
+                                    departure_time_obj = dt_util.as_local(
+                                        datetime.strptime(
                                             departure_time_str, "%H:%M"
                                         ).replace(
-                                            year=now.year, month=now.month, day=now.day
+                                            year=now.year,
+                                            month=now.month,
+                                            day=now.day,
                                         )
-                                        if time_candidate < now_naive - timedelta(
-                                            minutes=5
-                                        ):  # Allow for slight past times
-                                            time_candidate += timedelta(days=1)
-                                        departure_time_obj = time_candidate
-                                    except ValueError:
-                                        _LOGGER.error(
-                                            "Invalid time format, skipping departure: %s",
-                                            departure_time_str,
-                                        )
-                                        continue
+                                    )
+                                    if departure_time_obj < now - timedelta(
+                                        minutes=5
+                                    ):  # Allow for slight past times
+                                        departure_time_obj += timedelta(days=1)
+                                except ValueError:
+                                    _LOGGER.error(
+                                        "Invalid time format, skipping departure: %s",
+                                        departure_time_str,
+                                    )
+                                    continue
 
                         # Excluded Direction filter
                         if self.excluded_directions:
@@ -565,26 +562,34 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             try:
                                 arrival_time = None
                                 if isinstance(scheduled_arrival, (int, float)):
-                                    arrival_time = datetime.fromtimestamp(
-                                        int(scheduled_arrival)
+                                    arrival_time = dt_util.as_local(
+                                        dt_util.utc_from_timestamp(
+                                            int(scheduled_arrival)
+                                        )
                                     )
                                 elif isinstance(scheduled_arrival, str):
                                     try:
-                                        arrival_time = datetime.strptime(
-                                            scheduled_arrival, "%Y-%m-%dT%H:%M:%S"
+                                        arrival_time = dt_util.as_local(
+                                            datetime.strptime(
+                                                scheduled_arrival, "%Y-%m-%dT%H:%M:%S"
+                                            )
                                         )
                                     except ValueError:
                                         try:
-                                            arrival_time = datetime.strptime(
-                                                scheduled_arrival, "%Y-%m-%dT%H:%M"
+                                            arrival_time = dt_util.as_local(
+                                                datetime.strptime(
+                                                    scheduled_arrival, "%Y-%m-%dT%H:%M"
+                                                )
                                             )
                                         except ValueError:
-                                            arrival_time = datetime.strptime(
-                                                scheduled_arrival, "%H:%M"
-                                            ).replace(
-                                                year=today.year,
-                                                month=today.month,
-                                                day=today.day,
+                                            arrival_time = dt_util.as_local(
+                                                datetime.strptime(
+                                                    scheduled_arrival, "%H:%M"
+                                                ).replace(
+                                                    year=today.year,
+                                                    month=today.month,
+                                                    day=today.day,
+                                                )
                                             )
                                 else:
                                     _LOGGER.warning(
@@ -675,7 +680,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         departure.pop("departure_datetime", None)
 
                         departure_seconds = (
-                            effective_departure_time - now_naive
+                            effective_departure_time - now
                         ).total_seconds()
                         if departure_seconds >= self.offset:
                             filtered_departures.append(departure)

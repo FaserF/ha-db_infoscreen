@@ -27,8 +27,8 @@ Because this integration provides rich metadata (attributes), it can impact your
 If you enable features like **"Detailed Information"** or **"Keep Route"**, the sensor attributes will contain large JSON objects.
 -   **The Risk**: These attributes are saved to your Home Assistant database (`home-assistant_v2.db`) every time the sensor updates. Over weeks and months, this can lead to a massive database file, potentially slowing down backups or wearing out SD cards on Raspberry Pi devices.
 -   **Recommendation**:
-    -   Only enable "Keep Route" if you are actively using that data in a custom card.
-    -   Consider excluding these sensors from your [Recorder configuration](https://www.home-assistant.io/integrations/recorder/#exclude).
+  - Only enable "Keep Route" if you are actively using that data in a custom card.
+  - Consider excluding these sensors from your [Recorder configuration](https://www.home-assistant.io/integrations/recorder/#exclude).
 
 ### Memory Consumption
 On low-end hardware (like the Raspberry Pi 3), having 30+ sensors with detailed route tracking enabled can consume a noticeable amount of RAM. Ensure your hardware is sized appropriately for your configuration.

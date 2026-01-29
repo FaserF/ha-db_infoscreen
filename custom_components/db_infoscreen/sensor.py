@@ -81,44 +81,30 @@ class DBInfoSensor(SensorEntity):
             _LOGGER.debug("Converted departure time from timestamp: %s", departure_time)
 
         elif isinstance(departure_time, str):
-            try:
-                departure_time = datetime.strptime(departure_time, "%Y-%m-%d %H:%M:%S")
-                _LOGGER.debug(
-                    "Converted departure time from string: %s", departure_time
-                )
-            except ValueError:
+            # Attempt robust parsing using HA helper
+            parsed_dt = dt_util.parse_datetime(departure_time)
+            if parsed_dt:
+                departure_time = dt_util.as_local(parsed_dt)
+                _LOGGER.debug("Parsed departure time using parse_datetime: %s", departure_time)
+            else:
+                # Fallback for HH:MM format (assume today)
                 try:
-                    departure_time = datetime.strptime(
-                        departure_time, "%Y-%m-%dT%H:%M:%S"
+                    departure_time = dt_util.as_local(
+                        datetime.strptime(
+                            f"{today} {departure_time}",
+                            "%Y-%m-%d %H:%M",
+                        )
                     )
                     _LOGGER.debug(
-                        "Converted departure time from ISO string: %s", departure_time
+                        "Converted departure time from fallback HH:MM: %s",
+                        departure_time,
                     )
                 except ValueError:
-                    try:
-                        departure_time = datetime.strptime(
-                            departure_time, "%Y-%m-%dT%H:%M"
-                        )
-                        _LOGGER.debug(
-                            "Converted departure time from ISO short string: %s",
-                            departure_time,
-                        )
-                    except ValueError:
-                        try:
-                            departure_time = datetime.strptime(
-                                f"{today} {departure_time}",
-                                "%Y-%m-%d %H:%M",
-                            )
-                            _LOGGER.debug(
-                                "Converted departure time from time string: %s",
-                                departure_time,
-                            )
-                        except ValueError:
-                            _LOGGER.warning(
-                                "Unable to parse departure time from string: %s",
-                                departure_time,
-                            )
-                            return None
+                    _LOGGER.warning(
+                        "Unable to parse departure time from string: %s",
+                        departure_time,
+                    )
+                    return None
 
         if isinstance(departure_time, datetime):
             # Normalize to HA local date for comparison
