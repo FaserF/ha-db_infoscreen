@@ -95,3 +95,48 @@ async def test_coordinator_update_data(hass, mock_config_entry):
 
         assert len(data) == 1
         assert data[0]["destination"] == "Test Dest"
+
+async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
+    """Test excluding cancelled trains."""
+    from custom_components.db_infoscreen.const import CONF_EXCLUDE_CANCELLED
+
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M"),
+                "destination": "Valid Train",
+                "train": "ICE 1",
+                "cancelled": False,
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime("%Y-%m-%dT%H:%M"),
+                "destination": "Cancelled Train",
+                "train": "ICE 2",
+                "cancelled": True,
+            }
+        ]
+    }
+
+    # Test Default (include cancelled)
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.json.return_value = mock_data
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 2
+
+    # Test Exclude Cancelled
+    mock_config_entry.options[CONF_EXCLUDE_CANCELLED] = True
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch("aiohttp.ClientSession.get") as mock_get:
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.json.return_value = mock_data
+        mock_get.return_value.__aenter__.return_value = mock_response
+
+        data = await coordinator._async_update_data()
+        assert len(data) == 1
+        assert data[0]["destination"] == "Valid Train"

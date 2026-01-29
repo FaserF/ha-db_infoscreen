@@ -3,15 +3,51 @@
   "extends": [
     "config:base"
   ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": [
+        "^\\.backend_version$"
+      ],
+      "matchStrings": [
+        "^(?<currentValue>.*)$"
+      ],
+      "datasourceTemplate": "github-tags",
+      "depNameTemplate": "derf/db-fakedisplay",
+      "versioningTemplate": "semver"
+    }
+  ],
   "packageRules": [
     {
+      "matchDepNames": [
+        "derf/db-fakedisplay"
+      ],
+      "labels": [
+        "backend-api-update"
+      ],
+      "prBodyNotes": [
+        ":station: **Backend API Update Detected**",
+        "The upstream project `derf/db-fakedisplay` has released a new version. This Pull Request updates the tracked version to ensure our integration remains compatible."
+      ]
+    },
+    {
+      "matchDatasources": [
+        "pypi"
+      ],
       "matchUpdateTypes": [
         "minor",
-        "patch",
-        "pin",
-        "digest"
+        "patch"
       ],
       "automerge": true
     }
-  ]
+  ],
+  "pip_requirements": {
+    "fileMatch": [
+      "^requirements.*\\.txt$",
+      "manifest\\.json$"
+    ]
+  },
+  "github-actions": {
+    "enabled": true
+  }
 }

@@ -78,7 +78,8 @@
           "via_stations": "Via Stationen",
           "direction": "Richtung",
           "excluded_directions": "Ausgeschlossene Richtungen",
-          "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)"
+          "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)",
+          "exclude_cancelled": "Ausgefallene Züge ausschließen"
         }
       },
       "display_options": {

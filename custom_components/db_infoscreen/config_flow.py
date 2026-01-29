@@ -31,6 +31,7 @@ from .const import (
     CONF_KEEP_ENDSTATION,
     CONF_DEDUPLICATE_DEPARTURES,
     CONF_ENABLE_TEXT_VIEW,
+    CONF_EXCLUDE_CANCELLED,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,7 +61,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Process separated via stations into list
             via_raw = user_input.get(CONF_VIA_STATIONS, "")
             user_input[CONF_VIA_STATIONS] = [
-                s.strip() for s in via_raw.split("|") if s.strip()
+                s.strip() for s in via_raw.split(",") if s.strip()
             ]
 
             # Build base unique ID from station, via stations, direction, and platforms
@@ -212,7 +213,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             if CONF_VIA_STATIONS in user_input:
                 via_raw = user_input.get(CONF_VIA_STATIONS, "")
                 user_input[CONF_VIA_STATIONS] = [
-                    s.strip() for s in via_raw.split("|") if s.strip()
+                    s.strip() for s in via_raw.split(",") if s.strip()
                 ]
             return self.async_update_options(user_input)
 
@@ -220,7 +221,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         via_stations_list = self._get_config_value(CONF_VIA_STATIONS, [])
         if via_stations_list is None:
             via_stations_list = []
-        via_stations_str = "| ".join(via_stations_list)
+        via_stations_str = ", ".join(via_stations_list)
 
         # Get ignored train types
         ignored_types = self._get_config_value(CONF_IGNORED_TRAINTYPES, [])
@@ -256,6 +257,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_IGNORED_TRAINTYPES,
                         default=default_ignored,
                     ): cv.multi_select(IGNORED_TRAINTYPES_OPTIONS),
+                    vol.Optional(
+                        CONF_EXCLUDE_CANCELLED,
+                        default=self._get_config_value(CONF_EXCLUDE_CANCELLED, False),
+                    ): cv.boolean,
                 }
             ),
         )

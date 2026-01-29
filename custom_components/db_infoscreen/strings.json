@@ -78,7 +78,8 @@
           "via_stations": "Via Stations",
           "direction": "Direction",
           "excluded_directions": "Excluded Directions",
-          "ignored_train_types": "Ignored Train Types"
+          "ignored_train_types": "Ignored Train Types",
+          "exclude_cancelled": "Exclude Cancelled Trains"
         }
       },
       "display_options": {

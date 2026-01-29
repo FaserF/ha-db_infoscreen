@@ -34,6 +34,7 @@ from .const import (
     CONF_KEEP_ENDSTATION,
     CONF_DEDUPLICATE_DEPARTURES,
     TRAIN_TYPE_MAPPING,
+    CONF_EXCLUDE_CANCELLED,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -110,6 +111,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.keep_route = config.get(CONF_KEEP_ROUTE, False)
         self.keep_endstation = config.get(CONF_KEEP_ENDSTATION, False)
         self.deduplicate_departures = config.get(CONF_DEDUPLICATE_DEPARTURES, False)
+        self.exclude_cancelled = config.get(CONF_EXCLUDE_CANCELLED, False)
         custom_api_url = config.get(CONF_CUSTOM_API_URL, "")
         platforms = config.get(CONF_PLATFORMS, "")
         admode = config.get(CONF_ADMODE, "")
@@ -473,6 +475,14 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                 _LOGGER.debug(
                                     "Skipping departure as %s is the final stop.",
                                     self.station,
+                                )
+                                continue
+
+                        if self.exclude_cancelled:
+                            if departure.get("cancelled", False):
+                                _LOGGER.debug(
+                                    "Skipping cancelled departure: %s",
+                                    departure,
                                 )
                                 continue
 
