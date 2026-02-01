@@ -15,8 +15,6 @@ from custom_components.db_infoscreen.const import (
 )
 
 
-
-
 @pytest.fixture
 def mock_config_entry():
     """Create a mock config entry."""

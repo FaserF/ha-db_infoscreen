@@ -10,8 +10,6 @@ from custom_components.db_infoscreen.const import (
 )
 
 
-
-
 @pytest.fixture
 def mock_coordinator(hass):
     """Create a mock coordinator."""

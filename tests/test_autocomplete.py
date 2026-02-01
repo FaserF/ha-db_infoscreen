@@ -20,8 +20,16 @@ sys.modules["homeassistant.util.dt"] = MagicMock()
 
 # Mock async_timeout
 async_timeout_mod = types.ModuleType("async_timeout")
-async def async_enter(*args, **kwargs): return None
-async def async_exit(*args, **kwargs): return None
+
+
+async def async_enter(*args, **kwargs):
+    return None
+
+
+async def async_exit(*args, **kwargs):
+    return None
+
+
 timeout_ctx = MagicMock()
 timeout_ctx.__aenter__ = async_enter
 timeout_ctx.__aexit__ = async_exit
@@ -31,7 +39,12 @@ sys.modules["async_timeout"] = async_timeout_mod
 sys.path.append(os.getcwd())
 
 import pytest
-from custom_components.db_infoscreen.utils import async_get_stations, find_station_matches, CACHE_KEY_DATA
+from custom_components.db_infoscreen.utils import (
+    async_get_stations,
+    find_station_matches,
+    CACHE_KEY_DATA,
+)
+
 
 @pytest.fixture
 def hass():
@@ -40,13 +53,16 @@ def hass():
     mock_hass.data = {}
     return mock_hass
 
+
 @pytest.mark.asyncio
 async def test_async_get_stations_download(hass):
     """Test downloading stations when not cached."""
     with patch("aiohttp.ClientSession.get") as mock_get:
         mock_response = MagicMock()
         mock_response.status = 200
-        mock_response.text = AsyncMock(return_value='stations=["Zorneding", "München Hbf"];')
+        mock_response.text = AsyncMock(
+            return_value='stations=["Zorneding", "München Hbf"];'
+        )
         mock_response.raise_for_status = MagicMock()
         mock_get.return_value.__aenter__.return_value = mock_response
 
@@ -56,6 +72,7 @@ async def test_async_get_stations_download(hass):
         assert "Zorneding" in stations
         assert "München Hbf" in stations
         assert CACHE_KEY_DATA in hass.data
+
 
 def test_find_station_matches():
     """Test the fuzzy matching logic."""

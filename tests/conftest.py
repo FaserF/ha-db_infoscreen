@@ -17,9 +17,11 @@ if "homeassistant.config_entries" not in sys.modules:
     sys.modules["homeassistant.config_entries"] = ha_ce
     ha_ce.SOURCE_USER = "user"
     ha_ce.CONN_CLASS_CLOUD_POLL = "cloud_poll"
+
     class MockBase:
         def __init_subclass__(cls, **kwargs):
             pass
+
     ha_ce.ConfigFlow = MockBase
     ha_ce.OptionsFlow = MockBase
     ha_ce.ConfigEntry = MagicMock
@@ -32,12 +34,37 @@ if "homeassistant.helpers" not in sys.modules:
     sys.modules["homeassistant.helpers.config_validation"] = MagicMock()
     sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
 
-# Mock util/dt
+# Mock util/dt with real datetime behavior
 if "homeassistant.util" not in sys.modules:
     ha_util = types.ModuleType("homeassistant.util")
     ha_util.__path__ = []
     sys.modules["homeassistant.util"] = ha_util
-    sys.modules["homeassistant.util.dt"] = MagicMock()
+
+# Create a real stub for homeassistant.util.dt with datetime functions
+if "homeassistant.util.dt" not in sys.modules:
+    from datetime import datetime, timezone
+
+    ha_util_dt = types.ModuleType("homeassistant.util.dt")
+
+    def parse_datetime(dt_str):
+        """Parse ISO datetime string to timezone-aware datetime."""
+        if not dt_str:
+            return None
+        try:
+            # Try parsing with timezone info
+            if dt_str.endswith("Z"):
+                dt_str = dt_str[:-1] + "+00:00"
+            return datetime.fromisoformat(dt_str)
+        except (ValueError, AttributeError):
+            return None
+
+    def now():
+        """Return current timezone-aware datetime."""
+        return datetime.now(timezone.utc)
+
+    ha_util_dt.parse_datetime = parse_datetime
+    ha_util_dt.now = now
+    sys.modules["homeassistant.util.dt"] = ha_util_dt
 
 # Mock core
 if "homeassistant.core" not in sys.modules:
@@ -56,8 +83,13 @@ if "homeassistant.data_entry_flow" not in sys.modules:
 # 2. Mock async_timeout
 if "async_timeout" not in sys.modules:
     async_timeout_mod = types.ModuleType("async_timeout")
-    async def async_enter(*args, **kwargs): return None
-    async def async_exit(*args, **kwargs): return None
+
+    async def async_enter(*args, **kwargs):
+        return None
+
+    async def async_exit(*args, **kwargs):
+        return None
+
     timeout_ctx = MagicMock()
     timeout_ctx.__aenter__ = async_enter
     timeout_ctx.__aexit__ = async_exit
@@ -69,6 +101,7 @@ sys.path.append(os.getcwd())
 
 import pytest
 
+
 @pytest.fixture
 def hass():
     """Mock Hass fixture."""
@@ -79,9 +112,13 @@ def hass():
     mock_hass.data = {}
     return mock_hass
 
+
 @pytest.fixture
 def mock_setup_entry():
     """Mock async_setup_entry fixture."""
     from unittest.mock import patch
-    with patch("custom_components.db_infoscreen.async_setup_entry", return_value=True) as mock:
+
+    with patch(
+        "custom_components.db_infoscreen.async_setup_entry", return_value=True
+    ) as mock:
         yield mock

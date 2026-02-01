@@ -58,8 +58,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if len(self.hass.config_entries.async_entries(DOMAIN)) >= MAX_SENSORS:
-             errors["base"] = "max_sensors_reached"
-             return self.async_show_form(
+            errors["base"] = "max_sensors_reached"
+            return self.async_show_form(
                 step_id="user",
                 data_schema=vol.Schema({}),
                 errors=errors,
@@ -68,9 +68,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             station_query = user_input.get(CONF_STATION)
             if station_query:
+                # Reset transient state to avoid stale data affecting subsequent flows
+                self.no_match = False
+                self.found_stations = []
+                self.selected_station = None
+
                 stations = await async_get_stations(self.hass)
                 if not stations:
-                     errors["base"] = "cannot_connect"
+                    errors["base"] = "cannot_connect"
                 else:
                     matches = find_station_matches(stations, station_query)
                     if not matches:
@@ -78,7 +83,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         self.found_stations = [station_query]
                         self.no_match = True
                         return await self.async_step_choose(user_input=None)
-                    elif len(matches) == 1 and matches[0].lower() == station_query.lower():
+                    elif (
+                        len(matches) == 1
+                        and matches[0].lower() == station_query.lower()
+                    ):
                         # Exact unique match, proceed to details
                         self.selected_station = matches[0]
                         return await self.async_step_details()
@@ -92,9 +100,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({
-                vol.Required(CONF_STATION): cv.string
-            }),
+            data_schema=vol.Schema({vol.Required(CONF_STATION): cv.string}),
             errors=errors,
         )
 
@@ -107,20 +113,26 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return await self.async_step_details()
 
         if self.no_match:
-             return self.async_show_form(
+            return self.async_show_form(
                 step_id="choose",
-                data_schema=vol.Schema({
-                    vol.Required(CONF_STATION, default=self.found_stations[0]): vol.In(self.found_stations)
-                }),
-                description_placeholders={"warning": "⚠️ Station not found in official list! Please verify spelling."},
-                errors={"base": "station_not_found_warning"}
+                data_schema=vol.Schema(
+                    {
+                        vol.Required(
+                            CONF_STATION, default=self.found_stations[0]
+                        ): vol.In(self.found_stations)
+                    }
+                ),
+                description_placeholders={
+                    "warning": "⚠️ Station not found in official list! Please verify spelling."
+                },
+                errors={"base": "station_not_found_warning"},
             )
 
         return self.async_show_form(
             step_id="choose",
-            data_schema=vol.Schema({
-                vol.Required(CONF_STATION): vol.In(self.found_stations)
-            }),
+            data_schema=vol.Schema(
+                {vol.Required(CONF_STATION): vol.In(self.found_stations)}
+            ),
         )
 
     async def async_step_details(self, user_input=None):
@@ -133,15 +145,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Add the selected station to the input
             user_input[CONF_STATION] = self.selected_station
 
-            if not user_input.get(CONF_CUSTOM_API_URL):
-                if len(self.hass.config_entries.async_entries(DOMAIN)) >= MAX_SENSORS:
-                    errors["base"] = "max_sensors_reached"
-                    return self.async_show_form(
-                        step_id="details",
-                        data_schema=self.details_schema(),
-                        errors=errors,
-                        description_placeholders={"station": self.selected_station},
-                    )
+            # Check MAX_SENSORS unconditionally (even with custom API URL)
+            # to prevent unlimited sensor creation
+            if len(self.hass.config_entries.async_entries(DOMAIN)) >= MAX_SENSORS:
+                errors["base"] = "max_sensors_reached"
+                return self.async_show_form(
+                    step_id="details",
+                    data_schema=self.details_schema(),
+                    errors=errors,
+                    description_placeholders={"station": self.selected_station},
+                )
 
             return await self._async_create_db_entry(user_input)
 
@@ -228,8 +241,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """
         return vol.Schema(
             {
-                vol.Optional(CONF_NEXT_DEPARTURES, default=DEFAULT_NEXT_DEPARTURES): cv.positive_int,
-                vol.Optional(CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL): cv.positive_int,
+                vol.Optional(
+                    CONF_NEXT_DEPARTURES, default=DEFAULT_NEXT_DEPARTURES
+                ): cv.positive_int,
+                vol.Optional(
+                    CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL
+                ): cv.positive_int,
                 vol.Optional(CONF_HIDE_LOW_DELAY, default=False): cv.boolean,
                 vol.Optional(CONF_DROP_LATE_TRAINS, default=False): cv.boolean,
                 vol.Optional(CONF_DEDUPLICATE_DEPARTURES, default=False): cv.boolean,
@@ -238,7 +255,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_KEEP_ROUTE, default=False): cv.boolean,
                 vol.Optional(CONF_KEEP_ENDSTATION, default=False): cv.boolean,
                 vol.Optional(CONF_CUSTOM_API_URL, default=""): cv.string,
-                vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(DATA_SOURCE_OPTIONS),
+                vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(
+                    DATA_SOURCE_OPTIONS
+                ),
                 vol.Optional(CONF_OFFSET, default=DEFAULT_OFFSET): cv.string,
                 vol.Optional(CONF_PLATFORMS, default=""): cv.string,
                 vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
