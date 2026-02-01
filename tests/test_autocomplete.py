@@ -62,7 +62,9 @@ async def test_async_get_stations_download(hass):
     mock_session = MagicMock()
     mock_response = MagicMock()
     mock_response.status = 200
-    mock_response.text = AsyncMock(return_value='stations=["Hamburg Hbf", "München Hbf"];')
+    mock_response.text = AsyncMock(
+        return_value='stations=["Hamburg Hbf", "München Hbf"];'
+    )
     mock_response.raise_for_status = MagicMock()
     mock_session.get.return_value.__aenter__.return_value = mock_response
 
