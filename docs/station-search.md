@@ -57,7 +57,7 @@ The search uses a **4-tier priority matching system**:
 
 ### Manual Override
 If you enter a station that isn't in the official database (e.g., a very new station or a custom identifier), the integration will:
-- Show a warning: `⚠️ Station nicht in der offiziellen Liste gefunden!`
+- Show a warning: `⚠️ Station not found in the official list!`
 - Allow you to proceed with your manual entry
 - Attempt to fetch data from the API using your custom identifier
 

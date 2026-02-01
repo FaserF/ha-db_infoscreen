@@ -15,10 +15,6 @@ from homeassistant import config_entries
 @pytest.mark.asyncio
 async def test_form_user(hass):
     """Test we get the form."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-
     # Set up mock response
     hass.config_entries.flow.async_init.return_value = {
         "type": FlowResultType.FORM,

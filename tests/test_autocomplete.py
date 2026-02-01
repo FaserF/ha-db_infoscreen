@@ -38,17 +38,18 @@ sys.modules["async_timeout"] = async_timeout_mod
 
 sys.path.append(os.getcwd())
 
-import pytest
-from custom_components.db_infoscreen.utils import (
+import pytest  # ruff: noqa: E402
+from custom_components.db_infoscreen.utils import (  # ruff: noqa: E402
     async_get_stations,
     find_station_matches,
     CACHE_KEY_DATA,
 )
 
 
+# Simpler hass fixture for autocomplete tests (doesn't need config_entries mocking)
 @pytest.fixture
 def hass():
-    """Mock Hass."""
+    """Mock Hass for autocomplete tests."""
     mock_hass = MagicMock()
     mock_hass.data = {}
     return mock_hass
@@ -75,7 +76,7 @@ async def test_async_get_stations_download(hass):
 
 
 def test_find_station_matches():
-    """Test the fuzzy matching logic."""
+    """Test the matching logic (exact, starts-with, contains, fuzzy)."""
     stations = ["München Hbf", "München Ost", "Zorneding", "Berlin Hbf"]
 
     # Exact match
@@ -85,6 +86,10 @@ def test_find_station_matches():
     assert "München Hbf" in find_station_matches(stations, "München")
     assert "München Ost" in find_station_matches(stations, "München")
 
-    # Fuzzy match
+    # Starts with (these are NOT fuzzy matches)
     assert "Zorneding" in find_station_matches(stations, "Zorne")
     assert "Berlin Hbf" in find_station_matches(stations, "Berlin")
+
+    # Fuzzy match (typos/misspellings)
+    assert "München Hbf" in find_station_matches(stations, "Muenchen")
+    assert "Zorneding" in find_station_matches(stations, "Zornedin")

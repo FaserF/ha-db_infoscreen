@@ -4,7 +4,7 @@ import re
 import difflib
 import aiohttp
 import async_timeout
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ async def async_get_stations(hass):
     Check hass.data for cached list first.
     Refreshes cache if older than 24 hours.
     """
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
 
     if CACHE_KEY_DATA in hass.data and CACHE_KEY_UPDATE in hass.data:
         last_update = hass.data[CACHE_KEY_UPDATE]

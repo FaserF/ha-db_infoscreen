@@ -206,7 +206,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.async_abort(reason="already_configured")
 
         # Find a free unique ID
-        suffix = 1
+        suffix = 0
         unique_id_candidate = base_unique_id
         used_ids = {e.unique_id for e in same_station_entries}
 
