@@ -1,8 +1,5 @@
-"""Test the DB Infoscreen coordinator."""
-
+from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
 from homeassistant.util import dt as dt_util
 
@@ -16,6 +13,8 @@ from custom_components.db_infoscreen.const import (
     CONF_DETAILED,
     CONF_HIDE_LOW_DELAY,
 )
+
+
 
 
 @pytest.fixture

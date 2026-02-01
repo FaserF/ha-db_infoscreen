@@ -3,10 +3,23 @@
     "flow_title": "Setup Station Departure Sensor",
     "step": {
       "user": {
-        "title": "Configure Station",
-        "description": "Set up the departure sensor with the desired station and options.",
+        "title": "Search Station",
+        "description": "Please enter the station name to search for. The system will suggest the correct station from the official DBF list.",
         "data": {
-          "station": "Station Name, DS100 Code, or Trip number",
+          "station": "Station Name (e.g. Zorneding)"
+        }
+      },
+      "choose": {
+        "title": "Select Station",
+        "description": "Multiple matches found. Please select the correct station.",
+        "data": {
+          "station": "Station"
+        }
+      },
+      "details": {
+        "title": "Configure Details",
+        "description": "Configure the sensor options for {station}.",
+        "data": {
           "next_departures": "Number of Upcoming Departures",
           "update_interval": "Update Interval (minutes)",
           "hidelowdelay": "Hide Low Delay",
@@ -34,7 +47,10 @@
     },
     "error": {
       "max_sensors_reached": "Maximum number of sensors reached.",
-      "unknown": "An unknown error occurred."
+      "unknown": "An unknown error occurred.",
+      "no_stations_found": "No stations found matching your query. Please try a different spelling.",
+      "cannot_connect": "Failed to connect to DBF.",
+      "station_not_found_warning": "⚠️ Station not found in official list! Please verify spelling."
     }
   },
   "options": {

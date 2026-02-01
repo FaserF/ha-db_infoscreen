@@ -70,7 +70,7 @@ When adding the integration, you will be asked for the most important settings:
 
 | Option | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `station` | string | **Yes** | Station name, Trip number, or DS100 ID (e.g. `München Hbf` or `MH`). Check [DS100 List](https://ds100.frankfurtium.de/dumps/orte_de.html) for IDs. |
+| `station` | string | **Yes** | Station name (e.g. `München Hbf`), DS100 ID (e.g. `MH`), or EVA ID. The setup flow includes an **autocomplete search** to help find the correct official name. |
 | `data_source` | string | No | Backend source (DB, AVV, etc.). Default: `IRIS-TTS`. |
 | `next_departures` | int | No | Number of upcoming departures to display. Default: `4`. |
 | `platforms` | string | No | Filter by comma-separated platforms (e.g., `1, 2, 5`). |

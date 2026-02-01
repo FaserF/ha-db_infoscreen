@@ -1,12 +1,7 @@
 import logging
 import re
-import xml.etree.ElementTree as ET
-
-import urllib.parse
-import async_timeout
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from .const import (
     DOMAIN,
@@ -39,6 +34,7 @@ from .const import (
     CONF_EXCLUDE_CANCELLED,
     CONF_SHOW_OCCUPANCY,
 )
+from .utils import async_get_stations, find_station_matches
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,97 +45,115 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
+    def __init__(self):
+        """Initialize the config flow."""
+        self.found_stations = []
+        self.selected_station = None
+        self.no_match = False
+
     async def async_step_user(self, user_input=None):
-        """Handle the initial user step."""
+        """
+        Handle the initial step: Search for a station.
+        """
+        errors = {}
+
+        if len(self.hass.config_entries.async_entries(DOMAIN)) >= MAX_SENSORS:
+             errors["base"] = "max_sensors_reached"
+             return self.async_show_form(
+                step_id="user",
+                data_schema=vol.Schema({}),
+                errors=errors,
+            )
+
+        if user_input is not None:
+            station_query = user_input.get(CONF_STATION)
+            if station_query:
+                stations = await async_get_stations(self.hass)
+                if not stations:
+                     errors["base"] = "cannot_connect"
+                else:
+                    matches = find_station_matches(stations, station_query)
+                    if not matches:
+                        # No matches found, but allow manual entry via choose step
+                        self.found_stations = [station_query]
+                        self.no_match = True
+                        return await self.async_step_choose(user_input=None)
+                    elif len(matches) == 1 and matches[0].lower() == station_query.lower():
+                        # Exact unique match, proceed to details
+                        self.selected_station = matches[0]
+                        return await self.async_step_details()
+                    else:
+                        # Multiple or fuzzy matches, let user choose
+                        self.found_stations = matches
+                        # Append manual entry option if not already in list
+                        if station_query not in matches:
+                            self.found_stations.append(station_query)
+                        return await self.async_step_choose()
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema({
+                vol.Required(CONF_STATION): cv.string
+            }),
+            errors=errors,
+        )
+
+    async def async_step_choose(self, user_input=None):
+        """
+        Handle the selection step if multiple stations were found.
+        """
+        if user_input is not None:
+            self.selected_station = user_input[CONF_STATION]
+            return await self.async_step_details()
+
+        if self.no_match:
+             return self.async_show_form(
+                step_id="choose",
+                data_schema=vol.Schema({
+                    vol.Required(CONF_STATION, default=self.found_stations[0]): vol.In(self.found_stations)
+                }),
+                description_placeholders={"warning": "⚠️ Station not found in official list! Please verify spelling."},
+                errors={"base": "station_not_found_warning"}
+            )
+
+        return self.async_show_form(
+            step_id="choose",
+            data_schema=vol.Schema({
+                vol.Required(CONF_STATION): vol.In(self.found_stations)
+            }),
+        )
+
+    async def async_step_details(self, user_input=None):
+        """
+        Handle the configuration details step.
+        """
         errors = {}
 
         if user_input is not None:
-            # Check MAX_SENSORS only if no custom API URL is provided
+            # Add the selected station to the input
+            user_input[CONF_STATION] = self.selected_station
+
             if not user_input.get(CONF_CUSTOM_API_URL):
                 if len(self.hass.config_entries.async_entries(DOMAIN)) >= MAX_SENSORS:
                     errors["base"] = "max_sensors_reached"
                     return self.async_show_form(
-                        step_id="user",
-                        data_schema=self.user_data_schema(),
+                        step_id="details",
+                        data_schema=self.details_schema(),
                         errors=errors,
+                        description_placeholders={"station": self.selected_station},
                     )
 
-            # Search for station
-            stations = await self._async_search_stations(user_input[CONF_STATION])
-
-            if not stations:
-                errors["base"] = "station_not_found"
-            elif len(stations) == 1:
-                # Exact match or only one result -> proceed
-                user_input[CONF_STATION] = stations[0]["name"]
-                return await self._async_create_db_entry(user_input)
-            else:
-                # Multiple results -> let user select
-                self.context["stations"] = stations
-                self.context["user_input"] = user_input
-                return await self.async_step_select_station()
+            return await self._async_create_db_entry(user_input)
 
         return self.async_show_form(
-            step_id="user",
-            data_schema=self.user_data_schema(),
+            step_id="details",
+            data_schema=self.details_schema(),
             errors=errors,
-        )
-
-    async def _async_search_stations(self, query):
-        """Search for stations using IRIS API."""
-        url = f"https://iris.noncd.db.de/iris-tts/timetable/station/{urllib.parse.quote(query)}"
-        try:
-            session = async_get_clientsession(self.hass)
-            async with async_timeout.timeout(10):
-                async with session.get(url) as response:
-                    if response.status != 200:
-                        return []
-                    data = await response.text()
-                    root = ET.fromstring(data)
-                    stations = []
-                    for station in root.findall("station"):
-                        stations.append(
-                            {
-                                "name": station.get("name"),
-                                "ds100": station.get("ds100"),
-                                "eva": station.get("eva"),
-                            }
-                        )
-                    return stations
-        except Exception as err:
-            _LOGGER.error("Error searching stations: %s", err)
-            return []
-
-    async def async_step_select_station(self, user_input=None):
-        """Handle station selection step."""
-        stations = self.context.get("stations", [])
-        if user_input is not None:
-            # User selected a station via its unique identifier (EVA/DS100)
-            selected_station_id = user_input[CONF_STATION]
-            # Find the full station object
-            selected_station = next(
-                (s for s in stations if s["eva"] == selected_station_id), None
-            )
-
-            if selected_station:
-                # Use the stored context to create the entry
-                entry_data = self.context.get("user_input")
-                # Update with selected full name (and potentially store ID if needed later)
-                entry_data[CONF_STATION] = selected_station["name"]
-
-                # Re-run strict validation logic from async_step_user to ensure ID uniqueness
-                return await self._async_create_db_entry(entry_data)
-
-        # Prepare options using unique EVA as value and Name as label
-        # This handles multiple stations with the same name correctly
-        options = {s["eva"]: f"{s['name']} ({s['ds100']})" for s in stations}
-
-        return self.async_show_form(
-            step_id="select_station",
-            data_schema=vol.Schema({vol.Required(CONF_STATION): vol.In(options)}),
+            description_placeholders={"station": self.selected_station},
         )
 
     async def _async_create_db_entry(self, user_input):
+        """Finalize the entry creation logic merged from upstream."""
         # Process separated via stations into list
         via_raw = user_input.get(CONF_VIA_STATIONS, "")
         if isinstance(via_raw, str):
@@ -147,7 +161,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
             ]
 
-        # Build base unique ID from station, via stations, direction, and platforms
         station = user_input[CONF_STATION]
         via = user_input[CONF_VIA_STATIONS]
         direction = user_input.get(CONF_DIRECTION, "")
@@ -191,7 +204,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(unique_id_candidate)
         _LOGGER.debug("Creating new sensor with unique_id: %s", unique_id_candidate)
 
-        # Build display title
         title_parts = [station]
         if platforms:
             title_parts.append(f"platform {platforms}")
@@ -209,26 +221,34 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data=user_input,
         )
 
-    @staticmethod
-    def async_get_options_flow(config_entry):
-        return OptionsFlowHandler(config_entry)
-
-    def user_data_schema(self):
-        """Build the schema for the initial user step (simplified)."""
+    def details_schema(self):
+        """
+        Build the voluptuous Schema used for the integration's details form.
+        Does NOT include CONF_STATION as that is already selected.
+        """
         return vol.Schema(
             {
-                vol.Required(CONF_STATION): cv.string,
-                vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(
-                    DATA_SOURCE_OPTIONS
-                ),
-                vol.Optional(
-                    CONF_NEXT_DEPARTURES, default=DEFAULT_NEXT_DEPARTURES
-                ): cv.positive_int,
+                vol.Optional(CONF_NEXT_DEPARTURES, default=DEFAULT_NEXT_DEPARTURES): cv.positive_int,
+                vol.Optional(CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL): cv.positive_int,
+                vol.Optional(CONF_HIDE_LOW_DELAY, default=False): cv.boolean,
+                vol.Optional(CONF_DROP_LATE_TRAINS, default=False): cv.boolean,
+                vol.Optional(CONF_DEDUPLICATE_DEPARTURES, default=False): cv.boolean,
+                vol.Optional(CONF_DETAILED, default=False): cv.boolean,
+                vol.Optional(CONF_PAST_60_MINUTES, default=False): cv.boolean,
+                vol.Optional(CONF_KEEP_ROUTE, default=False): cv.boolean,
+                vol.Optional(CONF_KEEP_ENDSTATION, default=False): cv.boolean,
+                vol.Optional(CONF_CUSTOM_API_URL, default=""): cv.string,
+                vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(DATA_SOURCE_OPTIONS),
+                vol.Optional(CONF_OFFSET, default=DEFAULT_OFFSET): cv.string,
                 vol.Optional(CONF_PLATFORMS, default=""): cv.string,
                 vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
                 vol.Optional(CONF_DIRECTION, default=""): cv.string,
             }
         )
+
+    @staticmethod
+    def async_get_options_flow(config_entry):
+        return OptionsFlowHandler(config_entry)
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):

@@ -11,6 +11,7 @@ When you first add a "DB Infoscreen" integration, you meet the setup wizard. Thi
 ### 1. Station Selection
 -   **Search & Select**: Simply type the name of your city (e.g. `Frankfurt`). The integration will search the official database and present a list of stations to choose from.
 -   **Direct Entry**: You can still enter a precise DS100 ID (e.g. `FF`) or EVA ID if you know it.
+-   **Manual Override**: If a station is not found in the list, you can still proceed with your manual entry. A warning icon (⚠️) will indicate that the station name could not be verified, but the integration will attempt to fetch data for it anyway.
 
 ### 2. Data Source
 Select the backend provider.

@@ -1,5 +1,3 @@
-"""Tests for the DB Infoscreen sensor."""
-
 from unittest.mock import MagicMock, patch
 from datetime import timedelta
 import pytest
@@ -10,6 +8,8 @@ from custom_components.db_infoscreen.const import (
     CONF_STATION,
     CONF_ENABLE_TEXT_VIEW,
 )
+
+
 
 
 @pytest.fixture
