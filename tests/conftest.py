@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, AsyncMock
 # Try to import pytest-homeassistant-custom-component
 try:
     import pytest_homeassistant_custom_component  # noqa: F401
+
     PYTEST_HA_AVAILABLE = True
 except ImportError:
     PYTEST_HA_AVAILABLE = False
@@ -135,10 +136,11 @@ def setup_frame_helper():
     """Set up frame helper for the test session."""
     try:
         from homeassistant.helpers import frame
+
         # Initialize the frame helper's internal state
-        if not hasattr(frame, '_REPORTED_INTEGRATIONS'):
+        if not hasattr(frame, "_REPORTED_INTEGRATIONS"):
             frame._REPORTED_INTEGRATIONS = set()
-        if not hasattr(frame, '_INTEGRATION_FRAME'):
+        if not hasattr(frame, "_INTEGRATION_FRAME"):
             frame._INTEGRATION_FRAME = {}
     except (ImportError, AttributeError):
         pass
