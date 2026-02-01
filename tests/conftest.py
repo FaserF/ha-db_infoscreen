@@ -66,6 +66,10 @@ if "homeassistant.util.dt" not in sys.modules:
     ha_util_dt.now = now
     sys.modules["homeassistant.util.dt"] = ha_util_dt
 
+# Mock homeassistant.util.logging for pytest_homeassistant_custom_component
+if "homeassistant.util.logging" not in sys.modules:
+    sys.modules["homeassistant.util.logging"] = MagicMock()
+
 # Mock core
 if "homeassistant.core" not in sys.modules:
     sys.modules["homeassistant.core"] = MagicMock()
