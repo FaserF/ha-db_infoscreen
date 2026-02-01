@@ -3,10 +3,23 @@
     "flow_title": "Station Abfahrtssensor einrichten",
     "step": {
       "user": {
-        "title": "Station konfigurieren",
-        "description": "Richten Sie den Abfahrtssensor mit der gewünschten Station und den Optionen ein.",
+        "title": "Station suchen",
+        "description": "Gib einen Suchbegriff ein (z.B. 'München' statt 'München Hbf'). Das System schlägt automatisch passende Stationen aus der offiziellen DBF-Liste vor. Tipp: Verwende eher allgemeine Begriffe für bessere Suchergebnisse.",
         "data": {
-          "station": "Stationsname, DS100-Code oder Fahrtnummer",
+          "station": "Stationsname (z.B. Zorneding)"
+        }
+      },
+      "choose": {
+        "title": "Station auswählen",
+        "description": "Mehrere Treffer gefunden. Bitte wähle die richtige Station aus.",
+        "data": {
+          "station": "Station"
+        }
+      },
+      "details": {
+        "title": "Details konfigurieren",
+        "description": "Konfiguriere die Sensoroptionen für {station}.",
+        "data": {
           "next_departures": "Anzahl der nächsten Abfahrten",
           "update_interval": "Update-Intervall (Minuten)",
           "hidelowdelay": "Verzögerungen unterdrücken",
@@ -18,14 +31,15 @@
           "keep_endstation": "Behalte Abfahrt, auch wenn die Endstation diese Station ist.",
           "custom_api_url": "Benutzerdefinierte API-URL",
           "data_source": "Datenquelle",
-          "offset": "Offset-Zeit",
+          "offset": "Offset-Zeit (HH:MM)",
           "admode": "Bevorzugte Zeitdarstellung (Abfahrt / Ankunft)",
-          "platforms": "Gleise",
-          "via_stations": "Zeige nur Abfahrten über",
+          "platforms": "Gleise (kommagetrennt)",
+          "via_stations": "Zeige nur Abfahrten über (kommagetrennt)",
           "direction": "Zeige nur Abfahrten in Richtung",
           "excluded_directions": "Zeige keine Abfahrten in Richtung",
           "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)",
-          "show_occupancy": "Auslastungsinformationen anzeigen"
+          "show_occupancy": "Auslastungsinformationen anzeigen",
+          "exclude_cancelled": "Ausgefallene Züge ausschließen"
         }
       }
     },
@@ -34,7 +48,10 @@
     },
     "error": {
       "max_sensors_reached": "Maximale Anzahl von Sensoren erreicht.",
-      "unknown": "Ein unbekannter Fehler ist aufgetreten."
+      "unknown": "Ein unbekannter Fehler ist aufgetreten.",
+      "no_stations_found": "Keine Stationen gefunden, die deiner Suchanfrage entsprechen. Bitte versuche eine andere Schreibweise.",
+      "cannot_connect": "Verbindung zu DBF fehlgeschlagen.",
+      "station_not_found_warning": "⚠️ Station nicht in der offiziellen Liste gefunden! Bitte überprüfe die Schreibweise."
     }
   },
   "options": {
@@ -65,7 +82,7 @@
       },
       "general_options": {
         "title": "Allgemeine Einstellungen",
-        "description": "Konfigurieren Sie grundlegende Update-Einstellungen.",
+        "description": "Konfiguriere grundlegende Update-Einstellungen.",
         "data": {
           "next_departures": "Anzahl der nächsten Abfahrten",
           "update_interval": "Update-Intervall (Minuten)",
@@ -74,7 +91,7 @@
       },
       "filter_options": {
         "title": "Filter Einstellungen",
-        "description": "Filtern Sie Abfahrten nach Richtung, Gleis oder Zugart.",
+        "description": "Filtere Abfahrten nach Richtung, Gleis oder Zugart.",
         "data": {
           "platforms": "Gleise",
           "via_stations": "Via Stationen",
@@ -86,7 +103,7 @@
       },
       "display_options": {
         "title": "Anzeige Einstellungen",
-        "description": "Konfigurieren Sie die Anzeige.",
+        "description": "Konfiguriere die Anzeige.",
         "data": {
           "detailed": "Detaillierte Informationen",
           "enable_text_view": "Aktiviere vereinfachte Textansicht (für ePaper)",

@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Search Station",
-        "description": "Please enter the station name to search for. The system will suggest the correct station from the official DBF list.",
+        "description": "Enter a search term (e.g. 'Munich' instead of 'Munich Hbf'). The system will automatically suggest matching stations from the official DBF list. Tip: Use broader terms for better search results.",
         "data": {
           "station": "Station Name (e.g. Zorneding)"
         }

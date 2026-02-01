@@ -98,7 +98,7 @@ This project is a bridge between the Home Assistant ecosystem and the wider open
 | **Smart Filtering** | Exclude cancelled trains, filter by direction, or show only specific platforms. |
 | **Deep Attributes** | Access route info, warnings, messages, train composition (`wagon_order`), and unique `trip_id`. |
 | **Occupancy** | See how full the train is (1-4 scale) before it arrives. |
-| **Station Search** | Integrated search prevents typos by letting you pick from official station names. |
+| **Station Search** | Intelligent autocomplete prevents typos by letting you pick from official station names with fuzzy matching. |
 | **Example Automations** | [Cookbook](automations.md) with alerts for platform changes, cancellations, and more. |
 | **ePaper Ready** | Built-in "Text View" mode for ESPHome/ePaper displays. |
 
@@ -106,4 +106,4 @@ This project is a bridge between the Home Assistant ecosystem and the wider open
 
 ## 🚀 Getting Started
 
-[Install with HACS](installation.md){ .md-button .md-button--primary } [View Settings](configuration.md){ .md-button } [Example Automations](automations.md){ .md-button }
+[Install with HACS](installation.md){ .md-button .md-button--primary } [Station Search Guide](station-search.md){ .md-button } [View Settings](configuration.md){ .md-button } [Example Automations](automations.md){ .md-button }

@@ -13,6 +13,9 @@ When you first add a "DB Infoscreen" integration, you meet the setup wizard. Thi
 -   **Direct Entry**: You can still enter a precise DS100 ID (e.g. `FF`) or EVA ID if you know it.
 -   **Manual Override**: If a station is not found in the list, you can still proceed with your manual entry. A warning icon (⚠️) will indicate that the station name could not be verified, but the integration will attempt to fetch data for it anyway.
 
+!!! info "Learn More"
+    For detailed information about the station search feature, including search strategies and technical details, see the [Station Search Guide](station-search.md).
+
 ### 2. Data Source
 Select the backend provider.
 -   **IRIS-TTS**: The default and most reliable source for German stations. It provides high-frequency updates and quality notes.

@@ -3,10 +3,23 @@
     "flow_title": "Setup Station Departure Sensor",
     "step": {
       "user": {
-        "title": "Configure Station",
-        "description": "Set up the departure sensor with the desired station and options.",
+        "title": "Search Station",
+        "description": "Enter a search term (e.g. 'Munich' instead of 'Munich Hbf'). The system will automatically suggest matching stations from the official DBF list. Tip: Use broader terms for better search results.",
         "data": {
-          "station": "Station Name, DS100 Code, or Trip number",
+          "station": "Station Name (e.g. Zorneding)"
+        }
+      },
+      "choose": {
+        "title": "Select Station",
+        "description": "Multiple matches found. Please select the correct station.",
+        "data": {
+          "station": "Station"
+        }
+      },
+      "details": {
+        "title": "Configure Details",
+        "description": "Configure the sensor options for {station}.",
+        "data": {
           "next_departures": "Number of Upcoming Departures",
           "update_interval": "Update Interval (minutes)",
           "hidelowdelay": "Hide Low Delay",
@@ -18,14 +31,15 @@
           "keep_endstation": "Keep departure if station is endstation",
           "custom_api_url": "Custom API URL",
           "data_source": "Data Source",
-          "offset": "Offset Time",
+          "offset": "Offset Time (HH:MM)",
           "admode": "Display Mode",
-          "platforms": "Platforms",
-          "via_stations": "Only show departures via",
+          "platforms": "Platforms (comma separated)",
+          "via_stations": "Only show departures via (comma separated)",
           "direction": "Only show departures in direction",
           "excluded_directions": "Exclude departures in direction",
-          "ignored_train_types": "Do not track specified train types (f.e. ICE)",
-          "show_occupancy": "Show Occupancy Information"
+          "ignored_train_types": "Do not track specified train types (e.g. ICE)",
+          "show_occupancy": "Show Occupancy Information",
+          "exclude_cancelled": "Exclude Cancelled Trains"
         }
       }
     },
@@ -34,7 +48,10 @@
     },
     "error": {
       "max_sensors_reached": "Maximum number of sensors reached.",
-      "unknown": "An unknown error occurred."
+      "unknown": "An unknown error occurred.",
+      "no_stations_found": "No stations found matching your query. Please try a different spelling.",
+      "cannot_connect": "Failed to connect to DBF.",
+      "station_not_found_warning": "⚠️ Station not found in official list! Please verify spelling."
     }
   },
   "options": {
