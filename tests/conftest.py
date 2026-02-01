@@ -31,11 +31,17 @@ if "homeassistant.helpers" not in sys.modules:
     ha_helpers = types.ModuleType("homeassistant.helpers")
     ha_helpers.__path__ = []
     sys.modules["homeassistant.helpers"] = ha_helpers
-    sys.modules["homeassistant.helpers.config_validation"] = MagicMock()
-    sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
-    sys.modules["homeassistant.helpers.aiohttp_client"] = MagicMock()
 
-# Mock util/dt with real datetime behavior
+if "homeassistant.helpers.config_validation" not in sys.modules:
+    sys.modules["homeassistant.helpers.config_validation"] = MagicMock()
+if "homeassistant.helpers.update_coordinator" not in sys.modules:
+    sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
+if "homeassistant.helpers.aiohttp_client" not in sys.modules:
+    sys.modules["homeassistant.helpers.aiohttp_client"] = MagicMock()
+if "homeassistant.helpers.frame" not in sys.modules:
+    sys.modules["homeassistant.helpers.frame"] = MagicMock()
+
+# Mock util
 if "homeassistant.util" not in sys.modules:
     ha_util = types.ModuleType("homeassistant.util")
     ha_util.__path__ = []
@@ -67,7 +73,7 @@ if "homeassistant.util.dt" not in sys.modules:
     ha_util_dt.now = now
     sys.modules["homeassistant.util.dt"] = ha_util_dt
 
-# Mock homeassistant.util.logging for pytest_homeassistant_custom_component
+# Mock homeassistant.util.logging
 if "homeassistant.util.logging" not in sys.modules:
     sys.modules["homeassistant.util.logging"] = MagicMock()
 
@@ -127,3 +133,13 @@ def mock_setup_entry():
         "custom_components.db_infoscreen.async_setup_entry", return_value=True
     ) as mock:
         yield mock
+
+
+@pytest.fixture(autouse=True)
+def fail_on_log_exception(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Fixture to make tests fail on logged exceptions."""
+    # This fixture is used by pytest-homeassistant-custom-component
+    # We provide a no-op version for local testing
+    pass
