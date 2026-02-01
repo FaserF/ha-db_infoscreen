@@ -39,7 +39,15 @@ if "homeassistant.helpers.update_coordinator" not in sys.modules:
 if "homeassistant.helpers.aiohttp_client" not in sys.modules:
     sys.modules["homeassistant.helpers.aiohttp_client"] = MagicMock()
 if "homeassistant.helpers.frame" not in sys.modules:
-    sys.modules["homeassistant.helpers.frame"] = MagicMock()
+    # Create a proper frame helper mock
+    frame_helper = types.ModuleType("homeassistant.helpers.frame")
+
+    # Mock the frame helper functions
+    frame_helper.MissingIntegrationFrame = Exception
+    frame_helper.get_integration_frame = MagicMock(return_value=None)
+    frame_helper.report = MagicMock()
+
+    sys.modules["homeassistant.helpers.frame"] = frame_helper
 
 # Mock util
 if "homeassistant.util" not in sys.modules:
