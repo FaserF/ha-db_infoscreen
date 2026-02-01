@@ -38,8 +38,8 @@ sys.modules["async_timeout"] = async_timeout_mod
 
 sys.path.append(os.getcwd())
 
-import pytest  # ruff: noqa: E402
-from custom_components.db_infoscreen.utils import (  # ruff: noqa: E402
+import pytest  # noqa: E402
+from custom_components.db_infoscreen.utils import (  # noqa: E402
     async_get_stations,
     find_station_matches,
     CACHE_KEY_DATA,
