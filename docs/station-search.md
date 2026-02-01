@@ -40,7 +40,7 @@ Once the station is selected, you'll configure all sensor options (update interv
 The search uses a **4-tier priority matching system**:
 
 1. **Exact Match** (case-insensitive)
-   - Query: `Zorneding` → Result: `["Zorneding"]`
+   - Query: `Hamburg Hbf` → Result: `["Hamburg Hbf"]`
 
 2. **Starts With** (case-insensitive)
    - Query: `München` → Results: `["München Hbf", "München Ost", "München Pasing", ...]`
@@ -72,28 +72,24 @@ This is useful for:
 
 ### For City Stations
 Start with the city name only:
-```
-München → Select from: München Hbf, München Ost, München Pasing, etc.
-```
+
+    München → Select from: München Hbf, München Ost, München Pasing, etc.
 
 ### For Smaller Stations
 Use the full station name or a unique part:
-```
-Zorneding → Exact match: Zorneding
-```
+
+    Erlangen → Exact match: Erlangen
 
 ### For Airports
 Use the keyword "Flughafen":
-```
-Flughafen → Select from: München Flughafen Terminal, Frankfurt Flughafen, etc.
-```
+
+    Flughafen → Select from: München Flughafen Terminal, Frankfurt Flughafen, etc.
 
 ### For Ambiguous Names
 If you know the region, include it:
-```
-Neustadt → Many results
-Neustadt Weinstraße → Specific match
-```
+
+    Neustadt → Many results
+    Neustadt Weinstraße → Specific match
 
 ---
 

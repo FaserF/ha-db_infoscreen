@@ -33,6 +33,7 @@ if "homeassistant.helpers" not in sys.modules:
     sys.modules["homeassistant.helpers"] = ha_helpers
     sys.modules["homeassistant.helpers.config_validation"] = MagicMock()
     sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
+    sys.modules["homeassistant.helpers.aiohttp_client"] = MagicMock()
 
 # Mock util/dt with real datetime behavior
 if "homeassistant.util" not in sys.modules:

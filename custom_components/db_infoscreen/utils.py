@@ -2,7 +2,6 @@ import logging
 import json
 import re
 import difflib
-import aiohttp
 import async_timeout
 from datetime import datetime, timedelta, timezone
 
@@ -20,6 +19,8 @@ async def async_get_stations(hass):
     Check hass.data for cached list first.
     Refreshes cache if older than 24 hours.
     """
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
     now = datetime.now(timezone.utc)
 
     if CACHE_KEY_DATA in hass.data and CACHE_KEY_UPDATE in hass.data:
@@ -35,28 +36,28 @@ async def async_get_stations(hass):
 
     _LOGGER.debug("Downloading station list from %s", STATION_URL)
     try:
-        async with aiohttp.ClientSession() as session:
-            async with async_timeout.timeout(10):
-                async with session.get(STATION_URL) as response:
-                    response.raise_for_status()
-                    content = await response.text()
+        session = async_get_clientsession(hass)
+        async with async_timeout.timeout(10):
+            async with session.get(STATION_URL) as response:
+                response.raise_for_status()
+                content = await response.text()
 
-                    # Parse the JS content to extract the array
-                    match = re.search(r"stations=\[(.*?)\];", content, re.DOTALL)
-                    if match:
-                        json_str = f"[{match.group(1)}]"
-                        stations = json.loads(json_str)
-                        hass.data[CACHE_KEY_DATA] = stations
-                        hass.data[CACHE_KEY_UPDATE] = now
-                        _LOGGER.debug("Parsed and cached %d stations", len(stations))
-                        return stations
-                    else:
-                        _LOGGER.error("Could not find station array in response")
-                        # Return cached data if available even if expired, to be safe
-                        if CACHE_KEY_DATA in hass.data:
-                            _LOGGER.warning("Using expired cache due to parsing error.")
-                            return hass.data[CACHE_KEY_DATA]
-                        return []
+                # Parse the JS content to extract the array
+                match = re.search(r"stations=\[(.*?)\];", content, re.DOTALL)
+                if match:
+                    json_str = f"[{match.group(1)}]"
+                    stations = json.loads(json_str)
+                    hass.data[CACHE_KEY_DATA] = stations
+                    hass.data[CACHE_KEY_UPDATE] = now
+                    _LOGGER.debug("Parsed and cached %d stations", len(stations))
+                    return stations
+                else:
+                    _LOGGER.error("Could not find station array in response")
+                    # Return cached data if available even if expired, to be safe
+                    if CACHE_KEY_DATA in hass.data:
+                        _LOGGER.warning("Using expired cache due to parsing error.")
+                        return hass.data[CACHE_KEY_DATA]
+                    return []
     except Exception as e:
         _LOGGER.error("Error downloading station list: %s", e)
         # Fallback to expired cache if available
