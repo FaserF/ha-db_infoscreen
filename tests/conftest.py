@@ -147,6 +147,24 @@ def setup_frame_helper():
     yield
 
 
+@pytest.fixture(autouse=True)
+def enable_custom_integrations(monkeypatch):
+    """Enable custom integrations and prevent frame helper errors."""
+    try:
+        from homeassistant.helpers import frame
+
+        # Monkeypatch to prevent RuntimeError: Frame helper not set up
+        def mock_get_integration_frame(*args, **kwargs):
+            return None
+
+        monkeypatch.setattr(
+            frame, "get_integration_frame", mock_get_integration_frame, raising=False
+        )
+    except (ImportError, AttributeError):
+        pass
+    yield
+
+
 @pytest.fixture
 def hass():
     """Mock Hass fixture."""

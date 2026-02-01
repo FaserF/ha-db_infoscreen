@@ -6,7 +6,7 @@
         "title": "Search Station",
         "description": "Enter a search term (e.g. 'Munich' instead of 'Munich Hbf'). The system will automatically suggest matching stations from the official DBF list. Tip: Use broader terms for better search results.",
         "data": {
-          "station": "Station Name (e.g. Zorneding)"
+          "station": "Station Name (e.g. Hamburg Hbf)"
         }
       },
       "choose": {

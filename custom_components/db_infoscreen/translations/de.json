@@ -6,7 +6,7 @@
         "title": "Station suchen",
         "description": "Gib einen Suchbegriff ein (z.B. 'München' statt 'München Hbf'). Das System schlägt automatisch passende Stationen aus der offiziellen DBF-Liste vor. Tipp: Verwende eher allgemeine Begriffe für bessere Suchergebnisse.",
         "data": {
-          "station": "Stationsname (z.B. Zorneding)"
+          "station": "Stationsname (z.B. Hamburg Hbf)"
         }
       },
       "choose": {
