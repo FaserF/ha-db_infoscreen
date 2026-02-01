@@ -1,45 +1,7 @@
-import sys
-import os
-import types
+import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 
-# Mock homeassistant before importing anything else
-ha = types.ModuleType("homeassistant")
-ha.__path__ = []
-sys.modules["homeassistant"] = ha
-
-sys.modules["homeassistant.config_entries"] = MagicMock()
-sys.modules["homeassistant.helpers"] = MagicMock()
-sys.modules["homeassistant.helpers.config_validation"] = MagicMock()
-sys.modules["homeassistant.core"] = MagicMock()
-
-ha_util = types.ModuleType("homeassistant.util")
-ha_util.__path__ = []
-sys.modules["homeassistant.util"] = ha_util
-sys.modules["homeassistant.util.dt"] = MagicMock()
-
-# Mock async_timeout
-async_timeout_mod = types.ModuleType("async_timeout")
-
-
-async def async_enter(*args, **kwargs):
-    return None
-
-
-async def async_exit(*args, **kwargs):
-    return None
-
-
-timeout_ctx = MagicMock()
-timeout_ctx.__aenter__ = async_enter
-timeout_ctx.__aexit__ = async_exit
-async_timeout_mod.timeout = MagicMock(return_value=timeout_ctx)
-sys.modules["async_timeout"] = async_timeout_mod
-
-sys.path.append(os.getcwd())
-
-import pytest  # noqa: E402
-from custom_components.db_infoscreen.utils import (  # noqa: E402
+from custom_components.db_infoscreen.utils import (
     async_get_stations,
     find_station_matches,
     CACHE_KEY_DATA,
