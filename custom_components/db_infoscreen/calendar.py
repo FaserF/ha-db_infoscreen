@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, CONF_STATION
+from .const import DOMAIN
 from .entity import DBInfoScreenBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,11 +24,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up the DB Infoscreen calendar platform."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    station = config_entry.data.get(CONF_STATION, "Unknown")
 
     async_add_entities(
         [
-            DBInfoScreenCalendar(coordinator, config_entry, station),
+            DBInfoScreenCalendar(coordinator, config_entry),
         ]
     )
 
@@ -39,7 +38,7 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
     _attr_has_entity_name = True
     _attr_entity_registry_enabled_default = False  # Disabled by default
 
-    def __init__(self, coordinator, config_entry: ConfigEntry, station: str) -> None:
+    def __init__(self, coordinator, config_entry: ConfigEntry) -> None:
         """Initialize the calendar entity."""
         super().__init__(coordinator, config_entry)
 

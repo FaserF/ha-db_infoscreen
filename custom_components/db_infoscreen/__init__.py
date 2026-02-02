@@ -44,6 +44,7 @@ from .const import (
     CONF_EXCLUDE_CANCELLED,
     CONF_SHOW_OCCUPANCY,
     normalize_data_source,
+    DATA_SOURCE_MAP,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -139,8 +140,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
         base_url = custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
         url = f"{base_url}/{encoded_station}.json"
-
-        from .const import DATA_SOURCE_MAP
 
         data_source_map = DATA_SOURCE_MAP
 
@@ -427,6 +426,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
             MAX_SIZE_BYTES = 16000
 
+            def simple_serializer(obj):
+                if isinstance(obj, (datetime, timedelta)):
+                    return str(obj)
+                raise TypeError(f"Type {type(obj)} not serializable")
+
             for departure in departures_to_process:
                 _LOGGER.debug("Processing departure: %s", departure)
 
@@ -458,11 +462,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     temp_departure.pop("departure_datetime", None)
 
                 temp_list = filtered_departures + [temp_departure]
-
-                def simple_serializer(obj):
-                    if isinstance(obj, (datetime, timedelta)):
-                        return str(obj)
-                    raise TypeError(f"Type {type(obj)} not serializable")
 
                 try:
                     json_size = len(json.dumps(temp_list, default=simple_serializer))
@@ -587,7 +586,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                 # QoS (Pass-through + Message Parsing)
                 if "qos" in departure:
-                    departure["qos"] = departure["qos"]
+                    pass
 
                 # Parse facilities from messages
                 facilities = {}
@@ -652,7 +651,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                 scheduled_arrival = departure.get("scheduledArrival")
                 delay_arrival = departure.get("delayArrival")
-                if delay_arrival is None:
+                try:
+                    if delay_arrival is None or delay_arrival == "":
+                        delay_arrival = 0
+                    else:
+                        delay_arrival = int(delay_arrival)
+                except ValueError:
                     delay_arrival = 0
 
                 arrival_time_adjusted = None
@@ -704,7 +708,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     )
                         else:
                             _LOGGER.warning(
-                                f"Unsupported scheduledArrival type: {type(scheduled_arrival)}"
+                                "Unsupported scheduledArrival type: %s",
+                                type(scheduled_arrival),
                             )
 
                         if arrival_time:

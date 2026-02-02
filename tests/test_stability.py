@@ -1,6 +1,7 @@
 """Tests for stability and security scenarios."""
 
 import os
+from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -26,6 +27,47 @@ def mock_config_entry():
     return entry
 
 
+@contextmanager
+def patch_session(mock_data=None, side_effect=None):
+    """Patch the async_get_clientsession to return a mock session with data."""
+    with patch(
+        "custom_components.db_infoscreen.async_get_clientsession"
+    ) as mock_get_session:
+        # Mock Response
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json = AsyncMock(return_value=mock_data)
+
+        # Async context manager protocol
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=None)
+
+        # Mock Session
+        mock_session = MagicMock()
+
+        # session.get needs to return a context manager directly
+        def mock_get(*args, **kwargs):
+            if side_effect:
+                res = side_effect(*args, **kwargs)
+                # If side_effect returns raw data, wrap it in an ACM shim
+                if isinstance(res, (dict, list)):
+                    shim = MagicMock()
+                    shim.status = 200
+                    shim.raise_for_status = MagicMock()
+                    shim.json = AsyncMock(return_value=res)
+                    shim.__aenter__ = AsyncMock(return_value=shim)
+                    shim.__aexit__ = AsyncMock(return_value=None)
+                    return shim
+                return res
+            return mock_response
+
+        mock_session.get = MagicMock(side_effect=mock_get)
+
+        mock_get_session.return_value = mock_session
+        yield mock_session
+
+
 @pytest.mark.skipif(
     os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue"
 )
@@ -35,20 +77,24 @@ async def test_coordinator_handles_api_errors(hass, mock_config_entry):
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
 
     # Simulate a network error
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_get.side_effect = Exception("Network Error")
+    def side_effect_error(*args, **kwargs):
+        raise Exception("Network Error")
 
+    with patch_session(side_effect=side_effect_error):
         # Should not raise exception
         data = await coordinator._async_update_data()
         assert data == [] or data is None
 
     # Simulate a 500 error
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.status = 500
-        mock_response.raise_for_status.side_effect = Exception("HTTP 500")
-        mock_get.return_value.__aenter__.return_value = mock_response
+    def side_effect_500(*args, **kwargs):
+        mock_resp = MagicMock()
+        mock_resp.status = 500
+        mock_resp.raise_for_status = MagicMock(side_effect=Exception("HTTP 500"))
+        mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_resp.__aexit__ = AsyncMock(return_value=None)
+        return mock_resp
 
+    with patch_session(side_effect=side_effect_500):
         data = await coordinator._async_update_data()
         assert data == [] or data is None
 
@@ -61,13 +107,16 @@ async def test_coordinator_handles_malformed_json(hass, mock_config_entry):
     """Test handling of invalid JSON response."""
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
 
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.status = 200
-        # json() is awaited in code, so mock it as AsyncMock or MagicMock returning coroutine
-        mock_response.json = AsyncMock(side_effect=ValueError("Invalid JSON"))
-        mock_get.return_value.__aenter__.return_value = mock_response
+    def side_effect_malformed(*args, **kwargs):
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json = AsyncMock(side_effect=ValueError("Invalid JSON"))
+        mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
+        mock_resp.__aexit__ = AsyncMock(return_value=None)
+        return mock_resp
 
+    with patch_session(side_effect=side_effect_malformed):
         data = await coordinator._async_update_data()
         assert data == [] or data is None
 
@@ -104,12 +153,7 @@ async def test_large_response_handling(hass, mock_config_entry):
         ]
     }
 
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=large_data)
-        mock_get.return_value.__aenter__.return_value = mock_response
-
+    with patch_session(mock_data=large_data):
         # The coordinator has logic to limit JSON size (MAX_SIZE_BYTES = 16000)
         # Verify it respects that limit (it should return a truncated list)
         data = await coordinator._async_update_data()

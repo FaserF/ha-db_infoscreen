@@ -37,58 +37,6 @@ TRAIN_TYPE_MAPPING = {
     "": "Unbekannter Zugtyp",
 }
 
-DATA_SOURCE_OPTIONS = [
-    "IRIS-TTS",
-    "hafas=1",
-    "AVV – Aachener Verkehrsverbund",
-    "AVV – Augsburger Verkehrs- & Tarifverbund",
-    "BART – Bay Area Rapid Transit",
-    "BEG – Bayerische Eisenbahngesellschaft",
-    "BLS – BLS AG",
-    "BSVG – Braunschweiger Verkehrs-GmbH",
-    "BVG – Berliner Verkehrsbetriebe",
-    "CFL – Société Nationale des Chemins de Fer Luxembourgeois",
-    "CMTA – Capital Metro Austin Public Transport",
-    "DING – Donau-Iller Nahverkehrsverbund",
-    "DSB – Rejseplanen",
-    "IE – Iarnród Éireann",
-    "KVB – Kölner Verkehrs-Betriebe",
-    "KVV – Karlsruher Verkehrsverbund",
-    "LinzAG – Linz AG",
-    "MVV – Münchener Verkehrs- und Tarifverbund",
-    "NAHSH – Nahverkehrsverbund Schleswig-Holstein",
-    "NASA – Personennahverkehr in Sachsen-Anhalt",
-    "NVBW – Nahverkehrsgesellschaft Baden-Württemberg",
-    "NVV – Nordhessischer Verkehrsverbund",
-    "NWL – Nahverkehr Westfalen-Lippe",
-    "PKP – Polskie Koleje Państwowe",
-    "RMV – Rhein-Main-Verkehrsverbund",
-    "RSAG – Rostocker Straßenbahn",
-    "RVV – Regensburger Verkehrsverbund",
-    "Resrobot – Resrobot",
-    "Rolph – Rolph",
-    "STV – Steirischer Verkehrsverbund",
-    "SaarVV – Saarländischer Verkehrsverbund",
-    "TPG – Transports publics genevois",
-    "VAG – Freiburger Verkehrs AG",
-    "VBB – Verkehrsverbund Berlin-Brandenburg",
-    "VBN – Verkehrsverbund Bremen/Niedersachsen",
-    "VGN – Verkehrsverbund Großraum Nürnberg",
-    "VMT – Verkehrsverbund Mittelthüringen",
-    "VMV – Verkehrsgesellschaft Mecklenburg-Vorpommern",
-    "VOS – Verkehrsgemeinschaft Osnabrück",
-    "VRN – Verkehrsverbund Rhein-Neckar",
-    "VRR – Verkehrsverbund Rhein-Ruhr",
-    "VRR2 – Verkehrsverbund Rhein-Ruhr",
-    "VRR3 – Verkehrsverbund Rhein-Ruhr",
-    "VVO – Verkehrsverbund Oberelbe",
-    "VVS – Verkehrs- und Tarifverbund Stuttgart",
-    "ZVV – Züricher Verkehrsverbund",
-    "bwegt – bwegt",
-    "mobiliteit – mobilitéits zentral",
-    "ÖBB – Österreichische Bundesbahnen",
-]
-
 DATA_SOURCE_MAP = {
     "AVV – Aachener Verkehrsverbund": "hafas=AVV",
     "AVV – Augsburger Verkehrs- & Tarifverbund": "efa=AVV",
@@ -139,6 +87,8 @@ DATA_SOURCE_MAP = {
     "ÖBB – Österreichische Bundesbahnen": "hafas=ÖBB",
 }
 
+DATA_SOURCE_OPTIONS = ["IRIS-TTS", "hafas=1"] + sorted(DATA_SOURCE_MAP.keys())
+
 
 def normalize_data_source(value: str) -> str:
     """Normalize legacy data source values to descriptive keys."""
@@ -148,15 +98,20 @@ def normalize_data_source(value: str) -> str:
     if value == "hafas=1":
         return "hafas=1"
 
-    # Handle patterns: exact code -> find matching key containing that code
+    # Handle patterns: exact code -> find matching key using exact check
     # e.g., "NVBW" or "efa=NVBW"
     code = value
     if "=" in value:
         code = value.split("=", 1)[1]
 
+    matches = []
     for option, mapped_val in DATA_SOURCE_MAP.items():
-        if code in mapped_val:
-            return option
+        # Exact match of the full mapped value or exact match of the part after '='
+        if mapped_val == code or mapped_val.endswith("=" + code):
+            matches.append(option)
+
+    if len(matches) == 1:
+        return matches[0]
 
     return value
 

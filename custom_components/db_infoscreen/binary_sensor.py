@@ -27,13 +27,12 @@ async def async_setup_entry(
 ) -> None:
     """Set up the DB Infoscreen binary sensor platform."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    station = config_entry.data.get("station", "Unknown")
 
     async_add_entities(
         [
-            DBInfoScreenDelayBinarySensor(coordinator, config_entry, station),
-            DBInfoScreenCancellationBinarySensor(coordinator, config_entry, station),
-            DBInfoScreenConnectionBinarySensor(coordinator, config_entry, station),
+            DBInfoScreenDelayBinarySensor(coordinator, config_entry),
+            DBInfoScreenCancellationBinarySensor(coordinator, config_entry),
+            DBInfoScreenConnectionBinarySensor(coordinator, config_entry),
         ]
     )
 
@@ -41,7 +40,7 @@ async def async_setup_entry(
 class DBInfoScreenBaseBinarySensor(DBInfoScreenBaseEntity, BinarySensorEntity):
     """Base class for DB Infoscreen binary sensors."""
 
-    def __init__(self, coordinator, config_entry: ConfigEntry, station: str) -> None:
+    def __init__(self, coordinator, config_entry: ConfigEntry) -> None:
         """Initialize the binary sensor."""
         super().__init__(coordinator, config_entry)
 

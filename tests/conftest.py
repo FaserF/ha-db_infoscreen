@@ -278,9 +278,9 @@ def setup_frame_helper():
         from homeassistant.helpers import frame
 
         # Initialize the frame helper's internal state
-        if not hasattr(frame, "_REPORTED_INTEGRATIONS"):
+        if getattr(frame, "_REPORTED_INTEGRATIONS", None) is None:
             frame._REPORTED_INTEGRATIONS = set()
-        if not hasattr(frame, "_INTEGRATION_FRAME"):
+        if getattr(frame, "_INTEGRATION_FRAME", None) is None:
             frame._INTEGRATION_FRAME = {}
     except (ImportError, AttributeError):
         pass
