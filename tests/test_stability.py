@@ -1,6 +1,5 @@
 """Tests for stability and security scenarios."""
 
-import os
 from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
