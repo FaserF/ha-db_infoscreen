@@ -37,57 +37,90 @@ TRAIN_TYPE_MAPPING = {
     "": "Unbekannter Zugtyp",
 }
 
-DATA_SOURCE_OPTIONS = [
-    "IRIS-TTS",
-    "hafas=1",
-    "AVV (Aachen)",
-    "AVV (Augsburg)",
-    "BART",
-    "BEG",
-    "BLS",
-    "BSVG",
-    "BVG",
-    "bwegt",
-    "CMTA",
-    "DING",
-    "DSB",
-    "IE",
-    "KVV",
-    "KVB",
-    "LinzAG",
-    "mobiliteit",
-    "MVV",
-    "NAHSH",
-    "NASA",
-    "NVBW",
-    "NVV",
-    "NWL",
-    "\u00d6BB",
-    "PKP",
-    "Resrobot",
-    "RMV",
-    "Rolph",
-    "RSAG",
-    "RVV",
-    "SaarVV",
-    "STV",
-    "TPG",
-    "VAG",
-    "VBB",
-    "VBN",
-    "VGN",
-    "VMT",
-    "VMV",
-    "VOS",
-    "VRN",
-    "VRN2",
-    "VRR",
-    "VRR2",
-    "VRR3",
-    "VVO",
-    "VVS",
-    "ZVV",
-]
+DATA_SOURCE_MAP = {
+    "AVV – Aachener Verkehrsverbund": "hafas=AVV",
+    "AVV – Augsburger Verkehrs- & Tarifverbund": "efa=AVV",
+    "BART – Bay Area Rapid Transit": "hafas=BART",
+    "BEG – Bayerische Eisenbahngesellschaft": "efa=BEG",
+    "BLS – BLS AG": "hafas=BLS",
+    "BSVG – Braunschweiger Verkehrs-GmbH": "efa=BSVG",
+    "BVG – Berliner Verkehrsbetriebe": "hafas=BVG",
+    "CFL – Société Nationale des Chemins de Fer Luxembourgeois": "hafas=CFL",
+    "CMTA – Capital Metro Austin Public Transport": "hafas=CMTA",
+    "DING – Donau-Iller Nahverkehrsverbund": "efa=DING",
+    "DSB – Rejseplanen": "hafas=DSB",
+    "IE – Iarnród Éireann": "hafas=IE",
+    "KVB – Kölner Verkehrs-Betriebe": "hafas=KVB",
+    "KVV – Karlsruher Verkehrsverbund": "efa=KVV",
+    "LinzAG – Linz AG": "efa=LinzAG",
+    "MVV – Münchener Verkehrs- und Tarifverbund": "efa=MVV",
+    "NAHSH – Nahverkehrsverbund Schleswig-Holstein": "hafas=NAHSH",
+    "NASA – Personennahverkehr in Sachsen-Anhalt": "hafas=NASA",
+    "NVBW – Nahverkehrsgesellschaft Baden-Württemberg": "efa=NVBW",
+    "NVV – Nordhessischer Verkehrsverbund": "hafas=NVV",
+    "NWL – Nahverkehr Westfalen-Lippe": "efa=NWL",
+    "PKP – Polskie Koleje Państwowe": "hafas=PKP",
+    "RMV – Rhein-Main-Verkehrsverbund": "hafas=RMV",
+    "RSAG – Rostocker Straßenbahn": "hafas=RSAG",
+    "RVV – Regensburger Verkehrsverbund": "efa=RVV",
+    "Resrobot – Resrobot": "hafas=Resrobot",
+    "Rolph – Rolph": "efa=Rolph",
+    "STV – Steirischer Verkehrsverbund": "hafas=STV",
+    "SaarVV – Saarländischer Verkehrsverbund": "hafas=SaarVV",
+    "TPG – Transports publics genevois": "hafas=TPG",
+    "VAG – Freiburger Verkehrs AG": "efa=VAG",
+    "VBB – Verkehrsverbund Berlin-Brandenburg": "hafas=VBB",
+    "VBN – Verkehrsverbund Bremen/Niedersachsen": "hafas=VBN",
+    "VGN – Verkehrsverbund Großraum Nürnberg": "efa=VGN",
+    "VMT – Verkehrsverbund Mittelthüringen": "hafas=VMT",
+    "VMV – Verkehrsgesellschaft Mecklenburg-Vorpommern": "efa=VMV",
+    "VOS – Verkehrsgemeinschaft Osnabrück": "hafas=VOS",
+    "VRN – Verkehrsverbund Rhein-Neckar": "efa=VRN",
+    "VRR – Verkehrsverbund Rhein-Ruhr": "efa=VRR",
+    "VRR2 – Verkehrsverbund Rhein-Ruhr": "efa=VRR2",
+    "VRR3 – Verkehrsverbund Rhein-Ruhr": "efa=VRR3",
+    "VVO – Verkehrsverbund Oberelbe": "efa=VVO",
+    "VVS – Verkehrs- und Tarifverbund Stuttgart": "efa=VVS",
+    "ZVV – Züricher Verkehrsverbund": "hafas=ZVV",
+    "bwegt – bwegt": "efa=bwegt",
+    "mobiliteit – mobilitéits zentral": "hafas=mobiliteit",
+    "ÖBB – Österreichische Bundesbahnen": "hafas=ÖBB",
+}
+
+DATA_SOURCE_OPTIONS = ["IRIS-TTS", "hafas=1"] + sorted(DATA_SOURCE_MAP.keys())
+
+
+def normalize_data_source(value: str) -> str:
+    """Normalize legacy data source values to descriptive keys."""
+    if value in DATA_SOURCE_OPTIONS:
+        return value
+
+    if value == "hafas=1":
+        return "hafas=1"
+
+    # First check for exact value match in the map to avoid ambiguity
+    # e.g. "hafas=AVV" should match "AVV – Aachener Verkehrsverbund" directly
+    for option, mapped_val in DATA_SOURCE_MAP.items():
+        if mapped_val == value:
+            return option
+
+    # Handle patterns: exact code -> find matching key using exact check
+    # e.g., "NVBW" or "efa=NVBW"
+    code = value
+    if "=" in value:
+        code = value.split("=", 1)[1]
+
+    matches = []
+    for option, mapped_val in DATA_SOURCE_MAP.items():
+        # Exact match of the full mapped value or exact match of the part after '='
+        if mapped_val == code or mapped_val.endswith("=" + code):
+            matches.append(option)
+
+    if len(matches) == 1:
+        return matches[0]
+
+    return value
+
 
 IGNORED_TRAINTYPES_OPTIONS = {
     "S": "Stadtbahn (S-Bahn)",

@@ -11,11 +11,18 @@ When you first add a "DB Infoscreen" integration, you meet the setup wizard. Thi
 ### 1. Station Selection
 -   **Search & Select**: Simply type the name of your city (e.g. `Frankfurt`). The integration will search the official database and present a list of stations to choose from.
 -   **Direct Entry**: You can still enter a precise DS100 ID (e.g. `FF`) or EVA ID if you know it.
+-   **Manual Override**: If a station is not found in the list, you can still proceed with your manual entry. A warning icon (⚠️) will indicate that the station name could not be verified, but the integration will attempt to fetch data for it anyway.
+
+!!! info "Learn More"
+    For detailed information about the station search feature, including search strategies and technical details, see the [Station Search Guide](station-search.md).
 
 ### 2. Data Source
 Select the backend provider.
 -   **IRIS-TTS**: The default and most reliable source for German stations. It provides high-frequency updates and quality notes.
 -   **Regional/International**: Select providers like `ÖBB`, `SBB`, or regional networks when tracking trains outside Germany or on specific local lines not covered by the main DB IRIS system.
+
+!!! info "Full List"
+    See the complete [Data Sources Reference](data-sources.md) for all 45+ supported backends.
 
 ---
 

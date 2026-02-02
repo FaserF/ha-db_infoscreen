@@ -3,38 +3,77 @@
     "flow_title": "Station Abfahrtssensor einrichten",
     "step": {
       "user": {
-        "title": "Station konfigurieren",
-        "description": "Richten Sie den Abfahrtssensor mit der gewünschten Station und den Optionen ein.",
+        "title": "Station finden",
+        "description": "Bitte gib den Namen deiner Station ein (z.B. 'München Hbf').\n\nFalls deine Station nicht in der offiziellen IRIS-Liste gefunden wird, keine Sorge! Du kannst im nächsten Schritt die Option **Manuelle Eingabe** nutzen.",
         "data": {
-          "station": "Stationsname, DS100-Code oder Fahrtnummer",
-          "next_departures": "Anzahl der nächsten Abfahrten",
+          "station": "Station Name"
+        }
+      },
+      "choose": {
+        "title": "Station auswählen",
+        "description": "Es wurden mehrere Treffer gefunden. Bitte wähle deine Station aus der Liste.\n\nFalls deine Station nicht dabei ist oder du einen lokalen Verkehrsverbund (z.B. MVV, VRN) nutzen möchtest, wähle die Option **Manuelle Eingabe**.",
+        "data": {
+          "station": "Station"
+        }
+      },
+      "details": {
+        "title": "Sensor konfigurieren",
+        "description": "Einstellungen für **{station}**.\n\n**Datenquelle**: Standardmäßig verwenden wir das System der Deutschen Bahn. Handelt es sich um eine reine Nahverkehrs-Haltestelle (Bus, Tram, U-Bahn), die die DB nicht kennt? Dann aktiviere bitte **Zeige erweiterte Optionen** und wähle im nächsten Schritt die korrekte Datenquelle (z.B. MVV, VRN).",
+        "data": {
+          "next_departures": "Anzahl der anzuzeigenden Abfahrten",
           "update_interval": "Update-Intervall (Minuten)",
-          "hidelowdelay": "Verzögerungen unterdrücken",
-          "drop_late_trains": "Blende Züge aus, deren Abfahrt in der Vergangenheit ist, aber mit Verspätung innerhalb der Zeit wäre.",
-          "deduplicate_departures": "Ähnliche \"doppelte\" Abfahrten herausfiltern",
-          "detailed": "Detaillierte Informationen",
+          "advanced": "Zeige erweiterte Optionen (Datenquelle ändern / Filter)"
+        }
+      },
+      "advanced": {
+        "title": "Erweiterte Konfiguration",
+        "description": "Hier kannst du den Sensor für **{station}** feinjustieren.\n\n**Wichtig für Nicht-DB Stationen**: Ändere die 'Datenquelle' auf deinen lokalen Anbieter, falls mit der Standard-Einstellung keine Daten erscheinen.",
+        "data": {
+          "hidelowdelay": "Geringe Verspätungen ausblenden (unter 5 Min)",
+          "drop_late_trains": "Entferne Züge, die bereits abgefahren sind",
+          "deduplicate_departures": "Doppelte Einträge herausfiltern",
+          "detailed": "Detaillierte Informationen anzeigen",
           "past_60_minutes": "Abfahrten der letzten 60 Minuten einbeziehen",
-          "keep_route": "Behalte Routendetails (alle Zwischenstopp Bahnhöfe auf der Zugstrecke)",
-          "keep_endstation": "Behalte Abfahrt, auch wenn die Endstation diese Station ist.",
-          "custom_api_url": "Benutzerdefinierte API-URL",
-          "data_source": "Datenquelle",
-          "offset": "Offset-Zeit",
-          "admode": "Bevorzugte Zeitdarstellung (Abfahrt / Ankunft)",
-          "platforms": "Gleise",
-          "via_stations": "Zeige nur Abfahrten über",
-          "direction": "Zeige nur Abfahrten in Richtung",
-          "excluded_directions": "Zeige keine Abfahrten in Richtung",
-          "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)",
-          "show_occupancy": "Auslastungsinformationen anzeigen"
+          "keep_route": "Vollen Fahrtverlauf (alle Zwischenhalte) speichern",
+          "keep_endstation": "Abfahrt behalten, auch wenn dies die Endstation ist",
+          "custom_api_url": "Benutzerdefinierte API-URL (Experten)",
+          "data_source": "Datenquelle (Backend)",
+          "offset": "Zeit-Offset (HH:MM)",
+          "admode": "Anzeigemodus (Abfahrt vs Ankunft)",
+          "platforms": "Nach Gleisen filtern (kommagetrennt, z.B. 1, 2, 5-7)",
+          "via_stations": "Nach Via-Stationen filtern (kommagetrennt)",
+          "direction": "Nach Fahrtrichtung filtern",
+          "excluded_directions": "Fahrtrichtungen ausschließen",
+          "ignored_train_types": "Zugtypen ignorieren (z.B. 'ICE')",
+          "show_occupancy": "Auslastungsinformationen anzeigen (falls verfügbar)",
+          "exclude_cancelled": "Ausgefallene Züge entfernen"
+        }
+      },
+      "manual_config": {
+        "title": "Benutzerdefinierte Station konfigurieren",
+        "description": "Einrichtung für **{station}**.\n\n⚠️ **Wichtig**: Da diese Station nicht in der IRIS-Datenbank gefunden wurde, musst du unten die **korrekte Datenquelle auswählen**. Wähle z.B. 'MVV' für den Münchner Nahverkehr oder 'VRN' für Rhein-Neckar.",
+        "data": {
+          "data_source": "Datenquelle (Erforderlich)",
+          "next_departures": "Anzahl der Abfahrten",
+          "update_interval": "Update-Intervall (Minuten)",
+          "platforms": "Nach Gleisen filtern",
+          "via_stations": "Nach Via-Stationen filtern",
+          "custom_api_url": "Benutzerdefinierte API-URL (Experten)"
         }
       }
     },
-    "abort": {
-      "already_configured": "Diese Station ist bereits konfiguriert"
-    },
     "error": {
-      "max_sensors_reached": "Maximale Anzahl von Sensoren erreicht.",
-      "unknown": "Ein unbekannter Fehler ist aufgetreten."
+      "max_sensors_reached": "Maximale Anzahl von Sensoren erreicht (30).",
+      "unknown": "Ein unbekannter Fehler ist aufgetreten.",
+      "no_stations_found": "Keine Stationen gefunden. Versuche einen anderen Suchbegriff oder nutze die Manuelle Eingabe.",
+      "cannot_connect": "Verbindung zum Server fehlgeschlagen. Bitte prüfe deine Internetverbindung.",
+      "station_not_found_warning": "⚠️ Station nicht in der IRIS-Liste gefunden. Bitte überprüfe die Schreibweise.",
+      "station_invalid": "❌ Keine Daten für diese Station abrufbar. {error_detail}",
+      "station_validation_failed": "Stationsvalidierung fehlgeschlagen. Bitte überprüfe deine Einstellungen."
+    },
+    "abort": {
+      "already_configured": "Diese Station ist bereits konfiguriert.",
+      "station_validation_failed": "Station konnte nicht validiert werden. Keine Abfahrtsdaten abrufbar. Bitte überprüfe den Stationsnamen und die Datenquelle."
     }
   },
   "options": {
@@ -65,7 +104,7 @@
       },
       "general_options": {
         "title": "Allgemeine Einstellungen",
-        "description": "Konfigurieren Sie grundlegende Update-Einstellungen.",
+        "description": "Konfiguriere grundlegende Update-Einstellungen.",
         "data": {
           "next_departures": "Anzahl der nächsten Abfahrten",
           "update_interval": "Update-Intervall (Minuten)",
@@ -74,7 +113,7 @@
       },
       "filter_options": {
         "title": "Filter Einstellungen",
-        "description": "Filtern Sie Abfahrten nach Richtung, Gleis oder Zugart.",
+        "description": "Filtere Abfahrten nach Richtung, Gleis oder Zugart.",
         "data": {
           "platforms": "Gleise",
           "via_stations": "Via Stationen",
@@ -86,7 +125,7 @@
       },
       "display_options": {
         "title": "Anzeige Einstellungen",
-        "description": "Konfigurieren Sie die Anzeige.",
+        "description": "Konfiguriere die Anzeige.",
         "data": {
           "detailed": "Detaillierte Informationen",
           "enable_text_view": "Aktiviere vereinfachte Textansicht (für ePaper)",
@@ -108,6 +147,71 @@
           "data_source": "Datenquelle"
         }
       }
+    }
+  },
+  "issues": {
+    "stale_data": {
+      "title": "Stationsdaten sind veraltet",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Veraltete Daten für {station}",
+            "description": "Die Abfahrtsdaten für **{station}** wurden seit **{hours} Stunden** nicht aktualisiert.\n\nMögliche Ursachen:\n- Temporäre API-Probleme\n- Die Station wird möglicherweise nicht mehr vom Backend unterstützt\n- Netzwerkprobleme\n\nWas möchtest du tun?",
+            "data": {
+              "action": "Aktion"
+            }
+          }
+        }
+      },
+      "description": "Daten für Station **{station}** wurden seit {hours} Stunden nicht aktualisiert. Das Backend hat möglicherweise Probleme oder die Station wird nicht mehr unterstützt."
+    },
+    "api_error": {
+      "title": "API-Fehler für Station",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "API-Fehler für {station}",
+            "description": "Beim Abrufen der Daten für **{station}** sind mehrere Fehler aufgetreten:\n\n`{error}`\n\nDies könnte ein temporäres Problem sein. Du kannst es erneut versuchen oder die Datenquelle ändern.",
+            "data": {
+              "action": "Aktion"
+            }
+          },
+          "change_source": {
+            "title": "Datenquelle ändern",
+            "description": "Wähle eine andere Datenquelle für diese Station.",
+            "data": {
+              "data_source": "Datenquelle"
+            }
+          }
+        }
+      },
+      "description": "Fehler beim Abrufen der Daten für **{station}**: {error}"
+    },
+    "station_unsupported": {
+      "title": "Station wird möglicherweise nicht mehr unterstützt",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Station möglicherweise nicht unterstützt",
+            "description": "Die Station **{station}** (mit **{data_source}**) konnte mehrfach keine Daten liefern.\n\nDiese Station wird möglicherweise nicht mehr vom Backend unterstützt. Du kannst:\n- Erneut versuchen, um zu prüfen ob es ein temporäres Problem ist\n- Zu einer anderen Datenquelle wechseln\n- Diese Station aus deiner Konfiguration entfernen\n\n[Problem auf GitHub melden](https://faserf.github.io/ha-db_infoscreen/)",
+            "data": {
+              "action": "Aktion"
+            }
+          },
+          "change_source": {
+            "title": "Datenquelle ändern",
+            "description": "Wähle eine andere Datenquelle für diese Station.",
+            "data": {
+              "data_source": "Datenquelle"
+            }
+          }
+        }
+      },
+      "description": "Station **{station}** mit Datenquelle **{data_source}** wird möglicherweise nicht mehr unterstützt. Bitte überprüfe den Stationsnamen oder versuche eine andere Datenquelle."
+    },
+    "connection_error": {
+      "title": "Verbindungsfehler",
+      "description": "Konnte keine Verbindung zur Abfahrts-API für **{station}** herstellen. Dieses Problem wird automatisch behoben, wenn die Verbindung wiederhergestellt wird."
     }
   }
 }

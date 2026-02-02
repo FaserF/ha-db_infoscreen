@@ -1,5 +1,3 @@
-"""Tests for the DB Infoscreen sensor."""
-
 from unittest.mock import MagicMock, patch
 from datetime import timedelta
 import pytest
@@ -14,11 +12,23 @@ from custom_components.db_infoscreen.const import (
 
 @pytest.fixture
 def mock_coordinator(hass):
-    """Create a mock coordinator."""
-    coordinator = MagicMock()
-    coordinator.hass = hass
-    coordinator.data = []
-    return coordinator
+    """Create a mock coordinator stub."""
+
+    class CoordinatorStub:
+        def __init__(self, hass):
+            self.hass = hass
+            self.data = []
+            self.last_update_success = True
+            self.logger = MagicMock()
+            self.name = "test_coordinator"
+
+        def async_add_listener(self, *args):
+            pass
+
+        def async_remove_listener(self, *args):
+            pass
+
+    return CoordinatorStub(hass)
 
 
 @pytest.fixture
@@ -60,6 +70,8 @@ async def test_sensor_state_logic(
         False,
     )
     sensor.hass = hass
+    sensor.entity_id = "sensor.test"
+    sensor.platform = MagicMock()
 
     with patch("homeassistant.util.dt.now", return_value=fixed_now):
         # Test initial state (No Data)
@@ -102,6 +114,9 @@ async def test_sensor_text_view(
         "",
         True,  # Enable text view
     )
+    sensor.hass = hass
+    sensor.entity_id = "sensor.test"
+    sensor.platform = MagicMock()
 
     with patch("homeassistant.util.dt.now", return_value=fixed_now):
         mock_coordinator.data = [
@@ -111,10 +126,12 @@ async def test_sensor_text_view(
                 "platform": "1",
                 "time": fixed_now.timestamp(),  # Using timestamp
                 "delay": 0,
+                "scheduledDeparture": fixed_now.strftime("%Y-%m-%dT%H:%M"),
             }
         ]
-
+        sensor._handle_coordinator_update()
         attrs = sensor.extra_state_attributes
+        assert attrs is not None
         assert "next_departures_text" in attrs
         text_lines = attrs["next_departures_text"]
         assert len(text_lines) == 1

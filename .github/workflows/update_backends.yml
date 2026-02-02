@@ -1,0 +1,35 @@
+name: Update Backends
+
+on:
+  schedule:
+    - cron: '0 0 1 * *' # Monthly on the 1st
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  update-backends:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Run update script
+        run: python scripts/update_backends.py
+
+      - name: Format with Black
+        run: |
+          pip install black
+          black custom_components/db_infoscreen/const.py README.md
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: "chore: update supported backends from dbf.finalrewind.org"
+          title: "chore: Update supported backends"
+          body: "Automated update of `DATA_SOURCE_OPTIONS` and `DATA_SOURCE_MAP` in `const.py` based on the current backends listed at `https://dbf.finalrewind.org/_backend`."
+          branch: "update-backends-automation"
+          base: "main"
+          labels: "automation, backends"
