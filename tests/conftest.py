@@ -160,6 +160,9 @@ if not PYTEST_HA_AVAILABLE:
         frame_helper.MissingIntegrationFrame = Exception
         frame_helper.get_integration_frame = MagicMock(return_value=None)
         frame_helper.report = MagicMock()
+        frame_helper.report_usage = MagicMock()
+        frame_helper.report_non_thread_safe_operation = MagicMock()
+        frame_helper.verify_core_config = MagicMock()
 
         sys.modules["homeassistant.helpers.frame"] = frame_helper
 
@@ -301,6 +304,11 @@ def enable_custom_integrations(monkeypatch):
             frame, "get_integration_frame", mock_get_integration_frame, raising=False
         )
         monkeypatch.setattr(frame, "report", MagicMock(), raising=False)
+        monkeypatch.setattr(frame, "report_usage", MagicMock(), raising=False)
+        monkeypatch.setattr(
+            frame, "report_non_thread_safe_operation", MagicMock(), raising=False
+        )
+        monkeypatch.setattr(frame, "verify_core_config", MagicMock(), raising=False)
     except (ImportError, AttributeError):
         pass
     yield
