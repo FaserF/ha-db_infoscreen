@@ -69,7 +69,9 @@ def patch_session(mock_data, side_effect=None):
         yield mock_session
 
 
-@pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue")
+@pytest.mark.skipif(
+    os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue"
+)
 @pytest.mark.asyncio
 async def test_coordinator_url_encoding(hass, mock_config_entry):
     """Test correctly encoding of station and via parameters."""
@@ -85,7 +87,9 @@ async def test_coordinator_url_encoding(hass, mock_config_entry):
     assert "via=Hagsfeld%20Jenaer%20Stra%C3%9Fe" in coordinator.api_url
 
 
-@pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue")
+@pytest.mark.skipif(
+    os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue"
+)
 @pytest.mark.asyncio
 async def test_coordinator_options_in_url(hass, mock_config_entry):
     """Test that options are correctly correctly added to the URL."""
@@ -98,7 +102,9 @@ async def test_coordinator_options_in_url(hass, mock_config_entry):
     assert "hidelowdelay=1" in coordinator.api_url
 
 
-@pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue")
+@pytest.mark.skipif(
+    os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue"
+)
 @pytest.mark.asyncio
 async def test_coordinator_data_source_params(hass, mock_config_entry):
     """Test that data source mapping works."""
@@ -115,7 +121,9 @@ async def test_coordinator_data_source_params(hass, mock_config_entry):
     )
 
 
-@pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue")
+@pytest.mark.skipif(
+    os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue"
+)
 @pytest.mark.asyncio
 async def test_coordinator_update_data(hass, mock_config_entry):
     """Test updating data."""
@@ -140,7 +148,9 @@ async def test_coordinator_update_data(hass, mock_config_entry):
         assert data[0]["destination"] == "Test Dest"
 
 
-@pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue")
+@pytest.mark.skipif(
+    os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue"
+)
 @pytest.mark.asyncio
 async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
     """Test excluding cancelled trains."""
@@ -182,7 +192,9 @@ async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
         assert data[0]["destination"] == "Valid Train"
 
 
-@pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue")
+@pytest.mark.skipif(
+    os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue"
+)
 @pytest.mark.asyncio
 async def test_coordinator_occupancy(hass, mock_config_entry):
     """Test parsing occupancy data."""
@@ -217,7 +229,9 @@ async def test_coordinator_occupancy(hass, mock_config_entry):
         assert data[0]["occupancy"] == {"1": 1, "2": 4}
 
 
-@pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue")
+@pytest.mark.skipif(
+    os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue"
+)
 @pytest.mark.asyncio
 async def test_coordinator_platform_change(hass, mock_config_entry):
     """Test platform change detection."""
@@ -252,7 +266,9 @@ async def test_coordinator_platform_change(hass, mock_config_entry):
         assert data[1]["changed_platform"] is False
 
 
-@pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue")
+@pytest.mark.skipif(
+    os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue"
+)
 @pytest.mark.asyncio
 async def test_coordinator_wagon_order(hass, mock_config_entry):
     """Test wagon order and sector extraction."""
@@ -290,7 +306,9 @@ async def test_coordinator_wagon_order(hass, mock_config_entry):
         assert "platform_sectors" not in data[1]
 
 
-@pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue")
+@pytest.mark.skipif(
+    os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue"
+)
 @pytest.mark.asyncio
 async def test_coordinator_qos(hass, mock_config_entry):
     """Test QoS parsing and facilities extraction."""
@@ -332,7 +350,9 @@ async def test_coordinator_qos(hass, mock_config_entry):
         assert "facilities" not in data[1]
 
 
-@pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue")
+@pytest.mark.skipif(
+    os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue"
+)
 @pytest.mark.asyncio
 async def test_coordinator_route_details(hass, mock_config_entry):
     """Test route details parsing."""
@@ -378,7 +398,9 @@ async def test_coordinator_route_details(hass, mock_config_entry):
         assert simple_details[1] == {"name": "Simple B"}
 
 
-@pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue")
+@pytest.mark.skipif(
+    os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue"
+)
 @pytest.mark.asyncio
 async def test_coordinator_trip_id(hass, mock_config_entry):
     """Test trip ID parsing."""

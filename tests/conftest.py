@@ -300,9 +300,7 @@ def enable_custom_integrations(monkeypatch):
         monkeypatch.setattr(
             frame, "get_integration_frame", mock_get_integration_frame, raising=False
         )
-        monkeypatch.setattr(
-            frame, "report", MagicMock(), raising=False
-        )
+        monkeypatch.setattr(frame, "report", MagicMock(), raising=False)
     except (ImportError, AttributeError):
         pass
     yield
