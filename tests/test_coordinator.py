@@ -49,21 +49,35 @@ def patch_session(mock_data, side_effect=None):
         "custom_components.db_infoscreen.async_get_clientsession"
     ) as mock_get_session:
         # Mock Response
-        mock_response = AsyncMock()
+        mock_response = MagicMock()
         mock_response.status = 200
         mock_response.raise_for_status = MagicMock()
         mock_response.json = AsyncMock(return_value=mock_data)
 
+        # Async context manager protocol
+        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_response.__aexit__ = AsyncMock(return_value=None)
+
         # Mock Session
         mock_session = MagicMock()
 
-        # session.get needs to be an awaitable that returns mock_response
-        async def mock_get(*args, **kwargs):
+        # session.get needs to return a context manager directly, not a coroutine
+        def mock_get(*args, **kwargs):
             if side_effect:
-                return side_effect(*args, **kwargs)
+                res = side_effect(*args, **kwargs)
+                # If side_effect returns raw data, wrap it in an ACM shim
+                if isinstance(res, (dict, list)):
+                    shim = MagicMock()
+                    shim.status = 200
+                    shim.raise_for_status = MagicMock()
+                    shim.json = AsyncMock(return_value=res)
+                    shim.__aenter__ = AsyncMock(return_value=shim)
+                    shim.__aexit__ = AsyncMock(return_value=None)
+                    return shim
+                return res
             return mock_response
 
-        mock_session.get = AsyncMock(side_effect=mock_get)
+        mock_session.get = MagicMock(side_effect=mock_get)
 
         mock_get_session.return_value = mock_session
         yield mock_session
@@ -77,9 +91,6 @@ async def test_coordinator_url_encoding(hass, mock_config_entry):
     """Test correctly encoding of station and via parameters."""
     mock_config_entry.data[CONF_VIA_STATIONS] = ["Hagsfeld Jenaer Straße"]
     mock_config_entry.data[CONF_STATION] = "Hagsfeld Reitschulschlag, Karlsruhe"
-
-    # We wrap in patch_session even if not strictly needed, to prevent side-effect leakage?
-    # No, keep it simple. If this fails, the import or hass fixture is broken.
 
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
     expected_station = "Hagsfeld%20Reitschulschlag,%20Karlsruhe"

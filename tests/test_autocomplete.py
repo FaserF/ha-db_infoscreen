@@ -63,4 +63,4 @@ def test_find_station_matches():
 
     # Fuzzy match (typos/misspellings)
     assert "München Hbf" in find_station_matches(stations, "Muenchen")
-    assert "Hamburg Hbf" in find_station_matches(stations, "Hambur")
+    assert "Hamburg Hbf" in find_station_matches(stations, "Hamgurb")

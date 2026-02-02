@@ -1,9 +1,9 @@
 """Tests for stability and security scenarios."""
 
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import os
 from custom_components.db_infoscreen import DBInfoScreenCoordinator
 from custom_components.db_infoscreen.const import (
     CONF_STATION,

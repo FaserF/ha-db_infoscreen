@@ -103,7 +103,7 @@ if not PYTEST_HA_AVAILABLE:
                 self.data = None
 
             async def _async_update_data(self):
-                return None
+                return self.data
 
             async def async_config_entry_first_refresh(self):
                 pass
@@ -334,7 +334,6 @@ def hass():
         }
     )
 
-    mock_hass.config_entries.async_entries.return_value = []
     mock_hass.config_entries.async_entries.return_value = []
     mock_hass.data = {"integrations": {}, "custom_components": {}}
     return mock_hass

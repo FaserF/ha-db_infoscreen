@@ -87,7 +87,10 @@ def extract_data(html_content):
         name = html.unescape(name.strip())
 
         if "IRIS-TTS" in name:
-            backends.append({"name": "IRIS-TTS", "type": "iris", "val": ""})
+            key = ("iris", "")
+            if key not in seen:
+                backends.append({"name": "IRIS-TTS", "type": "iris", "val": ""})
+                seen.add(key)
             continue
 
         if "efa=" not in href and "hafas=" not in href:
@@ -127,19 +130,16 @@ def update_const_file(backends):
     with open(CONST_FILE, "r", encoding="utf-8") as f:
         content = f.read()
 
-    options = ["IRIS-TTS", "hafas=1"]
     data_map = {}
-
+    other_options = []
     for b in backends:
         if b["type"] == "iris":
             continue
-        options.append(b["name"])
+        other_options.append(b["name"])
         data_map[b["name"]] = f"{b['type']}={b['val']}"
 
-    iris = options.pop(0)
-    hafas1 = options.pop(0)
-    options.sort()
-    options = [iris, hafas1] + options
+    other_options.sort()
+    options = ["IRIS-TTS", "hafas=1"] + other_options
 
     # Replace DATA_SOURCE_OPTIONS
     new_list_str = "DATA_SOURCE_OPTIONS = [\n"
@@ -235,6 +235,39 @@ def update_readme(backends):
         print(f"Failed to update README: {e}")
 
 
+def update_docs_config(backends):
+    if not os.path.exists(DOCS_CONFIG_FILE):
+        return
+
+    with open(DOCS_CONFIG_FILE, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    md_list = generate_readme_content(backends)
+
+    try:
+        # Docs usually have a section for Data Sources
+        # Assuming similar structure to README or just searching for the section
+        parts = content.split("## 📡 Data Sources")
+        if len(parts) < 2:
+            return
+
+        after_header = parts[1]
+        pattern = re.compile(r"(<summary>.*?</summary>).*?(> Note:)", re.DOTALL)
+        replacement = r"\1\n\n" + md_list + r"\n\n\2"
+        new_after_header = pattern.sub(replacement, after_header)
+
+        new_content = parts[0] + "## 📡 Data Sources" + new_after_header
+
+        # Atomic write
+        tmp_file = DOCS_CONFIG_FILE + ".tmp"
+        with open(tmp_file, "w", encoding="utf-8") as f:
+            f.write(new_content)
+        os.replace(tmp_file, DOCS_CONFIG_FILE)
+        print(f"Successfully updated {DOCS_CONFIG_FILE}")
+    except Exception as e:
+        print(f"Failed to update {DOCS_CONFIG_FILE}: {e}")
+
+
 if __name__ == "__main__":
     html_content = fetch_backends()
     if html_content:
@@ -242,5 +275,6 @@ if __name__ == "__main__":
         if backends:
             update_const_file(backends)
             update_readme(backends)
+            update_docs_config(backends)
         else:
             print("No backends found.")

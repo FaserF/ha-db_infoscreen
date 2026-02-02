@@ -124,10 +124,11 @@ class DBInfoScreenCancellationBinarySensor(DBInfoScreenBaseBinarySensor):
         """Return True if any train is cancelled."""
         departures = self.coordinator.data or []
         for departure in departures:
-            if departure.get("isCancelled", False):
-                return True
-            # Some backends use different field names
-            if departure.get("cancelled", False):
+            if (
+                departure.get("isCancelled", False)
+                or departure.get("is_cancelled", False)
+                or departure.get("cancelled", False)
+            ):
                 return True
         return False
 
@@ -138,7 +139,11 @@ class DBInfoScreenCancellationBinarySensor(DBInfoScreenBaseBinarySensor):
         cancelled_trains = []
 
         for departure in departures:
-            if departure.get("isCancelled", False) or departure.get("cancelled", False):
+            if (
+                departure.get("isCancelled", False)
+                or departure.get("is_cancelled", False)
+                or departure.get("cancelled", False)
+            ):
                 line = departure.get("line", departure.get("train", "Unknown"))
                 destination = departure.get("destination", "Unknown")
                 cancelled_trains.append(

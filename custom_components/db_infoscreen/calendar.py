@@ -104,8 +104,7 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
                     delay_int = (
                         int(delay)
                         if delay is not None
-                        and str(delay).isdigit()
-                        or (isinstance(delay, (int, float)))
+                        and (str(delay).isdigit() or isinstance(delay, (int, float)))
                         else 0
                     )
                 except (ValueError, TypeError):

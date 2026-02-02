@@ -58,7 +58,7 @@ DATA_SOURCE_OPTIONS = [
     "MVV – Münchener Verkehrs- und Tarifverbund",
     "NAHSH – Nahverkehrsverbund Schleswig-Holstein",
     "NASA – Personennahverkehr in Sachsen-Anhalt",
-    "NVBW – Nahverkehrgesellschaft Baden-Württemberg",
+    "NVBW – Nahverkehrsgesellschaft Baden-Württemberg",
     "NVV – Nordhessischer Verkehrsverbund",
     "NWL – Nahverkehr Westfalen-Lippe",
     "PKP – Polskie Koleje Państwowe",
