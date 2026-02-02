@@ -6,15 +6,11 @@ import types
 from unittest.mock import MagicMock, AsyncMock
 
 # Try to import pytest-homeassistant-custom-component
-try:
-    import pytest_homeassistant_custom_component  # noqa: F401
-    from pytest_homeassistant_custom_component.common import (
-        MockConfigEntry,
-    )  # noqa: F401
+import importlib.util
 
-    PYTEST_HA_AVAILABLE = True
-except ImportError:
-    PYTEST_HA_AVAILABLE = False
+PYTEST_HA_AVAILABLE = (
+    importlib.util.find_spec("pytest_homeassistant_custom_component") is not None
+)
 
 # Only mock if pytest-homeassistant-custom-component is not available
 if not PYTEST_HA_AVAILABLE:
