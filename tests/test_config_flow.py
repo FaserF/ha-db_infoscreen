@@ -54,7 +54,7 @@ async def test_form_create_entry(hass):
         result2 = await flow.async_step_user({CONF_STATION: "München Hbf"})
 
     assert result2["type"] == FlowResultType.FORM
-    assert flow.selected_station == "München Hbf"
+    assert flow.selected_station == "München Hbf (IRIS-TTS)"
 
     # 2. Details Step
     with patch(
@@ -96,7 +96,11 @@ async def test_form_multiple_matches(hass):
         result2 = await flow.async_step_user({CONF_STATION: "München"})
 
     assert result2["type"] == FlowResultType.FORM
-    assert flow.found_stations == ["München Hbf", "München Ost", "München"]
+    assert flow.found_stations == [
+        "München Hbf (IRIS-TTS)",
+        "München Ost (IRIS-TTS)",
+        "München (Manual Entry)",
+    ]
 
 
 @pytest.mark.asyncio
@@ -119,7 +123,7 @@ async def test_form_no_matches_manual_override(hass):
         result2 = await flow.async_step_user({CONF_STATION: "MyCustomStation"})
 
     assert result2["type"] == FlowResultType.FORM
-    assert flow.found_stations == ["MyCustomStation"]
+    assert flow.found_stations == ["MyCustomStation (Manual Entry)"]
     assert flow.no_match is True
 
 

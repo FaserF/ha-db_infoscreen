@@ -1,8 +1,8 @@
 """Binary sensor platform for DB Infoscreen integration."""
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.components.binary_sensor import (
@@ -13,9 +13,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
+from .entity import DBInfoScreenBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,45 +29,21 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     station = config_entry.data.get("station", "Unknown")
 
-    async_add_entities([
-        DBInfoScreenDelayBinarySensor(coordinator, config_entry, station),
-        DBInfoScreenCancellationBinarySensor(coordinator, config_entry, station),
-        DBInfoScreenConnectionBinarySensor(coordinator, config_entry, station),
-    ])
+    async_add_entities(
+        [
+            DBInfoScreenDelayBinarySensor(coordinator, config_entry, station),
+            DBInfoScreenCancellationBinarySensor(coordinator, config_entry, station),
+            DBInfoScreenConnectionBinarySensor(coordinator, config_entry, station),
+        ]
+    )
 
 
-class DBInfoScreenBaseBinarySensor(BinarySensorEntity):
+class DBInfoScreenBaseBinarySensor(DBInfoScreenBaseEntity, BinarySensorEntity):
     """Base class for DB Infoscreen binary sensors."""
-
-    _attr_has_entity_name = True
 
     def __init__(self, coordinator, config_entry: ConfigEntry, station: str) -> None:
         """Initialize the binary sensor."""
-        self.coordinator = coordinator
-        self.config_entry = config_entry
-        self.station = station
-
-    @property
-    def device_info(self):
-        """Return device info."""
-        return {
-            "identifiers": {(DOMAIN, self.config_entry.entry_id)},
-            "name": f"DB Infoscreen {self.station}",
-            "manufacturer": "DBF (derf)",
-            "model": "Departure Board",
-            "configuration_url": getattr(self.coordinator, "web_url", None),
-        }
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return self.coordinator.last_update_success if hasattr(self.coordinator, "last_update_success") else False
-
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
-        )
+        super().__init__(coordinator, config_entry)
 
 
 class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
@@ -110,11 +86,13 @@ class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
                 if delay_int > 0:
                     line = departure.get("line", departure.get("train", "Unknown"))
                     destination = departure.get("destination", "Unknown")
-                    delayed_trains.append({
-                        "line": line,
-                        "destination": destination,
-                        "delay_minutes": delay_int,
-                    })
+                    delayed_trains.append(
+                        {
+                            "line": line,
+                            "destination": destination,
+                            "delay_minutes": delay_int,
+                        }
+                    )
                     max_delay = max(max_delay, delay_int)
             except (ValueError, TypeError):
                 pass
@@ -161,10 +139,12 @@ class DBInfoScreenCancellationBinarySensor(DBInfoScreenBaseBinarySensor):
             if departure.get("isCancelled", False) or departure.get("cancelled", False):
                 line = departure.get("line", departure.get("train", "Unknown"))
                 destination = departure.get("destination", "Unknown")
-                cancelled_trains.append({
-                    "line": line,
-                    "destination": destination,
-                })
+                cancelled_trains.append(
+                    {
+                        "line": line,
+                        "destination": destination,
+                    }
+                )
 
         return {
             "cancelled_trains": cancelled_trains,
@@ -189,7 +169,11 @@ class DBInfoScreenConnectionBinarySensor(DBInfoScreenBaseBinarySensor):
     @property
     def is_on(self) -> bool:
         """Return True if connection is healthy."""
-        return self.coordinator.last_update_success if hasattr(self.coordinator, "last_update_success") else False
+        return (
+            self.coordinator.last_update_success
+            if hasattr(self.coordinator, "last_update_success")
+            else False
+        )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -199,6 +183,8 @@ class DBInfoScreenConnectionBinarySensor(DBInfoScreenBaseBinarySensor):
 
         return {
             "api_url": getattr(self.coordinator, "api_url", "Unknown"),
-            "last_successful_update": last_update.isoformat() if last_update else "Never",
+            "last_successful_update": (
+                last_update.isoformat() if last_update else "Never"
+            ),
             "consecutive_errors": consecutive_errors,
         }

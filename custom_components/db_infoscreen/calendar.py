@@ -1,18 +1,18 @@
 """Calendar platform for DB Infoscreen integration."""
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
 import logging
-from typing import Any
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DOMAIN, CONF_STATION
+from .entity import DBInfoScreenBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,46 +24,37 @@ async def async_setup_entry(
 ) -> None:
     """Set up the DB Infoscreen calendar platform."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    station = config_entry.data.get("station", "Unknown")
+    station = config_entry.data.get(CONF_STATION, "Unknown")
 
-    async_add_entities([
-        DBInfoScreenCalendar(coordinator, config_entry, station),
-    ])
+    async_add_entities(
+        [
+            DBInfoScreenCalendar(coordinator, config_entry, station),
+        ]
+    )
 
 
-class DBInfoScreenCalendar(CalendarEntity):
+class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
     """Calendar entity that shows train departures as events."""
 
-    _attr_has_entity_name = True
     _attr_entity_registry_enabled_default = False  # Disabled by default
 
     def __init__(self, coordinator, config_entry: ConfigEntry, station: str) -> None:
         """Initialize the calendar entity."""
-        self.coordinator = coordinator
-        self.config_entry = config_entry
-        self.station = station
+        super().__init__(coordinator, config_entry)
 
         self._attr_unique_id = f"db_infoscreen_calendar_{config_entry.entry_id}"
         self._attr_name = f"{station} Departures Calendar"
         self._attr_icon = "mdi:calendar-clock"
 
     @property
-    def device_info(self):
-        """Return device info."""
-        return {
-            "identifiers": {(DOMAIN, self.config_entry.entry_id)},
-            "name": f"DB Infoscreen {self.station}",
-            "manufacturer": "DBF (derf)",
-            "model": "Departure Board",
-            "configuration_url": getattr(self.coordinator, "web_url", None),
-        }
-
-    @property
     def event(self) -> CalendarEvent | None:
         """Return the next upcoming event."""
+        now = dt_util.now()
         events = self._get_events_from_departures()
-        if events:
-            return events[0]
+        # Filter for future events only (where end time is in the future)
+        future_events = [e for e in events if e.end > now]
+        if future_events:
+            return future_events[0]
         return None
 
     async def async_get_events(
@@ -99,9 +90,13 @@ class DBInfoScreenCalendar(CalendarEntity):
                 # Extract other fields
                 line = departure.get("line", departure.get("train", "Unknown"))
                 destination = departure.get("destination", "Unknown")
-                platform = departure.get("platform", departure.get("scheduledPlatform", "?"))
+                platform = departure.get(
+                    "platform", departure.get("scheduledPlatform", "?")
+                )
                 delay = departure.get("delay", departure.get("delayDeparture", 0))
-                cancelled = departure.get("isCancelled", False)
+                cancelled = departure.get(
+                    "isCancelled", departure.get("cancelled", False)
+                )
 
                 # Build event summary
                 delay_str = f" (+{delay}min)" if delay and int(delay) > 0 else ""
@@ -170,7 +165,9 @@ class DBInfoScreenCalendar(CalendarEntity):
 
         try:
             if isinstance(departure_time_str, (int, float)):
-                return dt_util.utc_from_timestamp(int(departure_time_str)).astimezone(now.tzinfo)
+                return dt_util.utc_from_timestamp(int(departure_time_str)).astimezone(
+                    now.tzinfo
+                )
 
             # Try HA datetime parsing
             parsed_dt = dt_util.parse_datetime(departure_time_str)
@@ -201,16 +198,7 @@ class DBInfoScreenCalendar(CalendarEntity):
             return parsed_dt
 
         except (ValueError, TypeError) as e:
-            _LOGGER.debug("Could not parse departure time %s: %s", departure_time_str, e)
+            _LOGGER.debug(
+                "Could not parse departure time %s: %s", departure_time_str, e
+            )
             return None
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return self.coordinator.last_update_success if hasattr(self.coordinator, "last_update_success") else False
-
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
-        )

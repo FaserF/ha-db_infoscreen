@@ -17,6 +17,16 @@ from custom_components.db_infoscreen.const import (
 )
 
 
+@pytest.fixture(autouse=True)
+def patch_coordinator():
+    """Patch DataUpdateCoordinator to prevent background tasks and simplify tests."""
+    with patch(
+        "custom_components.db_infoscreen.DataUpdateCoordinator.async_config_entry_first_refresh",
+        new_callable=AsyncMock
+    ):
+        yield
+
+
 @pytest.fixture
 def mock_config_entry():
     """Create a mock config entry."""
@@ -32,24 +42,47 @@ def mock_config_entry():
 
 
 @contextmanager
-def patch_session(mock_data):
+def patch_session(mock_data, side_effect=None):
     """Patch the async_get_clientsession to return a mock session with data."""
-    with patch("custom_components.db_infoscreen.__init__.async_get_clientsession") as mock_get_session:
-        mock_session = MagicMock()
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=mock_data)
+    with patch(
+        "custom_components.db_infoscreen.__init__.async_get_clientsession"
+    ) as mock_get_session:
+        # Create a mock response response object
+        class MockResponse:
+            def __init__(self, data, status=200):
+                self.data = data
+                self.status = status
+            async def json(self): return self.data
+            def raise_for_status(self): pass
 
-        # MOCK THE ASYNC CONTEXT MANAGER CORRECTLY
-        # async with session.get() awaits the enter result
-        mock_context = MagicMock()
-        mock_context.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_context.__aexit__ = AsyncMock(return_value=None)
+        # Create a mock context manager
+        class MockContext:
+            def __init__(self, response):
+                self.response = response
+            async def __aenter__(self): return self.response
+            async def __aexit__(self, *args): pass
 
-        mock_session.get.return_value = mock_context
+        # Create a mock session
+        class MockSession:
+            def __init__(self, data, side_effect=None):
+                self.data = data
+                self.side_effect = side_effect
+            def get(self, *args, **kwargs):
+                if self.side_effect:
+                    # If it's a coroutine, we need to return something that when awaited
+                    # gives the response, but async with awaits the result of get().
+                    # However, typical aiohttp session.get is NOT a coroutine,
+                    # it returns a context manager.
+                    return self.side_effect(*args, **kwargs)
+                return MockContext(MockResponse(self.data))
 
+        mock_session = MockSession(mock_data, side_effect)
         mock_get_session.return_value = mock_session
-        yield
+        yield mock_session
+
+# Actually, the error 'object MagicMock can't be used in await'
+# happens because our response object (mock_response) itself might be a MagicMock
+# when it should be returning a coroutine for json()
 
 
 async def test_coordinator_url_encoding(hass, mock_config_entry):

@@ -33,6 +33,7 @@ from .const import (
     CONF_ENABLE_TEXT_VIEW,
     CONF_EXCLUDE_CANCELLED,
     CONF_SHOW_OCCUPANCY,
+    normalize_data_source,
 )
 from .utils import async_get_stations, find_station_matches
 
@@ -156,10 +157,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_advanced()
 
             # Combine basic options with defaults for entry creation
-            entry_data = {
-                CONF_STATION: self.selected_station,
-                **user_input
-            }
+            entry_data = {CONF_STATION: self.selected_station, **user_input}
             # Remove the virtual "advanced" flag
             entry_data.pop("advanced", None)
 
@@ -191,16 +189,23 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             # Combine with station for entry creation
-            entry_data = {
-                CONF_STATION: self.selected_station,
-                **user_input
-            }
+            entry_data = {CONF_STATION: self.selected_station, **user_input}
+
+            # Check MAX_SENSORS
+            if len(self.hass.config_entries.async_entries(DOMAIN)) >= MAX_SENSORS:
+                errors["base"] = "max_sensors_reached"
+                return self.async_show_form(
+                    step_id="manual_config",
+                    data_schema=self._manual_config_schema(),
+                    errors=errors,
+                    description_placeholders={"station": self.selected_station},
+                )
 
             # Validate station before saving
             validation_result = await self._validate_station(
                 entry_data.get(CONF_STATION),
                 entry_data.get(CONF_DATA_SOURCE, "IRIS-TTS"),
-                entry_data.get(CONF_CUSTOM_API_URL, "")
+                entry_data.get(CONF_CUSTOM_API_URL, ""),
             )
             if not validation_result["valid"]:
                 errors["base"] = "station_invalid"
@@ -210,7 +215,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     errors=errors,
                     description_placeholders={
                         "station": self.selected_station,
-                        "error_detail": validation_result["error"]
+                        "error_detail": validation_result["error"],
                     },
                 )
 
@@ -253,7 +258,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             entry_data = {
                 CONF_STATION: self.selected_station,
                 **self.basic_options,
-                **user_input
+                **user_input,
             }
             entry_data.pop("advanced", None)
 
@@ -280,10 +285,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Finalize the entry creation logic merged from upstream."""
         # Validate station data can be retrieved
         station_raw = user_input.get(CONF_STATION, "")
-        data_source = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
+        data_source = normalize_data_source(
+            user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
+        )
         custom_api_url = user_input.get(CONF_CUSTOM_API_URL, "")
 
-        validation_result = await self._validate_station(station_raw, data_source, custom_api_url)
+        validation_result = await self._validate_station(
+            station_raw, data_source, custom_api_url
+        )
         if not validation_result["valid"]:
             _LOGGER.error("Station validation failed: %s", validation_result["error"])
             # Return to appropriate step with error
@@ -405,7 +414,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }
         )
 
-    async def _validate_station(self, station: str, data_source: str, custom_api_url: str = "") -> dict:
+    async def _validate_station(
+        self, station: str, data_source: str, custom_api_url: str = ""
+    ) -> dict:
         """
         Validate that the station can be reached with the given data source.
         Returns {"valid": True} or {"valid": False, "error": "description"}
@@ -442,14 +453,26 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if response.status == 200:
                     data = await response.json()
                     if "error" in data:
-                        return {"valid": False, "error": data.get("error", "Unknown API error")}
+                        return {
+                            "valid": False,
+                            "error": data.get("error", "Unknown API error"),
+                        }
                     if "departures" not in data and "arrivals" not in data:
-                        return {"valid": False, "error": f"No departure data found for '{station}' with data source '{data_source}'. Please check the station name and data source."}
+                        return {
+                            "valid": False,
+                            "error": f"No departure data found for '{station}' with data source '{data_source}'. Please check the station name and data source.",
+                        }
                     return {"valid": True}
                 elif response.status == 404:
-                    return {"valid": False, "error": f"Station '{station}' not found. Please check the spelling or try a different data source."}
+                    return {
+                        "valid": False,
+                        "error": f"Station '{station}' not found. Please check the spelling or try a different data source.",
+                    }
                 else:
-                    return {"valid": False, "error": f"API returned status {response.status}. Please try again later."}
+                    return {
+                        "valid": False,
+                        "error": f"API returned status {response.status}. Please try again later.",
+                    }
         except Exception as e:
             _LOGGER.error("Validation request failed: %s", e)
             return {"valid": False, "error": f"Could not connect to API: {str(e)}"}

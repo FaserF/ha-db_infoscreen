@@ -1,4 +1,5 @@
 """Home Assistant Repairs for DB Infoscreen integration."""
+
 from __future__ import annotations
 
 import logging
@@ -120,7 +121,12 @@ def delete_issue(hass: HomeAssistant, issue_id: str) -> None:
 
 def clear_all_issues_for_entry(hass: HomeAssistant, entry_id: str) -> None:
     """Clear all repair issues related to a specific config entry."""
-    for issue_type in [ISSUE_STALE_DATA, ISSUE_API_ERROR, ISSUE_STATION_UNSUPPORTED, ISSUE_CONNECTION_ERROR]:
+    for issue_type in [
+        ISSUE_STALE_DATA,
+        ISSUE_API_ERROR,
+        ISSUE_STATION_UNSUPPORTED,
+        ISSUE_CONNECTION_ERROR,
+    ]:
         ir.async_delete_issue(hass, DOMAIN, f"{issue_type}_{entry_id}")
 
 
@@ -185,12 +191,16 @@ class StaleDataRepairFlow(RepairsFlow):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema({
-                vol.Required("action", default="retry"): vol.In({
-                    "retry": "Retry fetching data now",
-                    "report": "Report issue on GitHub",
-                })
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Required("action", default="retry"): vol.In(
+                        {
+                            "retry": "Retry fetching data now",
+                            "report": "Report issue on GitHub",
+                        }
+                    )
+                }
+            ),
         )
 
 
@@ -218,12 +228,16 @@ class APIErrorRepairFlow(RepairsFlow):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema({
-                vol.Required("action", default="retry"): vol.In({
-                    "retry": "Retry fetching data",
-                    "change_source": "Change data source",
-                })
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Required("action", default="retry"): vol.In(
+                        {
+                            "retry": "Retry fetching data",
+                            "change_source": "Change data source",
+                        }
+                    )
+                }
+            ),
         )
 
     async def async_step_change_source(
@@ -234,16 +248,23 @@ class APIErrorRepairFlow(RepairsFlow):
             # Update the config entry with new data source
             entry = self.hass.config_entries.async_get_entry(self._entry_id)
             if entry:
-                new_data = {**entry.data, CONF_DATA_SOURCE: user_input[CONF_DATA_SOURCE]}
+                new_data = {
+                    **entry.data,
+                    CONF_DATA_SOURCE: user_input[CONF_DATA_SOURCE],
+                }
                 self.hass.config_entries.async_update_entry(entry, data=new_data)
                 ir.async_delete_issue(self.hass, DOMAIN, self._issue_id)
             return self.async_create_entry(data={})
 
         return self.async_show_form(
             step_id="change_source",
-            data_schema=vol.Schema({
-                vol.Required(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(DATA_SOURCE_OPTIONS),
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(
+                        DATA_SOURCE_OPTIONS
+                    ),
+                }
+            ),
         )
 
 
@@ -270,6 +291,8 @@ class StationUnsupportedRepairFlow(RepairsFlow):
             elif action == "change_source":
                 return await self.async_step_change_source()
             elif action == "remove":
+                # Remove the associated repair issue first
+                ir.async_delete_issue(self.hass, DOMAIN, self._issue_id)
                 # Remove the config entry
                 entry = self.hass.config_entries.async_get_entry(self._entry_id)
                 if entry:
@@ -278,13 +301,17 @@ class StationUnsupportedRepairFlow(RepairsFlow):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema({
-                vol.Required("action", default="retry"): vol.In({
-                    "retry": "Try again",
-                    "change_source": "Change data source",
-                    "remove": "Remove this station",
-                })
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Required("action", default="retry"): vol.In(
+                        {
+                            "retry": "Try again",
+                            "change_source": "Change data source",
+                            "remove": "Remove this station",
+                        }
+                    )
+                }
+            ),
         )
 
     async def async_step_change_source(
@@ -294,14 +321,21 @@ class StationUnsupportedRepairFlow(RepairsFlow):
         if user_input is not None:
             entry = self.hass.config_entries.async_get_entry(self._entry_id)
             if entry:
-                new_data = {**entry.data, CONF_DATA_SOURCE: user_input[CONF_DATA_SOURCE]}
+                new_data = {
+                    **entry.data,
+                    CONF_DATA_SOURCE: user_input[CONF_DATA_SOURCE],
+                }
                 self.hass.config_entries.async_update_entry(entry, data=new_data)
                 ir.async_delete_issue(self.hass, DOMAIN, self._issue_id)
             return self.async_create_entry(data={})
 
         return self.async_show_form(
             step_id="change_source",
-            data_schema=vol.Schema({
-                vol.Required(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(DATA_SOURCE_OPTIONS),
-            }),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(
+                        DATA_SOURCE_OPTIONS
+                    ),
+                }
+            ),
         )

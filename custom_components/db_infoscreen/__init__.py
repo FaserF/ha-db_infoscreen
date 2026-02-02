@@ -43,6 +43,7 @@ from .const import (
     TRAIN_TYPE_MAPPING,
     CONF_EXCLUDE_CANCELLED,
     CONF_SHOW_OCCUPANCY,
+    normalize_data_source,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -109,7 +110,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.hide_low_delay = config.get(CONF_HIDE_LOW_DELAY, False)
         self.detailed = config.get(CONF_DETAILED, False)
         self.past_60_minutes = config.get(CONF_PAST_60_MINUTES, False)
-        self.data_source = config.get(CONF_DATA_SOURCE, "IRIS-TTS")
+        self.data_source = normalize_data_source(
+            config.get(CONF_DATA_SOURCE, "IRIS-TTS")
+        )
         self.offset = self.convert_offset_to_seconds(
             config.get(CONF_OFFSET, DEFAULT_OFFSET)
         )
@@ -138,6 +141,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         url = f"{base_url}/{encoded_station}.json"
 
         from .const import DATA_SOURCE_MAP
+
         data_source_map = DATA_SOURCE_MAP
 
         # Collect parameters
@@ -189,7 +193,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         )
 
     @property
-    def web_url(self) -> str:
+    def web_url(self) -> str | None:
         """Return the human-readable DBF website URL (without .json)."""
         if hasattr(self, "api_url") and self.api_url:
             # Remove .json from the URL to get the web page
@@ -225,9 +229,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         session = async_get_clientsession(self.hass)
         try:
             async with async_timeout.timeout(10):
-                async with session.get(self.api_url) as response:
-                    response.raise_for_status()
-                    data = await response.json()
+                response = await session.get(self.api_url)
+            response.raise_for_status()
+            data = await response.json()
 
             raw_departures = data.get("departures", [])
             if raw_departures is None:
@@ -249,6 +253,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             self._last_successful_update = now
             self._stale_issue_raised = False
             repairs.clear_all_issues_for_entry(self.hass, self.config_entry.entry_id)
+            # Ensure connection_error is cleared
+            repairs.delete_issue(
+                self.hass, f"connection_error_{self.config_entry.entry_id}"
+            )
 
             # --- PRE-PROCESSING: Parse time for all departures ---
             departures_with_time = []
@@ -295,15 +303,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             if departure_time_obj < now - timedelta(minutes=5):
                                 departure_time_obj += timedelta(days=1)
                         else:
-                            departure_time_obj = parsed_dt.astimezone(
-                                now.tzinfo
-                            )
+                            departure_time_obj = parsed_dt.astimezone(now.tzinfo)
                     else:
                         # Fallback for HH:MM format (assume today)
                         try:
-                            temp_dt = datetime.strptime(
-                                departure_time_str, "%H:%M"
-                            )
+                            temp_dt = datetime.strptime(departure_time_str, "%H:%M")
                             departure_time_obj = now.replace(
                                 hour=temp_dt.hour,
                                 minute=temp_dt.minute,
@@ -343,23 +347,17 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
             # --- DEDUPLICATION STEP ---
             if self.deduplicate_departures:
-                _LOGGER.debug(
-                    "Deduplication is enabled. Processing departures."
-                )
+                _LOGGER.debug("Deduplication is enabled. Processing departures.")
                 unique_departures = {}
 
-                departures_to_process.sort(
-                    key=lambda d: d["departure_datetime"]
-                )
+                departures_to_process.sort(key=lambda d: d["departure_datetime"])
 
                 for departure in departures_to_process:
                     # Use a robust key for identifying a trip
                     key_line = departure.get("line") or departure.get("train")
                     key_dest = departure.get("destination")
                     # The 'key' field seems to be a reliable trip identifier in some sources (like KVV)
-                    key_trip_id = departure.get("key") or departure.get(
-                        "trainNumber"
-                    )
+                    key_trip_id = departure.get("key") or departure.get("trainNumber")
 
                     # If we don't have enough info to build a key, treat it as unique.
                     if not key_line or not key_dest:
@@ -403,9 +401,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                 departures_to_process = list(unique_departures.values())
                 # Re-sort because dictionary values don't guarantee order if we added time-suffixed keys
-                departures_to_process.sort(
-                    key=lambda d: d["departure_datetime"]
-                )
+                departures_to_process.sort(key=lambda d: d["departure_datetime"])
 
             # --- MAIN FILTERING AND PROCESSING ---
             filtered_departures = []
@@ -439,8 +435,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     departure_direction = departure.get("direction")
                     if (
                         not departure_direction
-                        or self.direction.lower()
-                        not in departure_direction.lower()
+                        or self.direction.lower() not in departure_direction.lower()
                     ):
                         _LOGGER.debug(
                             "Skipping departure due to direction mismatch. Required: '%s', actual: '%s'",
@@ -449,15 +444,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         )
                         continue
 
-                json_size = len(json.dumps(filtered_departures))
-                if json_size > MAX_SIZE_BYTES:
-                    _LOGGER.info(
-                        "Filtered departures JSON size exceeds limit: %d bytes for entry: %s . Ignoring some future departures to keep the size lower.",
-                        json_size,
-                        self.station,
-                    )
-                    break
-
                 if not self.keep_endstation:
                     if departure.get("destination") == self.station:
                         _LOGGER.debug(
@@ -465,6 +451,18 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             self.station,
                         )
                         continue
+
+                # Compute size with candidate included
+                temp_list = filtered_departures + [departure]
+                json_size = len(json.dumps(temp_list))
+                if json_size > MAX_SIZE_BYTES:
+                    _LOGGER.info(
+                        "Filtered departures JSON size would exceed limit: %d bytes (limit %d) for entry: %s. Stopping here.",
+                        json_size,
+                        MAX_SIZE_BYTES,
+                        self.station,
+                    )
+                    break
 
                 if self.exclude_cancelled:
                     if departure.get("cancelled", False):
@@ -493,19 +491,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                 # Normalize the train classes from the API using the mapping.
                 mapped_api_classes = {
-                    TRAIN_TYPE_MAPPING.get(tc, tc)
-                    for tc in api_classes_to_process
+                    TRAIN_TYPE_MAPPING.get(tc, tc) for tc in api_classes_to_process
                 }
 
                 # Update the departure data with the normalized, more descriptive train classes.
                 departure["trainClasses"] = list(mapped_api_classes)
 
                 # Filter if any of the departure's train classes are in the ignored list.
-                if (
+                if mapped_ignored_train_types and not mapped_api_classes.isdisjoint(
                     mapped_ignored_train_types
-                    and not mapped_api_classes.isdisjoint(
-                        mapped_ignored_train_types
-                    )
                 ):
                     _LOGGER.debug(
                         "Ignoring departure due to train class. Mapped classes: %s",
@@ -552,11 +546,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 # Platform change detection
                 platform = departure.get("platform")
                 scheduled_platform = departure.get("scheduledPlatform")
-                if (
-                    platform
-                    and scheduled_platform
-                    and platform != scheduled_platform
-                ):
+                if platform and scheduled_platform and platform != scheduled_platform:
                     departure["changed_platform"] = True
                 else:
                     departure["changed_platform"] = False
@@ -579,9 +569,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 # Parse facilities from messages
                 facilities = {}
                 msg_texts = []
-                if "messages" in departure and isinstance(
-                    departure["messages"], dict
-                ):
+                if "messages" in departure and isinstance(departure["messages"], dict):
                     for msg_list in departure["messages"].values():
                         if isinstance(msg_list, list):
                             for msg in msg_list:
@@ -615,9 +603,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                 # Real-time Route Progress
                 route_details = []
-                if "route" in departure and isinstance(
-                    departure["route"], list
-                ):
+                if "route" in departure and isinstance(departure["route"], list):
                     for stop in departure["route"]:
                         if isinstance(stop, dict):
                             stop_name = stop.get("name")
@@ -637,9 +623,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     departure["route_details"] = route_details
 
                 # Trip-ID
-                departure["trip_id"] = departure.get(
-                    "trainId"
-                ) or departure.get("tripId")
+                departure["trip_id"] = departure.get("trainId") or departure.get(
+                    "tripId"
+                )
 
                 scheduled_arrival = departure.get("scheduledArrival")
                 delay_arrival = departure.get("delayArrival")
@@ -656,9 +642,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             ).astimezone(now.tzinfo)
                         elif isinstance(scheduled_arrival, str):
                             # Attempt robust parsing using HA helper
-                            parsed_dt = dt_util.parse_datetime(
-                                scheduled_arrival
-                            )
+                            parsed_dt = dt_util.parse_datetime(scheduled_arrival)
                             if parsed_dt:
                                 if parsed_dt.tzinfo is None:
                                     arrival_time = now.replace(
@@ -671,14 +655,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                         microsecond=parsed_dt.microsecond,
                                     )
                                     # Use a 5-minute grace window to handle next-day rollover
-                                    if arrival_time < now - timedelta(
-                                        minutes=5
-                                    ):
+                                    if arrival_time < now - timedelta(minutes=5):
                                         arrival_time += timedelta(days=1)
                                 else:
-                                    arrival_time = parsed_dt.astimezone(
-                                        now.tzinfo
-                                    )
+                                    arrival_time = parsed_dt.astimezone(now.tzinfo)
                             else:
                                 # Fallback for HH:MM format (assume today)
                                 try:
@@ -692,9 +672,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                         microsecond=0,
                                     )
                                     # Use a 5-minute grace window to handle next-day rollover
-                                    if arrival_time < now - timedelta(
-                                        minutes=5
-                                    ):
+                                    if arrival_time < now - timedelta(minutes=5):
                                         arrival_time += timedelta(days=1)
                                 except (ValueError, TypeError):
                                     _LOGGER.error(
@@ -732,9 +710,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 if "arrival_current" not in departure and departure.get(
                     "departure_current"
                 ):
-                    departure["arrival_current"] = departure.get(
-                        "departure_current"
-                    )
+                    departure["arrival_current"] = departure.get("departure_current")
                 # Fallback for the new timestamp attribute
                 if "arrival_timestamp" not in departure and departure.get(
                     "departure_timestamp"
@@ -745,9 +721,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                 effective_departure_time = departure_time
                 if not self.drop_late_trains:
-                    effective_departure_time += timedelta(
-                        minutes=delay_departure or 0
-                    )
+                    effective_departure_time += timedelta(minutes=delay_departure or 0)
 
                 # Remove route attributes to lower sensor size limit
                 if not self.detailed:
@@ -790,9 +764,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 # Remove temporary datetime object
                 departure.pop("departure_datetime", None)
 
-                departure_seconds = (
-                    effective_departure_time - now
-                ).total_seconds()
+                departure_seconds = (effective_departure_time - now).total_seconds()
                 if departure_seconds >= self.offset:
                     filtered_departures.append(departure)
 
@@ -801,9 +773,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 len(filtered_departures),
             )
             if filtered_departures:
-                self._last_valid_value = filtered_departures[
-                    : self.next_departures
-                ]
+                self._last_valid_value = filtered_departures[: self.next_departures]
                 _LOGGER.debug(
                     "Fetched and cached %d valid departures",
                     len(filtered_departures),
@@ -817,10 +787,16 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         except asyncio.TimeoutError:
             _LOGGER.error("Timeout fetching data from %s", self.api_url)
             self._handle_update_error("Connection timeout")
+            repairs.create_connection_error_issue(
+                self.hass, self.config_entry.entry_id, self.station
+            )
             return self._last_valid_value or []
         except aiohttp.ClientError as e:
             _LOGGER.error("Client error fetching data from %s: %s", self.api_url, e)
             self._handle_update_error(f"Connection error: {e}")
+            repairs.create_connection_error_issue(
+                self.hass, self.config_entry.entry_id, self.station
+            )
             return self._last_valid_value or []
         except json.JSONDecodeError as e:
             _LOGGER.error("JSON decode error from %s: %s", self.api_url, e)
@@ -839,7 +815,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
         # Check for stale data (24+ hours without successful update)
         if self._last_successful_update:
-            hours_since_update = (now - self._last_successful_update).total_seconds() / 3600
+            hours_since_update = (
+                now - self._last_successful_update
+            ).total_seconds() / 3600
             if hours_since_update >= 24 and not self._stale_issue_raised:
                 self._stale_issue_raised = True
                 repairs.create_stale_data_issue(

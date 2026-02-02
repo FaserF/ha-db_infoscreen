@@ -1,5 +1,6 @@
 from homeassistant.components.sensor import SensorEntity
 from .const import DOMAIN, CONF_ENABLE_TEXT_VIEW
+from .entity import DBInfoScreenBaseEntity
 import logging
 from homeassistant.util import dt as dt_util
 from datetime import datetime, timedelta
@@ -9,7 +10,7 @@ _LOGGER = logging.getLogger(__name__)
 MAX_LENGTH = 70
 
 
-class DBInfoSensor(SensorEntity):
+class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
     _attr_has_entity_name = True
 
     def __init__(
@@ -22,23 +23,8 @@ class DBInfoSensor(SensorEntity):
         platforms,
         enable_text_view,
     ):
-        """
-        Initialize the DBInfoSensor for a specific station's departure display.
-
-        Constructs the entity name from station, optional platforms, via_stations, and direction (truncating to 70 characters), sets a unique_id based on the config entry, sets a train icon, initializes the last-valid value cache, and logs initialization details.
-
-        Parameters:
-                coordinator: Data update coordinator providing sensor data and metadata.
-                config_entry: Config entry containing entry_id and stored config.
-                station (str): Station name used in the sensor display name.
-                via_stations (list[str] | None): Intermediate stations to include in the display name.
-                direction (str | None): Direction suffix to include in the display name.
-                platforms (str | None): Platform information to include in the display name.
-                enable_text_view (bool): Whether to generate simplified text view for ePaper.
-        """
-        self.coordinator = coordinator
-        self.config_entry = config_entry
-        self.station = station
+        """Initialize the sensor."""
+        super().__init__(coordinator, config_entry)
         self.via_stations = via_stations
         self.direction = direction
         self.platforms = platforms
@@ -49,7 +35,9 @@ class DBInfoSensor(SensorEntity):
         direction_suffix_name = f" direction {self.direction}" if self.direction else ""
 
         # Use simple name for entity matching _attr_has_entity_name=True
-        self._attr_name = f"Departures{platforms_suffix_name}{via_suffix_name}{direction_suffix_name}"
+        self._attr_name = (
+            f"Departures{platforms_suffix_name}{via_suffix_name}{direction_suffix_name}"
+        )
 
         if len(self._attr_name) > MAX_LENGTH:
             self._attr_name = self._attr_name[:MAX_LENGTH]
@@ -70,16 +58,6 @@ class DBInfoSensor(SensorEntity):
             self._attr_name,
         )
 
-    @property
-    def device_info(self):
-        """Return device info."""
-        return {
-            "identifiers": {(DOMAIN, self.config_entry.entry_id)},
-            "name": f"DB Infoscreen {self.station}",
-            "manufacturer": "DBF (derf)",
-            "model": "Departure Board",
-            "configuration_url": getattr(self.coordinator, "web_url", None),
-        }
 
     def format_departure_time(self, departure_time):
         if departure_time is None:
@@ -309,13 +287,6 @@ class DBInfoSensor(SensorEntity):
 
         return attributes
 
-    @property
-    def available(self):
-        return (
-            self.coordinator.last_update_success
-            if hasattr(self.coordinator, "last_update_success")
-            else False
-        )
 
     async def async_update(self):
         _LOGGER.debug("Sensor update triggered but not forcing refresh.")

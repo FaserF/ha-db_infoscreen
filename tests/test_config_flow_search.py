@@ -1,18 +1,19 @@
 """Test the db_infoscreen config flow station search."""
+
 from unittest.mock import patch, MagicMock, AsyncMock
-from homeassistant import config_entries, data_entry_flow
 from homeassistant.core import HomeAssistant
 
-from custom_components.db_infoscreen.const import DOMAIN, CONF_STATION, CONF_DATA_SOURCE
+from custom_components.db_infoscreen.const import CONF_STATION, CONF_DATA_SOURCE
 from custom_components.db_infoscreen.config_flow import ConfigFlow
 
 # Mock JS response matching the regex in utils.py
 SEARCH_JS_SINGLE = 'stations=["Frankfurt (Main) Hbf"];'
 SEARCH_JS_MULTI = 'stations=["Frankfurt (Main) Hbf", "Frankfurt (Oder)"];'
-SEARCH_JS_EMPTY = 'stations=[];'
+SEARCH_JS_EMPTY = "stations=[];"
 
 # Mock JSON response for the coordinator (departures)
 DEPARTURES_JSON = {"departures": []}
+
 
 def create_flow(hass):
     """Create a ConfigFlow instance with mocked base methods."""
@@ -20,12 +21,29 @@ def create_flow(hass):
     flow.hass = hass
 
     # Mock base class methods that are missing in the test environment's MockBase
-    flow.async_show_form = MagicMock(side_effect=lambda **kwargs: {"type": "form", "step_id": kwargs.get("step_id"), "errors": kwargs.get("errors")})
-    flow.async_create_entry = MagicMock(side_effect=lambda **kwargs: {"type": "create_entry", "title": kwargs.get("title"), "data": kwargs.get("data")})
+    def _show_form_side_effect(**kwargs):
+        return {
+            "type": "form",
+            "step_id": kwargs.get("step_id"),
+            "errors": kwargs.get("errors"),
+        }
+
+    flow.async_show_form = MagicMock(side_effect=_show_form_side_effect)
+
+    def _create_entry_side_effect(**kwargs):
+        return {
+            "type": "create_entry",
+            "title": kwargs.get("title"),
+            "data": kwargs.get("data"),
+        }
+
+    flow.async_create_entry = MagicMock(side_effect=_create_entry_side_effect)
 
     # Mock async_step_choose to behave like a form step for selection
     # MUST be AsyncMock because it is awaited in the flow
-    flow.async_step_choose = AsyncMock(side_effect=lambda **kwargs: {"type": "form", "step_id": "choose"})
+    flow.async_step_choose = AsyncMock(
+        side_effect=lambda **kwargs: {"type": "form", "step_id": "choose"}
+    )
 
     # Mock unique ID handling
     flow.async_set_unique_id = AsyncMock()
@@ -33,11 +51,15 @@ def create_flow(hass):
 
     return flow
 
+
 async def test_search_single_result(hass: HomeAssistant) -> None:
     """Test user input resulting in a single unique match."""
     # Patch helper globally (for utils.py) and locally for __init__ (where it's imported at top level)
-    with patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as mock_get_session_helper, \
-         patch("custom_components.db_infoscreen.__init__.async_get_clientsession") as mock_get_session_init:
+    with patch(
+        "homeassistant.helpers.aiohttp_client.async_get_clientsession"
+    ) as mock_get_session_helper, patch(
+        "custom_components.db_infoscreen.__init__.async_get_clientsession"
+    ) as mock_get_session_init:
 
         mock_session = MagicMock()
         mock_response = MagicMock()
@@ -57,7 +79,9 @@ async def test_search_single_result(hass: HomeAssistant) -> None:
         assert result["step_id"] == "user"
 
         # 2. Submit search query
-        result = await flow.async_step_user(user_input={CONF_STATION: "Frankfurt (Main) Hbf"})
+        result = await flow.async_step_user(
+            user_input={CONF_STATION: "Frankfurt (Main) Hbf"}
+        )
 
         # Verify it went to details step (to allow advanced options)
         assert result["type"] == "form"
@@ -71,13 +95,16 @@ async def test_search_single_result(hass: HomeAssistant) -> None:
         assert result["title"] == "Frankfurt (Main) Hbf"
         # Suffix should be stripped
         assert result["data"][CONF_STATION] == "Frankfurt (Main) Hbf"
-        assert result["data"][CONF_DATA_SOURCE] == "IRIS-TTS" # Default
+        assert result["data"][CONF_DATA_SOURCE] == "IRIS-TTS"  # Default
 
 
 async def test_search_multiple_results(hass: HomeAssistant) -> None:
     """Test user input resulting in multiple matches, requiring selection."""
-    with patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as mock_get_session_helper, \
-         patch("custom_components.db_infoscreen.__init__.async_get_clientsession") as mock_get_session_init:
+    with patch(
+        "homeassistant.helpers.aiohttp_client.async_get_clientsession"
+    ) as mock_get_session_helper, patch(
+        "custom_components.db_infoscreen.__init__.async_get_clientsession"
+    ) as mock_get_session_init:
 
         mock_session = MagicMock()
         mock_response = MagicMock()
@@ -120,8 +147,11 @@ async def test_search_multiple_results(hass: HomeAssistant) -> None:
 
 async def test_manual_entry(hass: HomeAssistant) -> None:
     """Test manual entry path."""
-    with patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as mock_get_session_helper, \
-         patch("custom_components.db_infoscreen.__init__.async_get_clientsession") as mock_get_session_init:
+    with patch(
+        "homeassistant.helpers.aiohttp_client.async_get_clientsession"
+    ) as mock_get_session_helper, patch(
+        "custom_components.db_infoscreen.__init__.async_get_clientsession"
+    ) as mock_get_session_init:
 
         mock_session = MagicMock()
         mock_response = MagicMock()
@@ -137,7 +167,9 @@ async def test_manual_entry(hass: HomeAssistant) -> None:
         flow = create_flow(hass)
 
         # 1. Submit search query that yields no results
-        result = await flow.async_step_user(user_input={CONF_STATION: "MyCustomStation"})
+        result = await flow.async_step_user(
+            user_input={CONF_STATION: "MyCustomStation"}
+        )
 
         # Should go to choose step
         assert result["type"] == "form"
