@@ -50,13 +50,14 @@ class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
     """Binary sensor that indicates if any train is delayed."""
 
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_has_entity_name = True
     _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator, config_entry: ConfigEntry, station: str) -> None:
         """Initialize the delay sensor."""
         super().__init__(coordinator, config_entry, station)
         self._attr_unique_id = f"db_infoscreen_delay_{config_entry.entry_id}"
-        self._attr_name = f"{station} Delay"
+        self._attr_name = "Delay"
         self._attr_icon = "mdi:clock-alert"
 
     @property
@@ -108,13 +109,14 @@ class DBInfoScreenCancellationBinarySensor(DBInfoScreenBaseBinarySensor):
     """Binary sensor that indicates if any train is cancelled."""
 
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_has_entity_name = True
     _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator, config_entry: ConfigEntry, station: str) -> None:
         """Initialize the cancellation sensor."""
         super().__init__(coordinator, config_entry, station)
         self._attr_unique_id = f"db_infoscreen_cancelled_{config_entry.entry_id}"
-        self._attr_name = f"{station} Cancellation"
+        self._attr_name = "Cancellation"
         self._attr_icon = "mdi:train-car-passenger-door"
 
     @property
@@ -157,13 +159,14 @@ class DBInfoScreenConnectionBinarySensor(DBInfoScreenBaseBinarySensor):
 
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_has_entity_name = True
     _attr_entity_registry_enabled_default = False  # Disabled by default
 
     def __init__(self, coordinator, config_entry: ConfigEntry, station: str) -> None:
         """Initialize the connection sensor."""
         super().__init__(coordinator, config_entry, station)
         self._attr_unique_id = f"db_infoscreen_connection_{config_entry.entry_id}"
-        self._attr_name = f"{station} API Connection"
+        self._attr_name = "API Connection"
         self._attr_icon = "mdi:api"
 
     @property

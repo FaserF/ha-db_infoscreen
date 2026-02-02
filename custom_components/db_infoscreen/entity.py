@@ -23,7 +23,7 @@ class DBInfoScreenBaseEntity(CoordinatorEntity):
         """Return device info."""
         return {
             "identifiers": {(DOMAIN, self.config_entry.entry_id)},
-            "name": f"DB Infoscreen {self.station}",
+            "name": f"DB Infoscreen {self.config_entry.title}",
             "manufacturer": "DBF (derf)",
             "model": "Departure Board",
             "configuration_url": getattr(self.coordinator, "web_url", None),

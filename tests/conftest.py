@@ -206,8 +206,21 @@ if not PYTEST_HA_AVAILABLE:
             """Return current timezone-aware datetime."""
             return datetime.now(timezone.utc)
 
+        def as_local(dt):
+            """Return local datetime."""
+            # For testing, we just assume UTC or whatever is passed
+            if dt is None:
+                return None
+            return dt
+
+        def utc_from_timestamp(timestamp):
+            """Return UTC datetime from timestamp."""
+            return datetime.fromtimestamp(timestamp, timezone.utc)
+
         ha_util_dt.parse_datetime = parse_datetime
         ha_util_dt.now = now
+        ha_util_dt.as_local = as_local
+        ha_util_dt.utc_from_timestamp = utc_from_timestamp
         sys.modules["homeassistant.util.dt"] = ha_util_dt
 
     # Mock homeassistant.util.logging
@@ -287,6 +300,8 @@ def enable_custom_integrations(monkeypatch):
         monkeypatch.setattr(
             frame, "get_integration_frame", mock_get_integration_frame, raising=False
         )
+        if hasattr(frame, "report"):
+            monkeypatch.setattr(frame, "report", MagicMock(), raising=False)
     except (ImportError, AttributeError):
         pass
     yield

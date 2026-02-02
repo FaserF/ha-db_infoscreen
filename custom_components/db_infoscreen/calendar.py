@@ -36,6 +36,7 @@ async def async_setup_entry(
 class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
     """Calendar entity that shows train departures as events."""
 
+    _attr_has_entity_name = True
     _attr_entity_registry_enabled_default = False  # Disabled by default
 
     def __init__(self, coordinator, config_entry: ConfigEntry, station: str) -> None:
@@ -43,7 +44,7 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
         super().__init__(coordinator, config_entry)
 
         self._attr_unique_id = f"db_infoscreen_calendar_{config_entry.entry_id}"
-        self._attr_name = f"{station} Departures Calendar"
+        self._attr_name = "Departures"
         self._attr_icon = "mdi:calendar-clock"
 
     @property

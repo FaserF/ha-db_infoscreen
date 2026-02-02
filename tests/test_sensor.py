@@ -112,6 +112,7 @@ async def test_sensor_text_view(
         "",
         True,  # Enable text view
     )
+    sensor.hass = hass
 
     with patch("homeassistant.util.dt.now", return_value=fixed_now):
         mock_coordinator.data = [
@@ -126,6 +127,7 @@ async def test_sensor_text_view(
         ]
         sensor._handle_coordinator_update()
         attrs = sensor.extra_state_attributes
+        print(f"DEBUG: attrs type: {type(attrs)}")
         assert attrs is not None
         assert "next_departures_text" in attrs
         text_lines = attrs["next_departures_text"]

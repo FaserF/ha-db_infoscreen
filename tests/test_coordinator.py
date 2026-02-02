@@ -45,43 +45,25 @@ def mock_config_entry():
 def patch_session(mock_data, side_effect=None):
     """Patch the async_get_clientsession to return a mock session with data."""
     with patch(
-        "custom_components.db_infoscreen.__init__.async_get_clientsession"
+        "custom_components.db_infoscreen.async_get_clientsession"
     ) as mock_get_session:
-        # Create a mock response object
-        class MockResponse:
-            def __init__(self, data, status=200):
-                self.data = data
-                self.status = status
+        # Mock Response
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.raise_for_status = MagicMock()
+        mock_response.json = AsyncMock(return_value=mock_data)
 
-            async def json(self):
-                return self.data
+        # Mock Session
+        mock_session = MagicMock()
 
-            def raise_for_status(self):
-                pass
+        # session.get needs to be an awaitable that returns mock_response
+        async def mock_get(*args, **kwargs):
+            if side_effect:
+                return side_effect(*args, **kwargs)
+            return mock_response
 
-        # Create a mock context manager
-        class MockContext:
-            def __init__(self, response):
-                self.response = response
+        mock_session.get = AsyncMock(side_effect=mock_get)
 
-            async def __aenter__(self):
-                return self.response
-
-            async def __aexit__(self, *args):
-                pass
-
-        # Create a mock session
-        class MockSession:
-            def __init__(self, data, side_effect=None):
-                self.data = data
-                self.side_effect = side_effect
-
-            def get(self, *args, **kwargs):
-                if self.side_effect:
-                    return self.side_effect(*args, **kwargs)
-                return MockContext(MockResponse(self.data))
-
-        mock_session = MockSession(mock_data, side_effect)
         mock_get_session.return_value = mock_session
         yield mock_session
 
