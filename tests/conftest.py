@@ -300,8 +300,9 @@ def enable_custom_integrations(monkeypatch):
         monkeypatch.setattr(
             frame, "get_integration_frame", mock_get_integration_frame, raising=False
         )
-        if hasattr(frame, "report"):
-            monkeypatch.setattr(frame, "report", MagicMock(), raising=False)
+        monkeypatch.setattr(
+            frame, "report", MagicMock(), raising=False
+        )
     except (ImportError, AttributeError):
         pass
     yield
@@ -336,7 +337,8 @@ def hass():
     )
 
     mock_hass.config_entries.async_entries.return_value = []
-    mock_hass.data = {}
+    mock_hass.config_entries.async_entries.return_value = []
+    mock_hass.data = {"integrations": {}, "custom_components": {}}
     return mock_hass
 
 
