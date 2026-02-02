@@ -15,3 +15,4 @@ test_config/home-assistant_v2.db-wal
 test_config/.HA_VERSION
 test_config/.ha_run.lock
 debug_dbf.py
+temp_autocomplete.js

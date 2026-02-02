@@ -2,6 +2,8 @@ from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import timedelta
 import pytest
 from homeassistant.util import dt as dt_util
+from contextlib import contextmanager
+import copy
 
 from custom_components.db_infoscreen import DBInfoScreenCoordinator
 from custom_components.db_infoscreen.const import (
@@ -29,23 +31,38 @@ def mock_config_entry():
     return entry
 
 
+@contextmanager
+def patch_session(mock_data):
+    """Patch the async_get_clientsession to return a mock session with data."""
+    with patch("custom_components.db_infoscreen.__init__.async_get_clientsession") as mock_get_session:
+        mock_session = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.json = AsyncMock(return_value=mock_data)
+
+        # MOCK THE ASYNC CONTEXT MANAGER CORRECTLY
+        # async with session.get() awaits the enter result
+        mock_context = MagicMock()
+        mock_context.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_context.__aexit__ = AsyncMock(return_value=None)
+
+        mock_session.get.return_value = mock_context
+
+        mock_get_session.return_value = mock_session
+        yield
+
+
 async def test_coordinator_url_encoding(hass, mock_config_entry):
     """Test correctly encoding of station and via parameters."""
-    # Test case from user feedback: "Hagsfeld Jenaer Straße"
     mock_config_entry.data[CONF_VIA_STATIONS] = ["Hagsfeld Jenaer Straße"]
     mock_config_entry.data[CONF_STATION] = "Hagsfeld Reitschulschlag, Karlsruhe"
 
+    # We wrap in patch_session even if not strictly needed, to prevent side-effect leakage?
+    # No, keep it simple. If this fails, the import or hass fixture is broken.
+
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-
-    # Check if station is encoded correctly (spaces -> %20, Comma -> %2C)
-    # quote_plus("Hagsfeld Reitschulschlag, Karlsruhe") -> Hagsfeld+Reitschulschlag%2C+Karlsruhe
-    # The code manually replaces + with %20 for the station name part effectively.
-    # We should verify the final URL.
-
-    expected_station = "Hagsfeld%20Reitschulschlag,%20Karlsruhe"  # based on code logic
+    expected_station = "Hagsfeld%20Reitschulschlag,%20Karlsruhe"
     assert expected_station in coordinator.api_url
-
-    # Check VIA encoding: This was the fix. Spaces should be "%20" now.
     assert "via=Hagsfeld%20Jenaer%20Stra%C3%9Fe" in coordinator.api_url
 
 
@@ -72,7 +89,7 @@ async def test_coordinator_data_source_params(hass, mock_config_entry):
     assert (
         "hafas=%C3%96BB" in coordinator.api_url
         or "hafas=\xc3\x96BB" in coordinator.api_url
-    )  # Check encoding
+    )
 
 
 async def test_coordinator_update_data(hass, mock_config_entry):
@@ -92,14 +109,8 @@ async def test_coordinator_update_data(hass, mock_config_entry):
         ]
     }
 
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=mock_data)
-        mock_get.return_value.__aenter__.return_value = mock_response
-
+    with patch_session(mock_data):
         data = await coordinator._async_update_data()
-
         assert len(data) == 1
         assert data[0]["destination"] == "Test Dest"
 
@@ -131,24 +142,14 @@ async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
 
     # Test Default (include cancelled)
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=mock_data)
-        mock_get.return_value.__aenter__.return_value = mock_response
-
+    with patch_session(mock_data):
         data = await coordinator._async_update_data()
         assert len(data) == 2
 
     # Test Exclude Cancelled
     mock_config_entry.options[CONF_EXCLUDE_CANCELLED] = True
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=mock_data)
-        mock_get.return_value.__aenter__.return_value = mock_response
-
+    with patch_session(mock_data):
         data = await coordinator._async_update_data()
         assert len(data) == 1
         assert data[0]["destination"] == "Valid Train"
@@ -157,7 +158,6 @@ async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
 async def test_coordinator_occupancy(hass, mock_config_entry):
     """Test parsing occupancy data."""
     from custom_components.db_infoscreen.const import CONF_SHOW_OCCUPANCY
-    import copy
 
     mock_data = {
         "departures": [
@@ -174,12 +174,7 @@ async def test_coordinator_occupancy(hass, mock_config_entry):
 
     # Test Default (Occupancy Disabled)
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=copy.deepcopy(mock_data))
-        mock_get.return_value.__aenter__.return_value = mock_response
-
+    with patch_session(copy.deepcopy(mock_data)):
         data = await coordinator._async_update_data()
         assert len(data) == 1
         assert "occupancy" not in data[0]
@@ -187,12 +182,7 @@ async def test_coordinator_occupancy(hass, mock_config_entry):
     # Test Occupancy Enabled
     mock_config_entry.options[CONF_SHOW_OCCUPANCY] = True
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=copy.deepcopy(mock_data))
-        mock_get.return_value.__aenter__.return_value = mock_response
-
+    with patch_session(copy.deepcopy(mock_data)):
         data = await coordinator._async_update_data()
         assert len(data) == 1
         assert data[0]["occupancy"] == {"1": 1, "2": 4}
@@ -224,12 +214,7 @@ async def test_coordinator_platform_change(hass, mock_config_entry):
     }
 
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=mock_data)
-        mock_get.return_value.__aenter__.return_value = mock_response
-
+    with patch_session(mock_data):
         data = await coordinator._async_update_data()
         assert len(data) == 2
         assert data[0]["changed_platform"] is True
@@ -261,19 +246,12 @@ async def test_coordinator_wagon_order(hass, mock_config_entry):
     }
 
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=mock_data)
-        mock_get.return_value.__aenter__.return_value = mock_response
-
+    with patch_session(mock_data):
         data = await coordinator._async_update_data()
         assert len(data) == 2
-
         # Test 1: Full info
         assert data[0]["wagon_order"] is True
         assert data[0]["platform_sectors"] == "A-C"
-
         # Test 2: Missing info
         assert "wagon_order" not in data[1]
         assert "platform_sectors" not in data[1]
@@ -308,19 +286,12 @@ async def test_coordinator_qos(hass, mock_config_entry):
     }
 
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=mock_data)
-        mock_get.return_value.__aenter__.return_value = mock_response
-
+    with patch_session(mock_data):
         data = await coordinator._async_update_data()
         assert len(data) == 2
-
         # Test 1: QoS and Facilities
         assert data[0]["qos"] == {"wifi": True}
         assert data[0]["facilities"] == {"bistro": False, "wifi": False}
-
         # Test 2: No QoS
         assert "qos" not in data[1]
         assert "facilities" not in data[1]
@@ -354,22 +325,15 @@ async def test_coordinator_route_details(hass, mock_config_entry):
     }
 
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=mock_data)
-        mock_get.return_value.__aenter__.return_value = mock_response
-
+    with patch_session(mock_data):
         data = await coordinator._async_update_data()
         assert len(data) == 2
-
         # Test 1: Detailed Route
         details = data[0]["route_details"]
         assert len(details) == 3
         assert details[0] == {"name": "Stop A", "arr_delay": 5}
         assert details[1] == {"name": "Stop B", "dep_delay": 0}
         assert details[2] == {"name": "Stop C"}
-
         # Test 2: Simple Route
         simple_details = data[1]["route_details"]
         assert len(simple_details) == 2
@@ -401,17 +365,10 @@ async def test_coordinator_trip_id(hass, mock_config_entry):
     }
 
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    with patch("aiohttp.ClientSession.get") as mock_get:
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=mock_data)
-        mock_get.return_value.__aenter__.return_value = mock_response
-
+    with patch_session(mock_data):
         data = await coordinator._async_update_data()
         assert len(data) == 2
-
         # Test 1: Trip ID present
         assert data[0]["trip_id"] == "123456789"
-
         # Test 2: Trip ID missing
         assert data[1]["trip_id"] is None

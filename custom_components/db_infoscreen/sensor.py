@@ -10,6 +10,8 @@ MAX_LENGTH = 70
 
 
 class DBInfoSensor(SensorEntity):
+    _attr_has_entity_name = True
+
     def __init__(
         self,
         coordinator,
@@ -45,7 +47,9 @@ class DBInfoSensor(SensorEntity):
         platforms_suffix_name = f" platform {platforms}" if platforms else ""
         via_suffix_name = f" via {' '.join(via_stations)}" if via_stations else ""
         direction_suffix_name = f" direction {self.direction}" if self.direction else ""
-        self._attr_name = f"{station} Departures{platforms_suffix_name}{via_suffix_name}{direction_suffix_name}"
+
+        # Use simple name for entity matching _attr_has_entity_name=True
+        self._attr_name = f"Departures{platforms_suffix_name}{via_suffix_name}{direction_suffix_name}"
 
         if len(self._attr_name) > MAX_LENGTH:
             self._attr_name = self._attr_name[:MAX_LENGTH]
@@ -65,6 +69,17 @@ class DBInfoSensor(SensorEntity):
             self._attr_unique_id,
             self._attr_name,
         )
+
+    @property
+    def device_info(self):
+        """Return device info."""
+        return {
+            "identifiers": {(DOMAIN, self.config_entry.entry_id)},
+            "name": f"DB Infoscreen {self.station}",
+            "manufacturer": "DBF (derf)",
+            "model": "Departure Board",
+            "configuration_url": getattr(self.coordinator, "web_url", None),
+        }
 
     def format_departure_time(self, departure_time):
         if departure_time is None:

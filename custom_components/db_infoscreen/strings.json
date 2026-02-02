@@ -3,54 +3,77 @@
     "flow_title": "Setup Station Departure Sensor",
     "step": {
       "user": {
-        "title": "Search Station",
-        "description": "Enter a search term (e.g. 'Munich' instead of 'Munich Hbf'). The system will automatically suggest matching stations from the official DBF list. Tip: Use broader terms for better search results.",
+        "title": "Find your Station",
+        "description": "Please enter the name of your station (e.g. 'Berlin Hbf').\n\nIf your station is not found in the official IRIS list, don't worry! You can use the 'Manual Entry' option in the next step to add it anyway.",
         "data": {
-          "station": "Station Name (e.g. Zorneding)"
+          "station": "Station Name"
         }
       },
       "choose": {
         "title": "Select Station",
-        "description": "Multiple matches found. Please select the correct station.",
+        "description": "We found multiple matches. Please select your station from the list below.\n\nIf your station is not listed, or you want to use a specific local transport provider (e.g. MVV, VRN), select the **Manual Entry** option.",
         "data": {
           "station": "Station"
         }
       },
       "details": {
-        "title": "Configure Details",
-        "description": "Configure the sensor options for {station}.",
+        "title": "Configure Sensor",
+        "description": "Setup options for **{station}**.\n\n**Data Source**: By default, we use the Deutsche Bahn (Info) system. If this is a local transport station (Bus, Tram, Subway) that DB doesn't know about, please enable **Show Advanced Options** and select the correct Data Source (e.g. MVV, VRN) in the next step.",
         "data": {
+          "next_departures": "Number of Upcoming Departures to show",
+          "update_interval": "Update Interval (minutes)",
+          "advanced": "Show Advanced Options (Change Data Source / Filter Settings)"
+        }
+      },
+      "advanced": {
+        "title": "Advanced Configuration",
+        "description": "Here you can fine-tune the sensor for **{station}**.\n\n**Crucial for Non-DB Stations**: Change the 'Data Source' to your local provider if no data appears with the default setting.",
+        "data": {
+          "hidelowdelay": "Hide Low Delays (under 5 mins)",
+          "drop_late_trains": "Remove trains that are already gone",
+          "deduplicate_departures": "Filter out duplicate entries",
+          "detailed": "Show Detailed Information",
+          "past_60_minutes": "Include departures from the last 60 minutes",
+          "keep_route": "Keep full route details (intermediate stops)",
+          "keep_endstation": "Keep departure even if this is the end station",
+          "custom_api_url": "Custom API URL (Expert only)",
+          "data_source": "Data Source (Backend)",
+          "offset": "Time Offset (HH:MM)",
+          "admode": "Display Mode (Arrival vs Departure)",
+          "platforms": "Filter by Platforms (comma separated, e.g. 1, 2, 5-7)",
+          "via_stations": "Filter by Via Stations (comma separated)",
+          "direction": "Filter by Final Destination",
+          "excluded_directions": "Exclude Final Destinations",
+          "ignored_train_types": "Ignored Train Types (e.g. 'ICE')",
+          "show_occupancy": "Show Occupancy Information (if available)",
+          "exclude_cancelled": "Remove Cancelled Trains"
+        }
+      },
+      "manual_config": {
+        "title": "Configure Custom Station",
+        "description": "Setting up **{station}**.\n\n⚠️ **Important**: Since this station was not found in the IRIS database, you **must select the correct Data Source** below. For example, select 'MVV' for Munich local transport or 'VRN' for Rhein-Neckar.",
+        "data": {
+          "data_source": "Data Source (Required)",
           "next_departures": "Number of Upcoming Departures",
           "update_interval": "Update Interval (minutes)",
-          "hidelowdelay": "Hide Low Delay",
-          "drop_late_trains": "Hide trains whose departure is in the past but would be delayed within the time.",
-          "deduplicate_departures": "Filter out similar \"duplicate\" departures",
-          "detailed": "Detailed Information",
-          "past_60_minutes": "Include Past 60 Minutes",
-          "keep_route": "Keep route details (all Train stations on train route)",
-          "keep_endstation": "Keep departure if station is endstation",
-          "custom_api_url": "Custom API URL",
-          "data_source": "Data Source",
-          "offset": "Offset Time",
-          "admode": "Display Mode",
-          "platforms": "Platforms",
-          "via_stations": "Only show departures via",
-          "direction": "Only show departures in direction",
-          "excluded_directions": "Exclude departures in direction",
-          "ignored_train_types": "Do not track specified train types (f.e. ICE)",
-          "show_occupancy": "Show Occupancy Information"
+          "platforms": "Filter by Platforms",
+          "via_stations": "Filter by Via Stations",
+          "custom_api_url": "Custom API URL (Expert only)"
         }
       }
     },
-    "abort": {
-      "already_configured": "This station is already configured"
-    },
     "error": {
-      "max_sensors_reached": "Maximum number of sensors reached.",
+      "max_sensors_reached": "Maximum number of sensors reached (30).",
       "unknown": "An unknown error occurred.",
-      "no_stations_found": "No stations found matching your query. Please try a different spelling.",
-      "cannot_connect": "Failed to connect to DBF.",
-      "station_not_found_warning": "⚠️ Station not found in official list! Please verify spelling."
+      "no_stations_found": "No matching stations found. You can try a different search term or use Manual Entry.",
+      "cannot_connect": "Could not connect to the server. Please check your internet connection.",
+      "station_not_found_warning": "⚠️ Station name not found in the IRIS results. Please double-check spelling.",
+      "station_invalid": "❌ Could not retrieve data for this station. {error_detail}",
+      "station_validation_failed": "Station validation failed. Please check your settings and try again."
+    },
+    "abort": {
+      "already_configured": "This station is already configured.",
+      "station_validation_failed": "Could not validate the station. No departure data could be retrieved. Please check the station name and data source."
     }
   },
   "options": {
@@ -124,6 +147,71 @@
           "data_source": "Data Source"
         }
       }
+    }
+  },
+  "issues": {
+    "stale_data": {
+      "title": "Station data is stale",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Stale Data for {station}",
+            "description": "The departure data for **{station}** has not been updated for **{hours} hours**.\n\nThis could be caused by:\n- Temporary API issues\n- The station may no longer be supported by the backend\n- Network connectivity problems\n\nWhat would you like to do?",
+            "data": {
+              "action": "Action"
+            }
+          }
+        }
+      },
+      "description": "Data for station **{station}** has not been updated for {hours} hours. The backend may be experiencing issues or the station may no longer be supported."
+    },
+    "api_error": {
+      "title": "API error for station",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "API Error for {station}",
+            "description": "Multiple errors occurred while fetching data for **{station}**:\n\n`{error}`\n\nThis might be a temporary issue. You can try again or change the data source.",
+            "data": {
+              "action": "Action"
+            }
+          },
+          "change_source": {
+            "title": "Change Data Source",
+            "description": "Select a different data source for this station.",
+            "data": {
+              "data_source": "Data Source"
+            }
+          }
+        }
+      },
+      "description": "Error fetching data for **{station}**: {error}"
+    },
+    "station_unsupported": {
+      "title": "Station may no longer be supported",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Station Possibly Unsupported",
+            "description": "The station **{station}** (using **{data_source}**) has failed to return data multiple times.\n\nThis station may no longer be supported by the backend. You can:\n- Try again to check if it's a temporary issue\n- Change to a different data source\n- Remove this station from your configuration\n\n[Report an issue on GitHub](https://faserf.github.io/ha-db_infoscreen/)",
+            "data": {
+              "action": "Action"
+            }
+          },
+          "change_source": {
+            "title": "Change Data Source",
+            "description": "Select a different data source for this station.",
+            "data": {
+              "data_source": "Data Source"
+            }
+          }
+        }
+      },
+      "description": "Station **{station}** with data source **{data_source}** may no longer be supported. Please check the station name or try a different data source."
+    },
+    "connection_error": {
+      "title": "Connection error",
+      "description": "Could not connect to the departure API for **{station}**. This issue will resolve automatically when the connection is restored."
     }
   }
 }

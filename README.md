@@ -120,29 +120,62 @@ This integration allows fetching data from various backend sources via [DBF](htt
 <details>
 <summary><strong>👇 Click to expand the full list of supported Data Sources</strong></summary>
 
-### Germany (DE)
-*   **IRIS-TTS** (Deutsche Bahn) - *Default / Recommended*
-*   **AVV** (Aachen), **AVV** (Augsburg)
-*   **BEG** (Bayern), **BSVG** (Braunschweig), **BVG** (Berlin/Brandenburg)
-*   **bwegt** (Baden-Württemberg), **DING** (Donau-Iller)
-*   **KVB** (Köln), **KVV** (Karlsruhe), **MVV** (München)
-*   **NAHSH** (Schleswig-Holstein), **NASA** (Sachsen-Anhalt), **NVBW** (BaWü)
-*   **NVV** (Nordhessen), **NWL** (Westfalen-Lippe), **RMV** (Rhein-Main)
-*   **RSAG** (Rostock), **RVV** (Regensburg), **SaarVV** (Saarland)
-*   **VAG** (Freiburg), **VBB** (Berlin-Brandenburg), **VBN** (Bremen/Niedersachsen)
-*   **VGN** (Nürnberg), **VMT** (Mittelthüringen), **VMV** (Mecklenburg-Vorpommern)
-*   **VOS** (Osnabrück), **VVO** (Oberelbe), **VRN** (Rhein-Neckar), **VRR** (Rhein-Ruhr)
-*   **VVS** (Stuttgart)
+### Supported Data Sources
 
-### International
-*   **Austria (AT)**: LinzAG, ÖBB, STV (Steiermark)
-*   **Switzerland (CH)**: BLS, TPG (Geneva), ZVV (Zürich)
-*   **Denmark (DK)**: DSB (Rejseplanen)
-*   **Ireland (IE)**: Iarnród Éireann
-*   **Luxembourg (LU)**: mobiliteit
-*   **Poland (PL)**: PKP
-*   **Sweden (SE)**: Resrobot
-*   **USA (US)**: BART (California), CMTA (Texas)
+#### 🇩🇪 Germany
+
+*   **IRIS-TTS** (Deutsche Bahn) - *Default / Recommended*
+*   **AVV – Aachener Verkehrsverbund**
+*   **AVV – Augsburger Verkehrs- & Tarifverbund**
+*   **BEG – Bayerische Eisenbahngesellschaft**
+*   **BSVG – Braunschweiger Verkehrs-GmbH**
+*   **BVG – Berliner Verkehrsbetriebe**
+*   **DING – Donau-Iller Nahverkehrsverbund**
+*   **KVB – Kölner Verkehrs-Betriebe**
+*   **KVV – Karlsruher Verkehrsverbund**
+*   **MVV – Münchener Verkehrs- und Tarifverbund**
+*   **NAHSH – Nahverkehrsverbund Schleswig-Holstein**
+*   **NASA – Personennahverkehr in Sachsen-Anhalt**
+*   **NVBW – Nahverkehrsgesellschaft Baden-Württemberg**
+*   **NVV – Nordhessischer Verkehrsverbund**
+*   **NWL – Nahverkehr Westfalen-Lippe**
+*   **RMV – Rhein-Main-Verkehrsverbund**
+*   **RSAG – Rostocker Straßenbahn**
+*   **RVV – Regensburger Verkehrsverbund**
+*   **SaarVV – Saarländischer Verkehrsverbund**
+*   **VAG – Freiburger Verkehrs AG**
+*   **VBB – Verkehrsverbund Berlin-Brandenburg**
+*   **VBN – Verkehrsverbund Bremen/Niedersachsen**
+*   **VGN – Verkehrsverbund Großraum Nürnberg**
+*   **VMT – Verkehrsverbund Mittelthüringen**
+*   **VMV – Verkehrsgesellschaft Mecklenburg-Vorpommern**
+*   **VOS – Verkehrsgemeinschaft Osnabrück**
+*   **VRN – Verkehrsverbund Rhein-Neckar**
+*   **VRR – Verkehrsverbund Rhein-Ruhr**
+*   **VRR2 – Verkehrsverbund Rhein-Ruhr**
+*   **VRR3 – Verkehrsverbund Rhein-Ruhr**
+*   **VVO – Verkehrsverbund Oberelbe**
+*   **VVS – Verkehrs- und Tarifverbund Stuttgart**
+*   **bwegt – bwegt**
+
+#### 🌍 International
+
+*   **BART – Bay Area Rapid Transit**
+*   **BLS – BLS AG**
+*   **CFL – Société Nationale des Chemins de Fer Luxembourgeois**
+*   **CMTA – Capital Metro Austin Public Transport**
+*   **DSB – Rejseplanen**
+*   **IE – Iarnród Éireann**
+*   **LinzAG – Linz AG**
+*   **PKP – Polskie Koleje Państwowe**
+*   **Resrobot – Resrobot**
+*   **Rolph – Rolph**
+*   **STV – Steirischer Verkehrsverbund**
+*   **TPG – Transports publics genevois**
+*   **ZVV – Züricher Verkehrsverbund**
+*   **mobiliteit – mobilitéits zentral**
+*   **ÖBB – Österreichische Bundesbahnen**
+
 
 > Note: To use HAFAS for stations also found in IRIS-TTS (e.g. "Frankenforst Kippekausen"), choose the specific backend or set `hafas=1`. See [Issue #8](https://github.com/FaserF/ha-db_infoscreen/issues/8).
 

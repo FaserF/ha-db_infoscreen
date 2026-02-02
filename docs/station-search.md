@@ -56,8 +56,8 @@ The search uses a **4-tier priority matching system**:
    - Catches typos and alternative spellings
 
 ### Manual Override
-If you enter a station that isn't in the official database (e.g., a very new station or a custom identifier), the integration will:
-- Show a warning: `⚠️ Station not found in the official list!`
+If you enter a station that isn't in the official IRIS list (e.g., a very new station or a custom identifier), the integration will:
+- Show a warning: `⚠️ Station not found in the official IRIS list!`
 - Allow you to proceed with your manual entry
 - Attempt to fetch data from the API using your custom identifier
 
@@ -103,13 +103,58 @@ If you know the region, include it:
 - **Cause**: The DBF API is temporarily unavailable
 - **Solution**: Wait a moment and try again. The integration will use cached station data if available.
 
-### "Station not found in official list"
+### "Station not found in official IRIS list"
 - **Cause**: You entered a custom identifier (DS100, EVA, or trip number)
 - **Solution**: This is expected. Proceed with your entry if you're confident it's correct. The integration will attempt to fetch data using your identifier.
+
+### Station ID not working after update
+- **Cause**: You're using a station ID (like `901795`) with a regional HAFAS backend
+- **Solution**: See the HAFAS section below for the correct data source selection
+
+---
+
+## 🚌 Using HAFAS Station IDs (Regional Networks)
+
+!!! important "Station IDs vs. Station Names"
+    The autocomplete database only contains **official Deutsche Bahn station names**. If you're tracking a **regional bus/train stop** that's not in the DB network, you need to use a **HAFAS station ID** with the appropriate backend.
+
+### Finding Your HAFAS Station ID
+
+1. Visit [dbf.finalrewind.org](https://dbf.finalrewind.org)
+2. Search for your station and select it
+3. Note the **numeric ID** in the URL (e.g., `901795` from `https://dbf.finalrewind.org/901795?hafas=VBN`)
+4. Also note the **HAFAS parameter** (e.g., `VBN`)
+
+### Configuration Steps
+
+1. **Enter the station ID** in the search field (e.g., `901795`)
+2. When it shows "Station not found", select **Manual Entry**
+3. In the manual configuration, select the correct **Data Source** matching your HAFAS backend:
+   - `VBN` for Verkehrsverbund Bremen/Niedersachsen
+   - `VRN` for Verkehrsverbund Rhein-Neckar
+   - etc. (see [Data Sources](data-sources.md) for full list)
+
+!!! example "Example: Bremen VBN Station"
+    - **Station ID**: `901795`
+    - **Data Source**: `VBN`
+    - **URL Preview**: `https://dbf.finalrewind.org/901795?hafas=VBN`
+
+### Common HAFAS Backends
+
+| Code | Network | Region |
+| :--- | :--- | :--- |
+| `VBN` | Verkehrsverbund Bremen/Niedersachsen | Bremen, Lower Saxony |
+| `VRN` | Verkehrsverbund Rhein-Neckar | Rhine-Neckar region |
+| `AVV` | Aachener Verkehrsverbund | Aachen area |
+| `VMT` | Verkehrsverbund Mittelthüringen | Central Thuringia |
+| `NASA` | Nahverkehr Sachsen-Anhalt | Saxony-Anhalt |
+
+For the complete list, see [Data Sources](data-sources.md).
 
 ---
 
 ## 🔗 Related Documentation
+- [Entities Reference](entities.md)
 - [Configuration Reference](configuration.md)
 - [Installation Guide](installation.md)
 - [Troubleshooting](troubleshooting.md)

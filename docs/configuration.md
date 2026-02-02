@@ -21,6 +21,9 @@ Select the backend provider.
 -   **IRIS-TTS**: The default and most reliable source for German stations. It provides high-frequency updates and quality notes.
 -   **Regional/International**: Select providers like `ÖBB`, `SBB`, or regional networks when tracking trains outside Germany or on specific local lines not covered by the main DB IRIS system.
 
+!!! info "Full List"
+    See the complete [Data Sources Reference](data-sources.md) for all 45+ supported backends.
+
 ---
 
 ## 🛠️ Options Flow (Fine Tuning)
