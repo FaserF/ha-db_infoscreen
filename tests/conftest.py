@@ -8,7 +8,9 @@ from unittest.mock import MagicMock, AsyncMock
 # Try to import pytest-homeassistant-custom-component
 try:
     import pytest_homeassistant_custom_component  # noqa: F401
-    from pytest_homeassistant_custom_component.common import MockConfigEntry # noqa: F401
+    from pytest_homeassistant_custom_component.common import (
+        MockConfigEntry,
+    )  # noqa: F401
 
     PYTEST_HA_AVAILABLE = True
 except ImportError:
@@ -63,6 +65,7 @@ if not PYTEST_HA_AVAILABLE:
 
         ha_ce.ConfigFlow = MockBase
         ha_ce.OptionsFlow = MockBase
+
         class ConfigEntry:
             def __init__(self, **kwargs):
                 for k, v in kwargs.items():
@@ -70,6 +73,7 @@ if not PYTEST_HA_AVAILABLE:
                 self.options = kwargs.get("options", {})
                 self.data = kwargs.get("data", {})
                 self.entry_id = kwargs.get("entry_id", "mock_entry_id")
+
         ha_ce.ConfigEntry = ConfigEntry
 
     # Mock helpers
@@ -82,38 +86,71 @@ if not PYTEST_HA_AVAILABLE:
         sys.modules["homeassistant.helpers.config_validation"] = MagicMock()
     if "homeassistant.helpers.update_coordinator" not in sys.modules:
         ha_uc = types.ModuleType("homeassistant.helpers.update_coordinator")
+
         class DataUpdateCoordinator:
-            def __init__(self, hass, logger, *, name, update_interval=None, update_method=None, request_refresh_debouncer=None):
+            def __init__(
+                self,
+                hass,
+                logger,
+                *,
+                name,
+                update_interval=None,
+                update_method=None,
+                request_refresh_debouncer=None
+            ):
                 self.hass = hass
                 self.logger = logger
                 self.name = name
                 self.update_interval = update_interval
                 self.update_method = update_method
                 self.data = None
+
             async def _async_update_data(self):
                 return None
+
             async def async_config_entry_first_refresh(self):
                 pass
+
             async def async_refresh(self):
                 pass
+
         ha_uc.DataUpdateCoordinator = DataUpdateCoordinator
+
         class StubCoordinatorEntity:
             """Stub for CoordinatorEntity."""
+
             last_update_success = True
+
             def __init__(self, coordinator, config_entry=None):
-                self.__dict__['coordinator'] = coordinator
-                self.__dict__['hass'] = getattr(coordinator, "hass", None)
+                self.__dict__["coordinator"] = coordinator
+                self.__dict__["hass"] = getattr(coordinator, "hass", None)
+
             def __setattr__(self, name, value):
                 self.__dict__[name] = value
+
             def __getattr__(self, name):
-                if name in {'_mock_methods', '_mock_unsafe', '_spec_set', '_spec_class'}:
+                if name in {
+                    "_mock_methods",
+                    "_mock_unsafe",
+                    "_spec_set",
+                    "_spec_class",
+                }:
                     raise AttributeError(name)
                 return self.__dict__.get(name, None)
-            def _handle_coordinator_update(self): pass
-            async def async_added_to_hass(self): pass
-            async def async_will_remove_from_hass(self): pass
+
+            def _handle_coordinator_update(self):
+                pass
+
+            async def async_added_to_hass(self):
+                pass
+
+            async def async_will_remove_from_hass(self):
+                pass
+
             @property
-            def extra_state_attributes(self): return {}
+            def extra_state_attributes(self):
+                return {}
+
         ha_uc.CoordinatorEntity = StubCoordinatorEntity
         sys.modules["homeassistant.helpers.update_coordinator"] = ha_uc
     if "homeassistant.helpers.aiohttp_client" not in sys.modules:
@@ -268,13 +305,25 @@ def hass():
     # Properly mock Config Entries
     mock_hass.config_entries = MagicMock()
     mock_hass.config_entries.flow = MagicMock()
-    mock_hass.config_entries.flow.async_init = AsyncMock(return_value={"type": "form", "step_id": "user"})
-    mock_hass.config_entries.flow.async_configure = AsyncMock(return_value={"type": "form", "step_id": "station"})
+    mock_hass.config_entries.flow.async_init = AsyncMock(
+        return_value={"type": "form", "step_id": "user"}
+    )
+    mock_hass.config_entries.flow.async_configure = AsyncMock(
+        return_value={"type": "form", "step_id": "station"}
+    )
 
     # Properly mock Options
     mock_hass.config_entries.options = MagicMock()
-    mock_hass.config_entries.options.async_init = AsyncMock(return_value={"type": "menu", "flow_id": "mock_flow_id"})
-    mock_hass.config_entries.options.async_configure = AsyncMock(return_value={"type": "form", "flow_id": "mock_flow_id", "step_id": "general_options"})
+    mock_hass.config_entries.options.async_init = AsyncMock(
+        return_value={"type": "menu", "flow_id": "mock_flow_id"}
+    )
+    mock_hass.config_entries.options.async_configure = AsyncMock(
+        return_value={
+            "type": "form",
+            "flow_id": "mock_flow_id",
+            "step_id": "general_options",
+        }
+    )
 
     mock_hass.config_entries.async_entries.return_value = []
     mock_hass.data = {}

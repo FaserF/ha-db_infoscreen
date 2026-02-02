@@ -13,6 +13,7 @@ from custom_components.db_infoscreen.const import (
 @pytest.fixture
 def mock_coordinator(hass):
     """Create a mock coordinator stub."""
+
     class CoordinatorStub:
         def __init__(self, hass):
             self.hass = hass
@@ -20,8 +21,13 @@ def mock_coordinator(hass):
             self.last_update_success = True
             self.logger = MagicMock()
             self.name = "test_coordinator"
-        def async_add_listener(self, *args): pass
-        def async_remove_listener(self, *args): pass
+
+        def async_add_listener(self, *args):
+            pass
+
+        def async_remove_listener(self, *args):
+            pass
+
     return CoordinatorStub(hass)
 
 

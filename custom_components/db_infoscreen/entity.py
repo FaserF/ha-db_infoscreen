@@ -1,8 +1,10 @@
 """Base entity for DB Infoscreen."""
+
 from __future__ import annotations
 
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
+
 
 class DBInfoScreenBaseEntity(CoordinatorEntity):
     """Base entity class for DB Infoscreen."""

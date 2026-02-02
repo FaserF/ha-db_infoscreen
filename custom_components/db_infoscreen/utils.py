@@ -98,7 +98,9 @@ def find_station_matches(stations, query):
     # 4. Fuzzy match
     # cutoff=0.6 is a reasonable default for difflib
     # Use case-normalized fuzzy matching
-    fuzzy = difflib.get_close_matches(query_lower, [s.lower() for s in stations], n=10, cutoff=0.6)
+    fuzzy = difflib.get_close_matches(
+        query_lower, [s.lower() for s in stations], n=10, cutoff=0.6
+    )
     # Map back to original casing
     if fuzzy:
         result = []

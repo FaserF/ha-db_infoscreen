@@ -58,7 +58,6 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
             self._attr_name,
         )
 
-
     def format_departure_time(self, departure_time):
         if departure_time is None:
             _LOGGER.debug("Departure time is None")
@@ -286,7 +285,6 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
             attributes["next_departures_text"] = next_departures_text
 
         return attributes
-
 
     async def async_update(self):
         _LOGGER.debug("Sensor update triggered but not forcing refresh.")

@@ -22,7 +22,7 @@ def patch_coordinator():
     """Patch DataUpdateCoordinator to prevent background tasks and simplify tests."""
     with patch(
         "custom_components.db_infoscreen.DataUpdateCoordinator.async_config_entry_first_refresh",
-        new_callable=AsyncMock
+        new_callable=AsyncMock,
     ):
         yield
 
@@ -52,21 +52,30 @@ def patch_session(mock_data, side_effect=None):
             def __init__(self, data, status=200):
                 self.data = data
                 self.status = status
-            async def json(self): return self.data
-            def raise_for_status(self): pass
+
+            async def json(self):
+                return self.data
+
+            def raise_for_status(self):
+                pass
 
         # Create a mock context manager
         class MockContext:
             def __init__(self, response):
                 self.response = response
-            async def __aenter__(self): return self.response
-            async def __aexit__(self, *args): pass
+
+            async def __aenter__(self):
+                return self.response
+
+            async def __aexit__(self, *args):
+                pass
 
         # Create a mock session
         class MockSession:
             def __init__(self, data, side_effect=None):
                 self.data = data
                 self.side_effect = side_effect
+
             def get(self, *args, **kwargs):
                 if self.side_effect:
                     # If it's a coroutine, we need to return something that when awaited
@@ -79,6 +88,7 @@ def patch_session(mock_data, side_effect=None):
         mock_session = MockSession(mock_data, side_effect)
         mock_get_session.return_value = mock_session
         yield mock_session
+
 
 # Actually, the error 'object MagicMock can't be used in await'
 # happens because our response object (mock_response) itself might be a MagicMock
