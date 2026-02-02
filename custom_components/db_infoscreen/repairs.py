@@ -312,6 +312,15 @@ class StationUnsupportedRepairFlow(RepairsFlow):
                     )
                 }
             ),
+            description_placeholders={
+                "station": self.hass.config_entries.async_get_entry(
+                    self._entry_id
+                ).data.get("station", "Unknown"),
+                "data_source": self.hass.config_entries.async_get_entry(
+                    self._entry_id
+                ).data.get("data_source", "Unknown"),
+                "docs_url": GITHUB_ISSUES_URL,
+            },
         )
 
     async def async_step_change_source(

@@ -191,7 +191,7 @@
         "step": {
           "init": {
             "title": "Station Possibly Unsupported",
-            "description": "The station **{station}** (using **{data_source}**) has failed to return data multiple times.\n\nThis station may no longer be supported by the backend. You can:\n- Try again to check if it's a temporary issue\n- Change to a different data source\n- Remove this station from your configuration\n\n[Report an issue on GitHub](https://faserf.github.io/ha-db_infoscreen/)",
+            "description": "The station **{station}** (using **{data_source}**) has failed to return data multiple times.\n\nThis station may no longer be supported by the backend. You can:\n- Try again to check if it's a temporary issue\n- Change to a different data source\n- Remove this station from your configuration\n\n[Report an issue on GitHub]({docs_url})",
             "data": {
               "action": "Action"
             }
