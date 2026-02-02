@@ -181,6 +181,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             name=f"DB Info {self.station}",
             update_interval=timedelta(minutes=update_interval),
         )
+        self.config_entry = config_entry
         self._last_valid_value = None
         self._consecutive_errors = 0
         self._last_successful_update: datetime | None = None
