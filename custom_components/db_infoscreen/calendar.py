@@ -99,7 +99,18 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
                 )
 
                 # Build event summary
-                delay_str = f" (+{delay}min)" if delay and int(delay) > 0 else ""
+                try:
+                    delay_int = (
+                        int(delay)
+                        if delay is not None
+                        and str(delay).isdigit()
+                        or (isinstance(delay, (int, float)))
+                        else 0
+                    )
+                except (ValueError, TypeError):
+                    delay_int = 0
+
+                delay_str = f" (+{delay_int}min)" if delay_int > 0 else ""
                 cancelled_str = " ⚠️ CANCELLED" if cancelled else ""
                 summary = f"{line} → {destination}{delay_str}{cancelled_str}"
 
@@ -110,8 +121,8 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
                     f"Platform: {platform}",
                     f"Station: {self.station}",
                 ]
-                if delay and int(delay) > 0:
-                    description_parts.append(f"Delay: {delay} minutes")
+                if delay_int > 0:
+                    description_parts.append(f"Delay: {delay_int} minutes")
                 if cancelled:
                     description_parts.append("⚠️ This train has been CANCELLED")
 

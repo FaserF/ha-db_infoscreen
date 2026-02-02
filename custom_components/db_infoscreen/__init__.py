@@ -453,8 +453,24 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         continue
 
                 # Compute size with candidate included
-                temp_list = filtered_departures + [departure]
-                json_size = len(json.dumps(temp_list))
+                temp_departure = departure.copy()
+                if "departure_datetime" in temp_departure:
+                    temp_departure.pop("departure_datetime", None)
+
+                temp_list = filtered_departures + [temp_departure]
+
+                def simple_serializer(obj):
+                    if isinstance(obj, (datetime, timedelta)):
+                        return str(obj)
+                    raise TypeError(f"Type {type(obj)} not serializable")
+
+                try:
+                    json_size = len(json.dumps(temp_list, default=simple_serializer))
+                except TypeError as e:
+                    _LOGGER.error("Error serializing for size check: %s", e)
+                    # Break to be safe if we can't measure
+                    break
+
                 if json_size > MAX_SIZE_BYTES:
                     _LOGGER.info(
                         "Filtered departures JSON size would exceed limit: %d bytes (limit %d) for entry: %s. Stopping here.",
@@ -465,7 +481,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     break
 
                 if self.exclude_cancelled:
-                    if departure.get("cancelled", False):
+                    if (
+                        departure.get("cancelled", False)
+                        or departure.get("isCancelled", False)
+                        or departure.get("is_cancelled", False)
+                    ):
                         _LOGGER.debug(
                             "Skipping cancelled departure: %s",
                             departure,
@@ -514,10 +534,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     or departure.get("dep_delay")
                     or departure.get("delay")
                 )
-                if delay_departure is None:
+                try:
+                    if delay_departure is None or delay_departure == "":
+                        delay_departure = 0
+                    else:
+                        delay_departure = int(delay_departure)
+                except ValueError:
                     delay_departure = 0
-                else:
-                    delay_departure = int(delay_departure)
 
                 departure_time_adjusted = None
                 if departure_time and delay_departure is not None:

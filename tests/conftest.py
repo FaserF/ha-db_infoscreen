@@ -4,6 +4,7 @@ import sys
 import os
 import types
 from unittest.mock import MagicMock, AsyncMock
+import pytest
 
 # Try to import pytest-homeassistant-custom-component
 import importlib.util
@@ -255,8 +256,6 @@ if not PYTEST_HA_AVAILABLE:
 
 # 3. Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-import pytest
 
 
 @pytest.fixture(scope="session", autouse=True)

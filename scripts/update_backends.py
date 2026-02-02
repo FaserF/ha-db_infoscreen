@@ -84,6 +84,12 @@ def extract_data(html_content):
 
     for href, name in links:
         href = html.unescape(href)
+        name = html.unescape(name.strip())
+
+        if "IRIS-TTS" in name:
+            backends.append({"name": "IRIS-TTS", "type": "iris", "val": ""})
+            continue
+
         if "efa=" not in href and "hafas=" not in href:
             continue
 
@@ -93,14 +99,10 @@ def extract_data(html_content):
         efa = params.get("efa", [None])[0]
         hafas = params.get("hafas", [None])[0]
 
-        name = html.unescape(name.strip())
-
         if efa:
             backends.append({"name": name, "type": "efa", "val": efa})
         elif hafas:
             backends.append({"name": name, "type": "hafas", "val": hafas})
-        elif "IRIS-TTS" in name:
-            backends.append({"name": "IRIS-TTS", "type": "iris", "val": ""})
 
     unique_backends = []
     for b in backends:
@@ -233,19 +235,6 @@ def update_readme(backends):
         print(f"Failed to update README: {e}")
 
 
-def update_docs_config(backends):
-    """Update docs/configuration.md with the new data source list."""
-    if not os.path.exists(DOCS_CONFIG_FILE):
-        print(f"Skipping {DOCS_CONFIG_FILE} (not found)")
-        return
-
-    # We don't need to add full list to docs/configuration.md, just ensure
-    # the description is accurate. The full list is in README.
-    # Just update the "Regional/International" text to reflect the categories.
-    # The current text is already generic enough, so no structural changes needed.
-    print(f"Reviewed {DOCS_CONFIG_FILE} - no structural changes needed.")
-
-
 if __name__ == "__main__":
     html_content = fetch_backends()
     if html_content:
@@ -253,6 +242,5 @@ if __name__ == "__main__":
         if backends:
             update_const_file(backends)
             update_readme(backends)
-            update_docs_config(backends)
         else:
             print("No backends found.")

@@ -10,7 +10,7 @@ from custom_components.db_infoscreen.utils import (
 
 # Simpler hass fixture for autocomplete tests (doesn't need config_entries mocking)
 @pytest.fixture
-def hass():
+def mock_hass_autocomplete():
     """Mock Hass for autocomplete tests."""
     mock_hass = MagicMock()
     mock_hass.data = {}
@@ -18,7 +18,7 @@ def hass():
 
 
 @pytest.mark.asyncio
-async def test_async_get_stations_download(hass):
+async def test_async_get_stations_download(mock_hass_autocomplete):
     """Test downloading stations when not cached."""
     # Mock the aiohttp_client module's async_get_clientsession function
     mock_session = MagicMock()
@@ -39,11 +39,11 @@ async def test_async_get_stations_download(hass):
         },
     ):
         # Execute
-        stations = await async_get_stations(hass)
+        stations = await async_get_stations(mock_hass_autocomplete)
 
         assert "Hamburg Hbf" in stations
         assert "München Hbf" in stations
-        assert CACHE_KEY_DATA in hass.data
+        assert CACHE_KEY_DATA in mock_hass_autocomplete.data
 
 
 def test_find_station_matches():

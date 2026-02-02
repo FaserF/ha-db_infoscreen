@@ -47,7 +47,7 @@ def patch_session(mock_data, side_effect=None):
     with patch(
         "custom_components.db_infoscreen.__init__.async_get_clientsession"
     ) as mock_get_session:
-        # Create a mock response response object
+        # Create a mock response object
         class MockResponse:
             def __init__(self, data, status=200):
                 self.data = data
@@ -78,21 +78,12 @@ def patch_session(mock_data, side_effect=None):
 
             def get(self, *args, **kwargs):
                 if self.side_effect:
-                    # If it's a coroutine, we need to return something that when awaited
-                    # gives the response, but async with awaits the result of get().
-                    # However, typical aiohttp session.get is NOT a coroutine,
-                    # it returns a context manager.
                     return self.side_effect(*args, **kwargs)
                 return MockContext(MockResponse(self.data))
 
         mock_session = MockSession(mock_data, side_effect)
         mock_get_session.return_value = mock_session
         yield mock_session
-
-
-# Actually, the error 'object MagicMock can't be used in await'
-# happens because our response object (mock_response) itself might be a MagicMock
-# when it should be returning a coroutine for json()
 
 
 async def test_coordinator_url_encoding(hass, mock_config_entry):
