@@ -153,7 +153,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             params["admode"] = "dep"
 
         # Check if the data source is in the HAFAS list
-        if self.data_source in data_source_map:
+        if self.data_source == "hafas=1":
+            params["hafas"] = "1"
+        elif self.data_source in data_source_map:
             key, value = data_source_map[self.data_source].split("=")
             params[key] = value
 
@@ -254,9 +256,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             self._stale_issue_raised = False
             repairs.clear_all_issues_for_entry(self.hass, self.config_entry.entry_id)
             # Ensure connection_error is cleared
-            repairs.delete_issue(
-                self.hass, f"connection_error_{self.config_entry.entry_id}"
-            )
+            # Ensure connection_error is cleared
 
             # --- PRE-PROCESSING: Parse time for all departures ---
             departures_with_time = []
@@ -457,6 +457,18 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         )
                         continue
 
+                if self.exclude_cancelled:
+                    if (
+                        departure.get("cancelled", False)
+                        or departure.get("isCancelled", False)
+                        or departure.get("is_cancelled", False)
+                    ):
+                        _LOGGER.debug(
+                            "Skipping cancelled departure: %s",
+                            departure,
+                        )
+                        continue
+
                 # Compute size with candidate included
                 temp_departure = departure.copy()
                 if "departure_datetime" in temp_departure:
@@ -479,18 +491,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         self.station,
                     )
                     break
-
-                if self.exclude_cancelled:
-                    if (
-                        departure.get("cancelled", False)
-                        or departure.get("isCancelled", False)
-                        or departure.get("is_cancelled", False)
-                    ):
-                        _LOGGER.debug(
-                            "Skipping cancelled departure: %s",
-                            departure,
-                        )
-                        continue
 
                 # Get train classes from the departure data.
                 train_classes = (

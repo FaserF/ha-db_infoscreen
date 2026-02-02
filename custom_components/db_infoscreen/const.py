@@ -98,6 +98,12 @@ def normalize_data_source(value: str) -> str:
     if value == "hafas=1":
         return "hafas=1"
 
+    # First check for exact value match in the map to avoid ambiguity
+    # e.g. "hafas=AVV" should match "AVV – Aachener Verkehrsverbund" directly
+    for option, mapped_val in DATA_SOURCE_MAP.items():
+        if mapped_val == value:
+            return option
+
     # Handle patterns: exact code -> find matching key using exact check
     # e.g., "NVBW" or "efa=NVBW"
     code = value

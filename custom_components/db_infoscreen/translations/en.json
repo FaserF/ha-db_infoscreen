@@ -162,8 +162,7 @@
             }
           }
         }
-      },
-      "description": "Data for station **{station}** has not been updated for {hours} hours. The backend may be experiencing issues or the station may no longer be supported."
+      }
     },
     "api_error": {
       "title": "API error for station",
@@ -184,8 +183,7 @@
             }
           }
         }
-      },
-      "description": "Error fetching data for **{station}**: {error}"
+      }
     },
     "station_unsupported": {
       "title": "Station may no longer be supported",
@@ -206,8 +204,7 @@
             }
           }
         }
-      },
-      "description": "Station **{station}** with data source **{data_source}** may no longer be supported. Please check the station name or try a different data source."
+      }
     },
     "connection_error": {
       "title": "Connection error",

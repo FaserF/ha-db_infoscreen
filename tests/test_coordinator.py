@@ -2,9 +2,7 @@ from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import timedelta
 import pytest
 from homeassistant.util import dt as dt_util
-from contextlib import contextmanager
 import copy
-import os
 
 from custom_components.db_infoscreen import DBInfoScreenCoordinator
 from custom_components.db_infoscreen.const import (
@@ -16,6 +14,7 @@ from custom_components.db_infoscreen.const import (
     CONF_DETAILED,
     CONF_HIDE_LOW_DELAY,
 )
+from tests.common import patch_session
 
 
 @pytest.fixture(autouse=True)
@@ -39,53 +38,10 @@ def mock_config_entry():
     entry.options = {
         CONF_NEXT_DEPARTURES: 5,
     }
+    entry.entry_id = "mock_entry_id"
     return entry
 
 
-@contextmanager
-def patch_session(mock_data, side_effect=None):
-    """Patch the async_get_clientsession to return a mock session with data."""
-    with patch(
-        "custom_components.db_infoscreen.async_get_clientsession"
-    ) as mock_get_session:
-        # Mock Response
-        mock_response = MagicMock()
-        mock_response.status = 200
-        mock_response.raise_for_status = MagicMock()
-        mock_response.json = AsyncMock(return_value=mock_data)
-
-        # Async context manager protocol
-        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_response.__aexit__ = AsyncMock(return_value=None)
-
-        # Mock Session
-        mock_session = MagicMock()
-
-        # session.get needs to return a context manager directly, not a coroutine
-        def mock_get(*args, **kwargs):
-            if side_effect:
-                res = side_effect(*args, **kwargs)
-                # If side_effect returns raw data, wrap it in an ACM shim
-                if isinstance(res, (dict, list)):
-                    shim = MagicMock()
-                    shim.status = 200
-                    shim.raise_for_status = MagicMock()
-                    shim.json = AsyncMock(return_value=res)
-                    shim.__aenter__ = AsyncMock(return_value=shim)
-                    shim.__aexit__ = AsyncMock(return_value=None)
-                    return shim
-                return res
-            return mock_response
-
-        mock_session.get = MagicMock(side_effect=mock_get)
-
-        mock_get_session.return_value = mock_session
-        yield mock_session
-
-
-@pytest.mark.skipif(
-    os.environ.get("GITHUB_ACTIONS") == "true", reason="CI Frame Helper Issue"
-)
 @pytest.mark.asyncio
 async def test_coordinator_url_encoding(hass, mock_config_entry):
     """Test correctly encoding of station and via parameters."""

@@ -69,7 +69,7 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
         # Filter events within the date range
         filtered_events = []
         for event in all_events:
-            if start_date <= event.start <= end_date:
+            if event.end > start_date and event.start < end_date:
                 filtered_events.append(event)
 
         return filtered_events
