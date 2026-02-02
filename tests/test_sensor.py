@@ -70,6 +70,8 @@ async def test_sensor_state_logic(
         False,
     )
     sensor.hass = hass
+    sensor.entity_id = "sensor.test"
+    sensor.platform = MagicMock()
 
     with patch("homeassistant.util.dt.now", return_value=fixed_now):
         # Test initial state (No Data)
@@ -113,6 +115,8 @@ async def test_sensor_text_view(
         True,  # Enable text view
     )
     sensor.hass = hass
+    sensor.entity_id = "sensor.test"
+    sensor.platform = MagicMock()
 
     with patch("homeassistant.util.dt.now", return_value=fixed_now):
         mock_coordinator.data = [
