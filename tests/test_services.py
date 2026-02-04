@@ -111,4 +111,5 @@ async def test_watch_train_cancellation(hass, mock_coordinator):
         hass.services, "async_call", new_callable=AsyncMock
     ) as mock_service:
         await mock_coordinator._check_watched_trips(departures)
+        mock_service.assert_called_once()
         assert "CANCELLED" in mock_service.call_args[0][2]["message"]

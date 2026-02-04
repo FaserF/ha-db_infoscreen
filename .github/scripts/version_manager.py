@@ -29,7 +29,7 @@ def get_current_version():
 
     # Fallback to manifest.json
     if os.path.exists(MANIFEST_FILE):
-        with open(MANIFEST_FILE, "r") as f:
+        with open(MANIFEST_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
             return data.get("version", "0.0.0")
 
@@ -38,14 +38,14 @@ def get_current_version():
 
 def write_version(version):
     """Write version to VERSION file and manifest.json."""
-    with open(VERSION_FILE, "w") as f:
+    with open(VERSION_FILE, "w", encoding="utf-8") as f:
         f.write(version)
 
     if os.path.exists(MANIFEST_FILE):
-        with open(MANIFEST_FILE, "r") as f:
+        with open(MANIFEST_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         data["version"] = version
-        with open(MANIFEST_FILE, "w") as f:
+        with open(MANIFEST_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
 

@@ -3,6 +3,7 @@ from unittest.mock import patch, mock_open
 import datetime
 import importlib.util
 import os
+import subprocess
 
 # Dynamic import of version_manager
 script_path = os.path.abspath(".github/scripts/version_manager.py")
@@ -25,8 +26,6 @@ class TestVersionManager(unittest.TestCase):
     @patch("os.path.exists")
     @patch("builtins.open", new_callable=mock_open, read_data='{"version": "2026.1.5"}')
     def test_get_current_version_fallback(self, mock_file, mock_exists, mock_git):
-        import subprocess
-
         mock_git.side_effect = subprocess.CalledProcessError(1, "git")
         mock_exists.side_effect = lambda p: p == vm.MANIFEST_FILE
         version = vm.get_current_version()
