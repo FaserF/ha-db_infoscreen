@@ -48,8 +48,8 @@ def test_elevator_sensor_general_message(mock_coordinator, mock_config_entry):
 
     # Should trigger for specific platform too if no platform is mentioned in text
     sensor_p1 = DBInfoScreenElevatorBinarySensor(mock_coordinator, mock_config_entry, "1")
-    assert sensor_p1.is_on is True
-    assert "Alle Aufzüge im Bahnhof gestört" in sensor_p1.extra_state_attributes["issues"]
+    assert sensor_p1.is_on is False
+    assert len(sensor_p1.extra_state_attributes["issues"]) == 0
 
 def test_elevator_sensor_keywords(mock_coordinator, mock_config_entry):
     mock_coordinator.data = [

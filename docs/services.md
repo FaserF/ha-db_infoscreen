@@ -47,10 +47,9 @@ This service extends the monitoring capability by tracking the connecting train 
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `train_id` | string | **Required**. The connecting Train number (e.g., `RE 456`) to monitor at the transfer station. |
-| `start_station` | string | **Optional**. The exact name of the station where the monitored train departs from. |
-| `notify_service` | string | **Required**. The notification service to call (e.g., `notify.mobile_app_iphone`). |
-| `delay_threshold` | integer | **Optional**. Minimum delay in minutes to trigger a notification (Default: 5). |
+| `my_train_id` | string | **Required**. The ID or Number of your current train (e.g., `ICE 123`). |
+| `change_station` | string | **Required**. The station where you change trains (e.g., `München Hbf`). |
+| `next_train_id` | string | **Required**. The ID or Number of the connecting train (e.g., `RE 456`). |
 
 ### Example Usage
 
@@ -58,8 +57,9 @@ This service extends the monitoring capability by tracking the connecting train 
 ```yaml
 service: db_infoscreen.track_connection
 data:
-  train_id: "RE 456"
-  notify_service: "notify.mobile_app_iphone"
+  my_train_id: "ICE 123"
+  change_station: "München Hbf"
+  next_train_id: "RE 456"
 ```
 
 **What it does:**

@@ -42,10 +42,17 @@ async def async_setup_entry(
     # Otherwise, we could create a general one or try to infer from typical usage.
     # For now, if 'platforms' config exists, we create one for each.
     # If not, we create a general "Station Accessibility" sensor.
-    platforms_str = config_entry.data.get("platforms", "")
+    # Priority: Options > Data
+    platforms_str = config_entry.options.get("platforms", config_entry.data.get("platforms", ""))
+
+    unique_platforms = set()
     if platforms_str:
-        platforms = [p.strip() for p in platforms_str.split(",")]
-        for platform in platforms:
+        # Split, strip, filter empty
+        parts = [p.strip() for p in platforms_str.split(",")]
+        unique_platforms = {p for p in parts if p}
+
+    if unique_platforms:
+        for platform in sorted(unique_platforms):
             async_add_entities(
                 [DBInfoScreenElevatorBinarySensor(coordinator, config_entry, platform)]
             )
@@ -58,7 +65,12 @@ async def async_setup_entry(
 class DBInfoScreenBaseBinarySensor(DBInfoScreenBaseEntity, BinarySensorEntity):
     """Base class for DB Infoscreen binary sensors."""
 
-    def __init__(self, coordinator, config_entry: ConfigEntry, station: str = None) -> None:
+    def __init__(
+        self,
+        coordinator,
+        config_entry: ConfigEntry,
+        station: str = None,
+    ) -> None:
         """Initialize the binary sensor."""
         super().__init__(coordinator, config_entry)
         self.station_name = station  # Store station or platform context if needed
@@ -223,7 +235,12 @@ class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
     _attr_has_entity_name = True
     _attr_entity_registry_enabled_default = False  # Disabled by default as requested
 
-    def __init__(self, coordinator, config_entry: ConfigEntry, platform: str | None) -> None:
+    def __init__(
+        self,
+        coordinator,
+        config_entry: ConfigEntry,
+        platform: str | None,
+    ) -> None:
         """Initialize the elevator sensor."""
         super().__init__(coordinator, config_entry)
         self.platform_filter = platform
@@ -293,7 +310,7 @@ class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
                     if is_relevant:
                         issues.add(text)
 
-        return list(issues)
+        return sorted(issues)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

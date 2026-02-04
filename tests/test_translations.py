@@ -86,4 +86,6 @@ def test_translations_consistency(translations_path, strings_path):
                 )
 
         assert not missing_keys, f"Missing keys in {filename}: {missing_keys}"
-        assert not mismatched_placeholders, f"Placeholder mismatch in {filename}: {mismatched_placeholders}"
+        assert (
+            not mismatched_placeholders
+        ), f"Placeholder mismatch in {filename}: {mismatched_placeholders}"

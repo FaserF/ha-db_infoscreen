@@ -241,21 +241,25 @@
       "name": "Watch Train",
       "description": "Registers a background task to monitor a specific train departure from a station.",
       "fields": {
-        "train": {
-          "name": "Train",
+        "train_id": {
+          "name": "Train ID",
           "description": "The train number to watch (e.g., 'ICE 123'). Must match exactly what is shown in the sensor."
-        },
-        "start_station": {
-          "name": "Start Station",
-          "description": "The exact name of the station where you will board."
         },
         "notify_service": {
           "name": "Notify Service",
           "description": "The notification service to call (e.g. 'mobile_app_my_phone'). Do not include the domain 'notify.', just the service name."
         },
-        "notify_data": {
-          "name": "Notify Data",
-          "description": "Additional data to pass to the notify service (JSON)."
+        "delay_threshold": {
+          "name": "Delay Threshold",
+          "description": "Minimum delay in minutes to trigger a notification (Default: 5)."
+        },
+        "notify_on_platform_change": {
+          "name": "Notify on Platform Change",
+          "description": "Whether to notify if the platform changes."
+        },
+        "notify_on_cancellation": {
+          "name": "Notify on Cancellation",
+          "description": "Whether to notify if the train is cancelled."
         }
       }
     }

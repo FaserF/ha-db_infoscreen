@@ -170,9 +170,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         config = {**config_entry.data, **config_entry.options}
 
         self.station = config[CONF_STATION]
-        self.next_departures = config_entry.data.get(
-            CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES
-        )
+        self.next_departures = config.get(CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES)
         self.favorite_trains = []
         fav_raw = config.get(CONF_FAVORITE_TRAINS, "")
         if isinstance(fav_raw, str) and fav_raw.strip():
@@ -313,11 +311,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
             # 1. Class
             if wagon_class == "1" or wagon_class == "12":
-                 sectors_first_class.update(sections)
+                sectors_first_class.update(sections)
 
             # 2. Class
             if wagon_class == "2" or wagon_class == "12":
-                 sectors_second_class.update(sections)
+                sectors_second_class.update(sections)
 
             # Bistro/Restaurant
             if "WR" in wagon_type or "AR" in wagon_type or "Bistro" in wagon_type:
@@ -597,12 +595,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         )
                         continue
 
+                is_cancelled = (
+                    departure.get("cancelled", False)
+                    or departure.get("isCancelled", False)
+                    or departure.get("is_cancelled", False)
+                )
+                departure["is_cancelled"] = is_cancelled  # Normalize
+
                 if self.exclude_cancelled:
-                    if (
-                        departure.get("cancelled", False)
-                        or departure.get("isCancelled", False)
-                        or departure.get("is_cancelled", False)
-                    ):
+                    if is_cancelled:
                         _LOGGER.debug(
                             "Skipping cancelled departure: %s",
                             departure,
@@ -976,6 +977,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         dep["alternative_connections"] = alternatives[:3]  # Limit to 3
 
             # --- Feature 7: Favorite Trains Filtering ---
+            # Capture the full list for background tasks (notifications, history) BEFORE filtering
+            pre_filtered_departures = filtered_departures
+
             if self.favorite_trains:
                 fav_filtered = []
                 for dep in filtered_departures:
@@ -989,19 +993,25 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     len(filtered_departures),
                 )
 
-            if filtered_departures:
-                self._last_valid_value = filtered_departures[: self.next_departures]
+            if filtered_departures or pre_filtered_departures:
+                # Cache the visible ones if available, otherwise just keep going.
+                # Actually _last_valid_value is used for sensor display, so it SHOULD be the filtered list.
+                if filtered_departures:
+                    self._last_valid_value = filtered_departures[: self.next_departures]
+
                 _LOGGER.debug(
-                    "Fetched and cached %d valid departures",
+                    "Fetched %d valid departures (pre-filter), %d visible",
+                    len(pre_filtered_departures),
                     len(filtered_departures),
                 )
 
                 # --- Feature 6: Watch Train Notifications ---
-                await self._check_watched_trips(filtered_departures)
+                await self._check_watched_trips(pre_filtered_departures)
 
                 # --- Feature 9: Full Connection Tracking ---
                 if self.tracked_connections:
-                    for dep in filtered_departures:
+                    for dep in pre_filtered_departures: # Check connection tracking on all trains
+
                         my_train_id = dep.get("train")
                         if not my_train_id:
                             continue
@@ -1039,7 +1049,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                 }
 
                 # --- Feature 10: Punctuality Statistics ---
-                self._update_history(filtered_departures)
+                self._update_history(pre_filtered_departures)
 
                 return filtered_departures[: self.next_departures]
             else:
@@ -1070,10 +1080,14 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             self._handle_update_error(f"Unexpected error: {e}")
             return self._last_valid_value or []
 
+
+
     async def _check_watched_trips(self, departures):
         """Check if any watched trips need notifications."""
         if not self.watched_trips:
             return
+
+        to_remove = []
 
         for train_id_to_watch, watch_config in self.watched_trips.items():
             # Find the trip in current departures
@@ -1083,56 +1097,70 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     trip_found = dep
                     break
 
-            if trip_found:
-                delay = trip_found.get("delayDeparture", 0)
-                platform = trip_found.get("platform")
-                cancelled = trip_found.get("isCancelled", False)
-                destination = trip_found.get("destination")
+            if not trip_found:
+                 # Increment missed counter
+                 missed = watch_config.get("missed_update_count", 0) + 1
+                 watch_config["missed_update_count"] = missed
+                 if missed >= 3:
+                     to_remove.append(train_id_to_watch)
+                 continue
 
-                notify = False
-                message = f"Update for {trip_found.get('train')} to {destination}: "
+            # Found it, reset counter
+            watch_config["missed_update_count"] = 0
 
-                # 1. Check Delay
-                try:
-                    delay_int = int(delay) if delay else 0
-                    if delay_int >= watch_config["delay_threshold"] and delay_int != watch_config["last_notified_delay"]:
-                        notify = True
-                        message += f"Delay is now {delay_int} min. "
-                        watch_config["last_notified_delay"] = delay_int
-                except (ValueError, TypeError):
-                    pass
+            delay = trip_found.get("delayDeparture", 0)
+            platform = trip_found.get("platform")
+            is_cancelled = trip_found.get("is_cancelled", False)
+            destination = trip_found.get("destination")
 
-                # 2. Check Platform
-                if watch_config["notify_on_platform_change"] and platform and platform != watch_config["last_notified_platform"]:
-                    if watch_config["last_notified_platform"] is not None:
-                         notify = True
-                         message += f"Platform changed to {platform}. "
-                    watch_config["last_notified_platform"] = platform
+            notify = False
+            message = f"Update for {trip_found.get('train')} to {destination}: "
 
-                # 3. Check Cancellation
-                if watch_config["notify_on_cancellation"] and cancelled and not watch_config["last_notified_cancellation"]:
+            # 1. Check Delay
+            try:
+                delay_int = int(delay) if delay else 0
+                if delay_int >= watch_config["delay_threshold"] and delay_int != watch_config["last_notified_delay"]:
                     notify = True
-                    message += "Train is CANCELLED! "
-                    watch_config["last_notified_cancellation"] = True
+                    message += f"Delay is now {delay_int} min. "
+                    watch_config["last_notified_delay"] = delay_int
+            except (ValueError, TypeError):
+                pass
 
-                if notify:
-                    try:
-                        if "." not in watch_config["notify_service"]:
-                             raise ValueError("Invalid notify service format (missing '.')")
+            # 2. Check Platform
+            if watch_config["notify_on_platform_change"] and platform and platform != watch_config["last_notified_platform"]:
+                if watch_config["last_notified_platform"] is not None:
+                        notify = True
+                        message += f"Platform changed to {platform}. "
+                watch_config["last_notified_platform"] = platform
 
-                        service_parts = watch_config["notify_service"].split(".")
-                        domain = service_parts[0]
-                        service = ".".join(service_parts[1:])
+            # 3. Check Cancellation
+            if watch_config["notify_on_cancellation"] and is_cancelled and not watch_config["last_notified_cancellation"]:
+                notify = True
+                message += "Train is CANCELLED! "
+                watch_config["last_notified_cancellation"] = True
 
-                        if not domain or not service:
-                             raise ValueError("Invalid notify service format (empty domain or service)")
+            if notify:
+                try:
+                    if "." not in watch_config["notify_service"]:
+                            raise ValueError("Invalid notify service format (missing '.')")
 
-                        await self.hass.services.async_call(
-                            domain, service, {"message": message, "title": "🚆 DB Watcher"}
-                        )
-                        _LOGGER.info("Sent notification for trip %s: %s", train_id_to_watch, message)
-                    except Exception as e:
-                        _LOGGER.error("Failed to send notification for trip %s: %s", train_id_to_watch, e)
+                    service_parts = watch_config["notify_service"].split(".")
+                    domain = service_parts[0]
+                    service = ".".join(service_parts[1:])
+
+                    if not domain or not service:
+                            raise ValueError("Invalid notify service format (empty domain or service)")
+
+                    await self.hass.services.async_call(
+                        domain, service, {"message": message, "title": "🚆 DB Watcher"}
+                    )
+                    _LOGGER.info("Sent notification for trip %s: %s", train_id_to_watch, message)
+                except Exception as e:
+                    _LOGGER.error("Failed to send notification for trip %s: %s", train_id_to_watch, e)
+
+        for train_id in to_remove:
+            _LOGGER.debug("Removing stale watch for %s", train_id)
+            self.watched_trips.pop(train_id, None)
 
     async def _get_train_departure_at_station(self, station, train_id):
         """Fetch departure data for a specific train at another station."""

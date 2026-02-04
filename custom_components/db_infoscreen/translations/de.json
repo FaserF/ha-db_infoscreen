@@ -241,21 +241,25 @@
       "name": "Zug überwachen",
       "description": "Registriert eine Hintergrundaufgabe zur Überwachung einer bestimmten Zugabfahrt.",
       "fields": {
-        "train": {
-          "name": "Zug",
+        "train_id": {
+          "name": "Zugnummer",
           "description": "Die zu überwachende Zugnummer (z.B. 'ICE 123'). Muss exakt mit der Anzeige im Sensor übereinstimmen."
-        },
-        "start_station": {
-          "name": "Startbahnhof",
-          "description": "Der genaue Name des Bahnhofs, an dem du einsteigst."
         },
         "notify_service": {
           "name": "Benachrichtigungsdienst",
           "description": "Der aufzurufende Benachrichtigungsdienst (z.B. 'mobile_app_mein_handy'). Ohne 'notify.'-Domain."
         },
-        "notify_data": {
-          "name": "Benachrichtigungsdaten",
-          "description": "Zusätzliche Daten für den Benachrichtigungsdienst (JSON)."
+        "delay_threshold": {
+          "name": "Mindestverspätung",
+          "description": "Minimale Verspätung in Minuten für eine Benachrichtigung (Standard: 5)."
+        },
+        "notify_on_platform_change": {
+          "name": "Benachrichtigung bei Gleiswechsel",
+          "description": "Benachrichtigen, wenn sich das Gleis ändert."
+        },
+        "notify_on_cancellation": {
+          "name": "Benachrichtigung bei Ausfall",
+          "description": "Benachrichtigen, wenn der Zug ausfällt."
         }
       }
     }
