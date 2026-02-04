@@ -383,3 +383,51 @@ async def test_coordinator_trip_id(hass, mock_config_entry):
         assert data[0]["trip_id"] == "123456789"
         # Test 2: Trip ID missing
         assert data[1]["trip_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_coordinator_alternative_connections(hass, mock_config_entry):
+    """Test alternative connections are generated for same-destination trains."""
+    mock_config_entry.options[CONF_DETAILED] = True
+
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "München Hbf",
+                "train": "ICE 1",
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "München Hbf",  # Same destination
+                "train": "ICE 2",
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=20)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Berlin Hbf",  # Different destination
+                "train": "ICE 3",
+            },
+        ]
+    }
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch_session(mock_data):
+        data = await coordinator._async_update_data()
+        assert len(data) == 3
+
+        # ICE 1 should have ICE 2 as an alternative (same destination, later)
+        assert "alternative_connections" in data[0]
+        assert len(data[0]["alternative_connections"]) == 1
+        assert data[0]["alternative_connections"][0]["train"] == "ICE 2"
+
+        # ICE 2 should NOT have alternatives (no later train with same dest)
+        assert "alternative_connections" not in data[1]
+
+        # ICE 3 has unique destination, no alternatives
+        assert "alternative_connections" not in data[2]

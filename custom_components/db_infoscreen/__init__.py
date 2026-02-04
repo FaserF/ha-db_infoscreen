@@ -867,6 +867,34 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 "Number of departures added to the filtered list: %d",
                 len(filtered_departures),
             )
+
+            # --- Feature 4: Alternative Connections ---
+            # For each departure, find other trains going to the same destination
+            # that depart later. This helps users find backup options.
+            if self.detailed and len(filtered_departures) > 1:
+                for i, dep in enumerate(filtered_departures):
+                    dest = dep.get("destination")
+                    if not dest:
+                        continue
+
+                    alternatives = []
+                    for j, other_dep in enumerate(filtered_departures):
+                        if i == j:
+                            continue
+                        if other_dep.get("destination") == dest:
+                            # Only include if it departs later
+                            my_time = dep.get("departure_timestamp")
+                            other_time = other_dep.get("departure_timestamp")
+                            if my_time and other_time and other_time > my_time:
+                                alternatives.append({
+                                    "train": other_dep.get("train"),
+                                    "scheduledDeparture": other_dep.get("scheduledDeparture"),
+                                    "platform": other_dep.get("platform"),
+                                })
+
+                    if alternatives:
+                        dep["alternative_connections"] = alternatives[:3]  # Limit to 3
+
             if filtered_departures:
                 self._last_valid_value = filtered_departures[: self.next_departures]
                 _LOGGER.debug(

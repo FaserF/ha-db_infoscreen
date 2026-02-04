@@ -27,6 +27,7 @@ The primary sensor that displays the next departure time.
 - `messages` - Quality notes and warnings
 - `wagon_order` - Raw wagon order data (if available and detailed)
 - `wagon_order_html` - HTML summary of wagon order (e.g. "1. Class in A")
+- `alternative_connections` - List of later trains to the same destination (if detailed enabled)
 
 ---
 
