@@ -13,6 +13,7 @@ with patch("subprocess.check_output") as mock_git:
     mock_git.return_value = b""
     spec.loader.exec_module(vm)
 
+
 class TestVersionManager(unittest.TestCase):
     @patch("subprocess.check_output")
     def test_get_current_version_git(self, mock_git):
@@ -25,6 +26,7 @@ class TestVersionManager(unittest.TestCase):
     @patch("builtins.open", new_callable=mock_open, read_data='{"version": "2026.1.5"}')
     def test_get_current_version_fallback(self, mock_file, mock_exists, mock_git):
         import subprocess
+
         mock_git.side_effect = subprocess.CalledProcessError(1, "git")
         mock_exists.side_effect = lambda p: p == vm.MANIFEST_FILE
         version = vm.get_current_version()
@@ -73,6 +75,7 @@ class TestVersionManager(unittest.TestCase):
         new_v = vm.calculate_version("stable", now=now)
         # Should be 2026.2.1
         self.assertEqual(new_v, "2026.2.1")
+
 
 if __name__ == "__main__":
     unittest.main()

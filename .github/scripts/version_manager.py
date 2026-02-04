@@ -99,7 +99,7 @@ def calculate_version(release_type, now=None):
 
         # If it's a new cycle, we already have .0, otherwise increment
         if not is_new_cycle:
-             patch += 1
+            patch += 1
         return f"{year}.{month}.{patch}"
 
     elif release_type == "beta":
