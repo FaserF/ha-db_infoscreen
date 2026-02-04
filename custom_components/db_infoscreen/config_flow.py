@@ -34,6 +34,7 @@ from .const import (
     CONF_EXCLUDE_CANCELLED,
     CONF_SHOW_OCCUPANCY,
     CONF_FAVORITE_TRAINS,
+    CONF_WALK_TIME,
     normalize_data_source,
 )
 from .utils import async_get_stations, find_station_matches
@@ -392,6 +393,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL
                     ): cv.positive_int,
                     vol.Optional("advanced", default=False): cv.boolean,
+                    vol.Optional(CONF_WALK_TIME, default=0): cv.positive_int,
                 }
             )
 
@@ -533,6 +535,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_OFFSET,
                         default=self._get_config_value(CONF_OFFSET, DEFAULT_OFFSET),
                     ): cv.string,
+                    vol.Optional(
+                        CONF_WALK_TIME,
+                        default=self._get_config_value(CONF_WALK_TIME, 0),
+                    ): cv.positive_int,
                 }
             ),
         )

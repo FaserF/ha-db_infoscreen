@@ -1,7 +1,7 @@
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from typing import Any
-from .const import DOMAIN, CONF_ENABLE_TEXT_VIEW, CONF_STATION
+from .const import DOMAIN, CONF_ENABLE_TEXT_VIEW, CONF_STATION, CONF_WALK_TIME, CONF_NEXT_DEPARTURES
 from .entity import DBInfoScreenBaseEntity
 import logging
 from homeassistant.util import dt as dt_util
@@ -378,6 +378,61 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
         return None
 
 
+class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
+    """Sensor that calculates the time to leave for the next train."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "leave_now"
+    _attr_entity_registry_enabled_default = False  # Disabled by default
+
+    def __init__(self, coordinator, config_entry):
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "Leave Now Alarm"
+        self._attr_unique_id = f"leave_now_{config_entry.entry_id}"
+        self._attr_icon = "mdi:walk"
+
+    @property
+    def walk_time(self):
+        """Get the walk time from config data or options."""
+        return self.config_entry.data.get(CONF_WALK_TIME, 0) or self.config_entry.options.get(CONF_WALK_TIME, 0)
+
+    @property
+    def native_value(self):
+        if not self.coordinator.data or not isinstance(self.coordinator.data, list) or len(self.coordinator.data) == 0:
+            return None
+
+        # Get next departure (first in list)
+        next_dep = self.coordinator.data[0]
+        departure_timestamp = next_dep.get("departure_timestamp")
+
+        if not departure_timestamp:
+            return None
+
+        now = dt_util.now().timestamp()
+        minutes_until_departure = (departure_timestamp - now) / 60
+        minutes_until_leave = int(minutes_until_departure - self.walk_time)
+
+        if minutes_until_leave <= 0:
+            return "Leave now!"
+
+        return minutes_until_leave
+
+    @property
+    def extra_state_attributes(self):
+        if not self.coordinator.data or not isinstance(self.coordinator.data, list) or len(self.coordinator.data) == 0:
+            return {}
+
+        next_dep = self.coordinator.data[0]
+        return {
+            "train": next_dep.get("train"),
+            "destination": next_dep.get("destination"),
+            "departure_time": next_dep.get("departure_current"),
+            "walk_time": self.walk_time,
+            "next_departures_count": len(self.coordinator.data)
+        }
+
+
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """
     Set up a DBInfoSensor entity for the given config entry.
@@ -404,7 +459,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             platforms,
             enable_text_view,
         ),
-        DBInfoScreenWatchdogSensor(coordinator, config_entry)
+        DBInfoScreenWatchdogSensor(coordinator, config_entry),
+        DBInfoScreenLeaveNowSensor(coordinator, config_entry)
     ]
 
     async_add_entities(entities)

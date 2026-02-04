@@ -31,6 +31,27 @@ The primary sensor that displays the next departure time.
 
 ---
 
+### Leave Now Alarm Sensor
+**Entity ID**: `sensor.db_infoscreen_{station}_leave_now_alarm`
+
+!!! note "Disabled by Default"
+    This sensor is disabled by default. Enable it if you want to be notified when it's time to leave for the station.
+
+| State | Meaning |
+| :--- | :--- |
+| **{Time to leave}** | Time until you need to leave to reach the station on time |
+| **On Time** | You are on time to leave |
+| **Delayed** | You are delayed to leave |
+| **Unknown** | No data available |
+
+**Attributes:**
+- `time_to_leave` - Time in minutes until you need to leave
+- `departure_time` - Scheduled departure time of the train
+- `travel_time` - Configured travel time to the station
+- `delay` - Current delay of the train in minutes
+
+---
+
 ### Trip Watchdog Sensor
 **Entity ID**: `sensor.db_infoscreen_{station}_trip_watchdog`
 
