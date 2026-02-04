@@ -1,5 +1,7 @@
 from homeassistant.components.sensor import SensorEntity
-from .const import DOMAIN, CONF_ENABLE_TEXT_VIEW
+from homeassistant.config_entries import ConfigEntry
+from typing import Any
+from .const import DOMAIN, CONF_ENABLE_TEXT_VIEW, CONF_STATION
 from .entity import DBInfoScreenBaseEntity
 import logging
 from homeassistant.util import dt as dt_util
@@ -202,20 +204,6 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
     def extra_state_attributes(self):
         """
         Return additional state attributes for the sensor including next departures and metadata.
-
-        Converts any integer epoch values found in each departure's 'scheduledTime' or 'time' to
-        'YYYY-MM-DD HH:MM:SS' strings. Builds an attribution string from the coordinator's
-        `api_url` (defaults to "dbf.finalrewind.org") and formats the coordinator's `last_update`
-        as an ISO timestamp or "Unknown" if not present.
-
-        Returns:
-            dict: A mapping containing:
-                - "next_departures": list of departure dicts (with epoch times converted to strings when applicable)
-                - "station": configured station identifier
-                - "via_stations": configured via stations string or list
-                - "direction": configured direction value
-                - "last_updated": ISO-formatted last update timestamp or "Unknown"
-                - "attribution": attribution string for the data source
         """
         full_api_url = getattr(self.coordinator, "api_url", "dbf.finalrewind.org")
         attribution = f"Data provided by API {full_api_url}"
@@ -226,7 +214,6 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
 
         for departure in raw_departures:
             # Create a shallow copy of the departure so we can modify fields for display
-            # without affecting the cached data in the coordinator.
             dep_copy = departure.copy()
 
             if "scheduledTime" in dep_copy and isinstance(
@@ -308,11 +295,92 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         )
 
 
+class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
+    """Sensor that watches the prev station of the next departing train."""
+
+    _attr_has_entity_name = True
+    _attr_icon = "mdi:eye-check-outline"
+    _attr_entity_registry_enabled_default = False # Optional feature
+
+    def __init__(self, coordinator, config_entry: ConfigEntry) -> None:
+        """Initialize the watchdog sensor."""
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"db_infoscreen_watchdog_{config_entry.entry_id}"
+        self._attr_name = "Trip Watchdog"
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the state of the watchdog."""
+        data = self._get_watchdog_data()
+        if not data:
+            return "Unknown"
+
+        station = data.get("previous_station_name")
+        delay = data.get("previous_delay", 0)
+
+        if station :
+            if delay and delay > 0:
+                return f"{station}: +{delay} min"
+            return f"{station}: On Time"
+
+        return "Unknown"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return details about the watched trip."""
+        return self._get_watchdog_data() or {}
+
+    def _get_watchdog_data(self) -> dict[str, Any] | None:
+        """Calculate watchdog data from the first departure."""
+        if not self.coordinator.data or len(self.coordinator.data) == 0:
+            return None
+
+        # Look at the first (next) departure
+        next_train = self.coordinator.data[0]
+        route = next_train.get("route", [])
+
+        if not route:
+            return None
+
+        my_station_name = self.coordinator.config_entry.data.get(CONF_STATION)
+        # Clean up station name (sometimes has IDs or commas)
+        # Strategy:
+        # 1. Try to find exact match of `self.station` (or coordinator.station) in route names.
+        # 2. If found, take index - 1.
+
+        # Let's try to find a fuzzy match or exact match
+        found_index = -1
+        for idx, stop in enumerate(route):
+            stop_name = stop.get("name", "")
+            # Simple check
+            if stop_name == my_station_name or (my_station_name and my_station_name in stop_name):
+                found_index = idx
+                break
+
+        # Use first stop if not found? No, that's unreliable.
+        # But for 'detailed=1', route usually contains ALL stops.
+
+        if found_index > 0:
+            prev_stop = route[found_index - 1]
+            prev_name = prev_stop.get("name")
+            # dep_delay is delay at departure from that stop
+            # arr_delay is delay at arrival at that stop
+            delay = prev_stop.get("dep_delay") or prev_stop.get("arr_delay") or 0
+
+            return {
+                "train": next_train.get("train"),
+                "current_station_index": found_index,
+                "previous_station_name": prev_name,
+                "previous_delay": int(delay) if delay else 0,
+                "updated": getattr(self.coordinator, "last_update", None)
+            }
+
+        return None
+
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """
     Set up a DBInfoSensor entity for the given config entry.
-
-    Reads 'station', 'via_stations', 'direction', and 'platforms' from config_entry.data, retrieves the coordinator from hass.data[DOMAIN][config_entry.entry_id], and adds a single DBInfoSensor via async_add_entities.
     """
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     station = config_entry.data.get("station")
@@ -322,22 +390,21 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     enable_text_view = config_entry.options.get(CONF_ENABLE_TEXT_VIEW, False)
 
     _LOGGER.debug(
-        "Setting up DBInfoSensor for station: %s with via_stations: %s, direction: %s, text_view: %s",
-        station,
-        via_stations,
-        direction,
-        enable_text_view,
+        "Setting up DBInfoScreen sensors for station: %s",
+        station
     )
-    async_add_entities(
-        [
-            DBInfoSensor(
-                coordinator,
-                config_entry,
-                station,
-                via_stations,
-                direction,
-                platforms,
-                enable_text_view,
-            )
-        ]
-    )
+
+    entities = [
+        DBInfoSensor(
+            coordinator,
+            config_entry,
+            station,
+            via_stations,
+            direction,
+            platforms,
+            enable_text_view,
+        ),
+        DBInfoScreenWatchdogSensor(coordinator, config_entry)
+    ]
+
+    async_add_entities(entities)

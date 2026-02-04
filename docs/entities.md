@@ -30,6 +30,25 @@ The primary sensor that displays the next departure time.
 
 ---
 
+### Trip Watchdog Sensor
+**Entity ID**: `sensor.db_infoscreen_{station}_trip_watchdog`
+
+!!! note "Disabled by Default"
+    This sensor is disabled by default. Enable it if you want to monitor the status of the next train at its previous stop.
+
+| State | Meaning |
+| :--- | :--- |
+| **{Station}: +X min** | Train left previous station with X minute delay |
+| **{Station}: On Time** | Train left previous station on time |
+| **Unknown** | No route data available |
+
+**Attributes:**
+- `train` - Train identifier (e.g. "ICE 578")
+- `previous_station_name` - Name of the previous station
+- `previous_delay` - Delay in minutes at previous station
+
+---
+
 ## 🔴 Binary Sensors
 
 Three binary sensors are automatically created to provide quick status indicators.
