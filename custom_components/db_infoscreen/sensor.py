@@ -432,6 +432,61 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
         }
 
 
+class DBInfoScreenPunctualitySensor(DBInfoScreenBaseEntity, SensorEntity):
+    """Sensor that displays punctuality statistics for the station."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "punctuality"
+    _attr_entity_registry_enabled_default = False  # Disabled by default
+    _attr_native_unit_of_measurement = "%"
+
+    def __init__(self, coordinator, config_entry):
+        super().__init__(coordinator, config_entry)
+        self._attr_name = "Station Punctuality"
+        self._attr_unique_id = f"punctuality_{config_entry.entry_id}"
+        self._attr_icon = "mdi:chart-line"
+
+    @property
+    def native_value(self):
+        stats = self._get_stats()
+        return stats.get("punctuality_percent")
+
+    @property
+    def extra_state_attributes(self):
+        return self._get_stats()
+
+    def _get_stats(self):
+        """Calculate statistics from history."""
+        history = getattr(self.coordinator, "departure_history", {})
+        if not history:
+            return {
+                "punctuality_percent": None,
+                "total_trains": 0,
+                "delayed_trains": 0,
+                "cancelled_trains": 0,
+                "average_delay": 0,
+            }
+
+        total = len(history)
+        delayed = sum(1 for d in history.values() if d["delay"] > 5 and not d["cancelled"])
+        cancelled = sum(1 for d in history.values() if d["cancelled"])
+        on_time = total - delayed - cancelled
+
+        punctuality = round((on_time / total) * 100, 1) if total > 0 else 100
+
+        total_delay = sum(d["delay"] for d in history.values() if not d["cancelled"])
+        avg_delay = round(total_delay / (total - cancelled), 1) if (total - cancelled) > 0 else 0
+
+        return {
+            "punctuality_percent": punctuality,
+            "total_trains": total,
+            "delayed_trains": delayed,
+            "cancelled_trains": cancelled,
+            "average_delay": avg_delay,
+        }
+
+
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """
@@ -460,7 +515,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             enable_text_view,
         ),
         DBInfoScreenWatchdogSensor(coordinator, config_entry),
-        DBInfoScreenLeaveNowSensor(coordinator, config_entry)
+        DBInfoScreenLeaveNowSensor(coordinator, config_entry),
+        DBInfoScreenPunctualitySensor(coordinator, config_entry)
     ]
 
     async_add_entities(entities)

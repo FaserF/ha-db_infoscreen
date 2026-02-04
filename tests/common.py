@@ -16,9 +16,13 @@ def patch_session(mock_data=None, side_effect=None):
         mock_response.raise_for_status = MagicMock()
         mock_response.json = AsyncMock(return_value=mock_data)
 
-        # Async context manager protocol
-        mock_response.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_response.__aexit__ = AsyncMock(return_value=None)
+        async def __mock_aenter__(*args, **kwargs):
+            return mock_response
+        async def __mock_aexit__(*args, **kwargs):
+            return None
+
+        mock_response.__aenter__ = __mock_aenter__
+        mock_response.__aexit__ = __mock_aexit__
 
         # Mock Session
         mock_session = MagicMock()
@@ -33,8 +37,14 @@ def patch_session(mock_data=None, side_effect=None):
                     shim.status = 200
                     shim.raise_for_status = MagicMock()
                     shim.json = AsyncMock(return_value=res)
-                    shim.__aenter__ = AsyncMock(return_value=shim)
-                    shim.__aexit__ = AsyncMock(return_value=None)
+
+                    async def __shim_aenter__(*args, **kwargs):
+                        return shim
+                    async def __shim_aexit__(*args, **kwargs):
+                        return None
+
+                    shim.__aenter__ = __shim_aenter__
+                    shim.__aexit__ = __shim_aexit__
                     return shim
                 return res
             return mock_response

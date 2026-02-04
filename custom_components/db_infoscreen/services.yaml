@@ -31,3 +31,24 @@ watch_train:
       default: true
       selector:
         boolean:
+track_connection:
+  description: Monitors a connecting train at a transfer station.
+  fields:
+    my_train_id:
+      description: The ID or Number of your current train (e.g. ICE 123).
+      example: ICE 123
+      required: true
+      selector:
+         text:
+    change_station:
+      description: The station where you change trains.
+      example: München Hbf
+      required: true
+      selector:
+         text:
+    next_train_id:
+      description: The ID or Number of the train you want to catch.
+      example: ICE 456
+      required: true
+      selector:
+         text:

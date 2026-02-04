@@ -52,6 +52,26 @@ The primary sensor that displays the next departure time.
 
 ---
 
+### Station Punctuality Sensor
+**Entity ID**: `sensor.db_infoscreen_{station}_station_punctuality`
+
+!!! note "Disabled by Default"
+    This sensor is disabled by default. It tracks the punctuality of all trains at this station over a rolling 24-hour window.
+
+| State | Meaning |
+| :--- | :--- |
+| **{Percentage}** | The percentage of trains departing on time (delay <= 5 min) |
+| **Unknown** | No historical data collected yet |
+
+**Attributes:**
+- `total_trains` - Total number of trains tracked in the last 24h
+- `delayed_trains` - Number of trains with delay > 5 min
+- `cancelled_trains` - Number of cancelled trains
+- `average_delay` - Average delay in minutes for all non-cancelled trains
+- `punctuality_percent` - Number value for graphs
+
+---
+
 ### Trip Watchdog Sensor
 **Entity ID**: `sensor.db_infoscreen_{station}_trip_watchdog`
 
