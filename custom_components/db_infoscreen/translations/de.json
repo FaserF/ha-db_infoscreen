@@ -22,6 +22,7 @@
         "data": {
           "next_departures": "Anzahl der anzuzeigenden Abfahrten",
           "update_interval": "Update-Intervall (Minuten)",
+          "walk_time": "Fußweg zur Station (Minuten)",
           "advanced": "Zeige erweiterte Optionen (Datenquelle ändern / Filter)"
         }
       },
@@ -46,7 +47,8 @@
           "excluded_directions": "Fahrtrichtungen ausschließen",
           "ignored_train_types": "Zugtypen ignorieren (z.B. 'ICE')",
           "show_occupancy": "Auslastungsinformationen anzeigen (falls verfügbar)",
-          "exclude_cancelled": "Ausgefallene Züge entfernen"
+          "exclude_cancelled": "Ausgefallene Züge entfernen",
+          "favorite_trains": "Mehrere favorisierte Züge (kommagetrennt z.B. 'ICE 1, RE 2')"
         }
       },
       "manual_config": {
@@ -108,7 +110,8 @@
         "data": {
           "next_departures": "Anzahl der nächsten Abfahrten",
           "update_interval": "Update-Intervall (Minuten)",
-          "offset": "Offset-Zeit (HH:MM)"
+          "offset": "Offset-Zeit (HH:MM)",
+          "walk_time": "Fußweg zur Station (Minuten)"
         }
       },
       "filter_options": {
@@ -120,7 +123,8 @@
           "direction": "Richtung",
           "excluded_directions": "Ausgeschlossene Richtungen",
           "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)",
-          "exclude_cancelled": "Ausgefallene Züge ausschließen"
+          "exclude_cancelled": "Ausgefallene Züge ausschließen",
+          "favorite_trains": "Mehrere favorisierte Züge (kommagetrennt z.B. 'ICE 1, RE 2')"
         }
       },
       "display_options": {
@@ -162,8 +166,7 @@
             }
           }
         }
-      },
-      "description": "Daten für Station **{station}** wurden seit {hours} Stunden nicht aktualisiert. Das Backend hat möglicherweise Probleme oder die Station wird nicht mehr unterstützt."
+      }
     },
     "api_error": {
       "title": "API-Fehler für Station",
@@ -184,8 +187,7 @@
             }
           }
         }
-      },
-      "description": "Fehler beim Abrufen der Daten für **{station}**: {error}"
+      }
     },
     "station_unsupported": {
       "title": "Station wird möglicherweise nicht mehr unterstützt",
@@ -193,7 +195,7 @@
         "step": {
           "init": {
             "title": "Station möglicherweise nicht unterstützt",
-            "description": "Die Station **{station}** (mit **{data_source}**) konnte mehrfach keine Daten liefern.\n\nDiese Station wird möglicherweise nicht mehr vom Backend unterstützt. Du kannst:\n- Erneut versuchen, um zu prüfen ob es ein temporäres Problem ist\n- Zu einer anderen Datenquelle wechseln\n- Diese Station aus deiner Konfiguration entfernen\n\n[Problem auf GitHub melden](https://faserf.github.io/ha-db_infoscreen/)",
+            "description": "Die Station **{station}** (mit **{data_source}**) konnte mehrfach keine Daten liefern.\n\nDiese Station wird möglicherweise nicht mehr vom Backend unterstützt. Du kannst:\n- Erneut versuchen, um zu prüfen ob es ein temporäres Problem ist\n- Zu einer anderen Datenquelle wechseln\n- Diese Station aus deiner Konfiguration entfernen\n\n[Problem auf GitHub melden]({docs_url})",
             "data": {
               "action": "Aktion"
             }
@@ -206,12 +208,57 @@
             }
           }
         }
-      },
-      "description": "Station **{station}** mit Datenquelle **{data_source}** wird möglicherweise nicht mehr unterstützt. Bitte überprüfe den Stationsnamen oder versuche eine andere Datenquelle."
+      }
     },
     "connection_error": {
       "title": "Verbindungsfehler",
       "description": "Konnte keine Verbindung zur Abfahrts-API für **{station}** herstellen. Dieses Problem wird automatisch behoben, wenn die Verbindung wiederhergestellt wird."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "leave_now": {
+        "name": "Aufbruchalarm",
+        "state": {
+          "leave_now": "Jetzt aufbrechen!",
+          "delayed": "Verspätet",
+          "on_time": "Pünktlich"
+        }
+      },
+      "punctuality": {
+        "name": "Pünktlichkeit"
+      },
+      "trip_watchdog": {
+        "name": "Reiseüberwachung"
+      }
+    }
+  },
+  "services": {
+    "watch_train": {
+      "name": "Zug überwachen",
+      "description": "Registriert eine Hintergrundaufgabe zur Überwachung einer bestimmten Zugabfahrt.",
+      "fields": {
+        "train_id": {
+          "name": "Zugnummer",
+          "description": "Die zu überwachende Zugnummer (z.B. 'ICE 123'). Muss exakt mit der Anzeige im Sensor übereinstimmen."
+        },
+        "notify_service": {
+          "name": "Benachrichtigungsdienst",
+          "description": "Der aufzurufende Benachrichtigungsdienst (z.B. 'notify.mobile_app_mein_handy'). Inklusive 'notify.'-Präfix."
+        },
+        "delay_threshold": {
+          "name": "Mindestverspätung",
+          "description": "Minimale Verspätung in Minuten für eine Benachrichtigung (Standard: 5)."
+        },
+        "notify_on_platform_change": {
+          "name": "Benachrichtigung bei Gleiswechsel",
+          "description": "Benachrichtigen, wenn sich das Gleis ändert."
+        },
+        "notify_on_cancellation": {
+          "name": "Benachrichtigung bei Ausfall",
+          "description": "Benachrichtigen, wenn der Zug ausfällt."
+        }
+      }
     }
   }
 }

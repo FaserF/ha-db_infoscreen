@@ -248,3 +248,105 @@ action:
           {% set wake_up = dep_time - (30 * 60) %}
           hour:{{ wake_up | timestamp_custom('%H') }},minutes:{{ wake_up | timestamp_custom('%M') }},skip_ui:true
 ```
+
+---
+
+## 🎨 Lovelace Dashboard Examples
+
+### 12. Premium Departure Board Card
+A beautiful, dynamic departure board using a Markdown card. Shows delays, platform changes, and wagon order.
+
+```yaml
+type: markdown
+title: 🚆 Departures
+content: >
+  {% set departures = state_attr('sensor.frankfurt_hbf', 'next_departures') or [] %}
+  {% if departures | length > 0 %}
+  | Time | Train | Destination | Platform |
+  |:-----|:------|:------------|:---------|
+  {% for dep in departures[:5] %}
+  {% set delay = dep.delayDeparture | int(0) %}
+  {% set time_str = dep.scheduledDeparture or dep.scheduledArrival or '?' %}
+  {% set delay_str = ' +' ~ delay if delay > 0 else '' %}
+  {% set platform = dep.platform or '?' %}
+  {% set changed = '⚠️ ' if dep.changed_platform else '' %}
+  {% set cancelled = '~~' if dep.isCancelled else '' %}
+  | {{ cancelled }}{{ time_str }}{{ delay_str }}{{ cancelled }} | {{ dep.train }} | {{ dep.destination }} | {{ changed }}{{ platform }} |
+  {% endfor %}
+  {% else %}
+  *No departures available*
+  {% endif %}
+```
+
+### 13. Compact Next Train Widget
+A minimal card showing just the next train with key info.
+
+```yaml
+type: custom:button-card
+entity: sensor.frankfurt_hbf
+show_name: false
+show_icon: true
+icon: mdi:train
+styles:
+  card:
+    - padding: 16px
+    - background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)
+  icon:
+    - color: '#00d4ff'
+custom_fields:
+  train: >
+    [[[ return (entity.attributes.next_departures || [])[0]?.train || '?' ]]]
+  time: >
+    [[[
+      const dep = (entity.attributes.next_departures || [])[0];
+      const delay = dep?.delayDeparture || 0;
+      const time = dep?.scheduledDeparture || '?';
+      return delay > 0 ? `${time} +${delay}` : time;
+    ]]]
+  dest: >
+    [[[ return (entity.attributes.next_departures || [])[0]?.destination || '?' ]]]
+```
+
+### 14. Wagon Order Display
+Show the wagon order summary for the next ICE/IC train.
+
+```yaml
+type: conditional
+conditions:
+  - condition: template
+    value_template: >
+      {{ state_attr('sensor.frankfurt_hbf', 'next_departures')[0].wagon_order_html is defined }}
+card:
+  type: markdown
+  content: >
+    ### 🚃 Wagon Order
+    {{ state_attr('sensor.frankfurt_hbf', 'next_departures')[0].wagon_order_html | safe }}
+```
+
+### 15. Alternative Connections Card
+Show backup trains if you miss the first one.
+
+```yaml
+type: markdown
+title: 🔄 Alternative Connections
+content: >
+  {% set first = state_attr('sensor.frankfurt_hbf', 'next_departures')[0] %}
+  {% if first.alternative_connections is defined %}
+  If you miss **{{ first.train }}**, you can also take:
+  {% for alt in first.alternative_connections %}
+  - {{ alt.train }} at {{ alt.scheduledDeparture }} (Pl. {{ alt.platform or '?' }})
+  {% endfor %}
+  {% else %}
+  *No alternative connections available.*
+  {% endif %}
+```
+
+### 16. Trip Watchdog Status
+Display the delay status at the previous station.
+
+```yaml
+type: entity
+entity: sensor.frankfurt_hbf_trip_watchdog
+name: Previous Station
+icon: mdi:eye-check
+```

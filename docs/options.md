@@ -41,12 +41,13 @@ Refine which trains are shown.
 ### 🖼️ Display Settings
 Control how the data is presented in Home Assistant.
 
-*   **Detailed Information**: Enables extra attributes for each departure (e.g., full route).
+*   **Detailed Information**: Enables extra attributes for each departure (e.g., full route, wagon order).
 *   **Enable Simplified Text View**: Provides a pre-formatted string for simple markdown cards.
 *   **Display Mode (admode)**:
     *   `preferred departure`: Shows the planned time, but switches to actual time if delayed.
     *   `departure`: Always shows the departure time.
     *   `arrival`: Shows the arrival time (useful for tracking incoming trains).
+*   **Favorite Trains**: A comma-separated list of train names (e.g., `ICE 123, RE 5`) to filter the departure board for commuters.
 *   **Hide Low Delay**: Hide delays below 5 minutes to reduce visual clutter.
 
 ### ⚡ Advanced Settings

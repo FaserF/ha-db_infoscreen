@@ -91,6 +91,7 @@ nav:
   - Configuration: configuration.md
   - Options: options.md
   - Advanced: advanced.md
+  - Services: services.md
   - Automations: automations.md
   - Limitations: limitations.md
   - Troubleshooting: troubleshooting.md

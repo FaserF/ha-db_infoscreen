@@ -3,33 +3,56 @@ import datetime
 import json
 import os
 import re
+import subprocess
 
 VERSION_FILE = "VERSION"
 MANIFEST_FILE = "custom_components/db_infoscreen/manifest.json"
 
 
 def get_current_version():
-    if os.path.exists(VERSION_FILE):
-        with open(VERSION_FILE, "r") as f:
-            return f.read().strip()
+    """Get the current version from git tags (preferred) or manifest.json."""
+    try:
+        # Get tags sorted by version-like reference name (descending)
+        tags = (
+            subprocess.check_output(
+                ["git", "tag", "--sort=-v:refname"], stderr=subprocess.DEVNULL
+            )
+            .decode()
+            .splitlines()
+        )
+        for tag in tags:
+            # Match CalVer tags like 2026.1.1
+            if re.match(r"^20\d{2}\.\d+\.\d+", tag):
+                return tag.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+
+    # Fallback to manifest.json
+    if os.path.exists(MANIFEST_FILE):
+        with open(MANIFEST_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data.get("version", "0.0.0")
+
     return "0.0.0"
 
 
 def write_version(version):
-    with open(VERSION_FILE, "w") as f:
+    """Write version to VERSION file and manifest.json."""
+    with open(VERSION_FILE, "w", encoding="utf-8") as f:
         f.write(version)
 
     if os.path.exists(MANIFEST_FILE):
-        with open(MANIFEST_FILE, "r") as f:
+        with open(MANIFEST_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         data["version"] = version
-        with open(MANIFEST_FILE, "w") as f:
+        with open(MANIFEST_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
 
-def calculate_version(release_type):
+def calculate_version(release_type, now=None):
     current_version = get_current_version()
-    now = datetime.datetime.now()
+    if now is None:
+        now = datetime.datetime.now()
     year = now.year
     month = now.month
 
@@ -63,8 +86,9 @@ def calculate_version(release_type):
         suffix_num = 0
 
     # Logic: Reset patch if Year or Month changes
-    if year != curr_year or month != curr_month:
-        patch = 1
+    is_new_cycle = year != curr_year or month != curr_month
+    if is_new_cycle:
+        patch = 0
     else:
         patch = curr_patch
 
@@ -72,26 +96,29 @@ def calculate_version(release_type):
         # If we have a suffix, "promoting" means removing the suffix from the current patch
         if suffix_type is not None:
             return f"{year}.{month}.{patch}"
-        # Straight increment
-        return f"{year}.{month}.{patch + 1}"
+
+        # If it's a new cycle, we already have .0, otherwise increment
+        if not is_new_cycle:
+            patch += 1
+        return f"{year}.{month}.{patch}"
 
     elif release_type == "beta":
         # Already in beta? Increment beta number
-        if suffix_type == "b" and year == curr_year and month == curr_month:
+        if suffix_type == "b" and not is_new_cycle:
             return f"{year}.{month}.{patch}b{suffix_num + 1}"
 
-        # New beta? Increment patch (if stable) and start at b0
-        if suffix_type is None:
+        # New beta? Increment patch (if stable and NOT a new cycle) and start at b0
+        if suffix_type is None and not is_new_cycle:
             patch += 1
         return f"{year}.{month}.{patch}b0"
 
     elif release_type == "nightly" or release_type == "dev":
         # Already in dev? Increment dev number
-        if suffix_type == "-dev" and year == curr_year and month == curr_month:
+        if suffix_type == "-dev" and not is_new_cycle:
             return f"{year}.{month}.{patch}-dev{suffix_num + 1}"
 
-        # New dev? Increment patch (if stable) and start at dev0
-        if suffix_type is None:
+        # New dev? Increment patch (if stable and NOT a new cycle) and start at dev0
+        if suffix_type is None and not is_new_cycle:
             patch += 1
         return f"{year}.{month}.{patch}-dev0"
 

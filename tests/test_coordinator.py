@@ -13,6 +13,7 @@ from custom_components.db_infoscreen.const import (
     CONF_DATA_SOURCE,
     CONF_DETAILED,
     CONF_HIDE_LOW_DELAY,
+    CONF_FAVORITE_TRAINS,
 )
 from tests.common import patch_session
 
@@ -227,7 +228,12 @@ async def test_coordinator_wagon_order(hass, mock_config_entry):
                 "destination": "With Sectors",
                 "train": "ICE 1",
                 "platform": "Gl. 5 A-C",
-                "wagonorder": True,
+                "wagonorder": [
+                    {"sections": ["A"], "class": "1", "type": "Apmz"},
+                    {"sections": ["B"], "class": "12", "type": "ABpmz"},
+                    {"sections": ["C"], "class": "2", "type": "Bpmz"},
+                    {"sections": ["C"], "type": "WRmz"},  # Bistro
+                ],
             },
             {
                 "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
@@ -245,8 +251,16 @@ async def test_coordinator_wagon_order(hass, mock_config_entry):
         data = await coordinator._async_update_data()
         assert len(data) == 2
         # Test 1: Full info
-        assert data[0]["wagon_order"] is True
+        assert data[0]["wagon_order"] is not None
         assert data[0]["platform_sectors"] == "A-C"
+
+        # Verify HTML generation
+        html = data[0].get("wagon_order_html")
+        assert html is not None
+        assert "<b>1. Klasse:</b> A, B" in html
+        assert "<b>2. Klasse:</b> B, C" in html
+        assert "<b>Bordbistro:</b> C" in html
+
         # Test 2: Missing info
         assert "wagon_order" not in data[1]
         assert "platform_sectors" not in data[1]
@@ -370,3 +384,90 @@ async def test_coordinator_trip_id(hass, mock_config_entry):
         assert data[0]["trip_id"] == "123456789"
         # Test 2: Trip ID missing
         assert data[1]["trip_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_coordinator_alternative_connections(hass, mock_config_entry):
+    """Test alternative connections are generated for same-destination trains."""
+    mock_config_entry.options[CONF_DETAILED] = True
+
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "München Hbf",
+                "train": "ICE 1",
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "München Hbf",  # Same destination
+                "train": "ICE 2",
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=20)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Berlin Hbf",  # Different destination
+                "train": "ICE 3",
+            },
+        ]
+    }
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    with patch_session(mock_data):
+        data = await coordinator._async_update_data()
+        assert len(data) == 3
+
+        # ICE 1 should have ICE 2 as an alternative (same destination, later)
+        assert "alternative_connections" in data[0]
+        assert len(data[0]["alternative_connections"]) == 1
+        assert data[0]["alternative_connections"][0]["train"] == "ICE 2"
+
+        # ICE 2 should NOT have alternatives (no later train with same dest)
+        assert "alternative_connections" not in data[1]
+
+        # ICE 3 has unique destination, no alternatives
+        assert "alternative_connections" not in data[2]
+
+
+@pytest.mark.asyncio
+async def test_coordinator_favorite_trains_filter(hass, mock_config_entry):
+    """Test that departures are filtered by favorite trains."""
+    mock_config_entry.options[CONF_FAVORITE_TRAINS] = "ICE 1, RE 2"
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Berlin",
+                "train": "ICE 1",
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=11)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Nürnberg",
+                "train": "ICE 500",
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=12)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Salzburg",
+                "train": "RE 2 (Regio)",
+            },
+        ]
+    }
+
+    with patch_session(mock_data):
+        data = await coordinator._async_update_data()
+        assert len(data) == 2
+        assert data[0]["train"] == "ICE 1"
+        assert data[1]["train"] == "RE 2 (Regio)"

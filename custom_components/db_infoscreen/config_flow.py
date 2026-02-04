@@ -33,6 +33,8 @@ from .const import (
     CONF_ENABLE_TEXT_VIEW,
     CONF_EXCLUDE_CANCELLED,
     CONF_SHOW_OCCUPANCY,
+    CONF_FAVORITE_TRAINS,
+    CONF_WALK_TIME,
     normalize_data_source,
 )
 from .utils import async_get_stations, find_station_matches
@@ -391,6 +393,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_UPDATE_INTERVAL, default=DEFAULT_UPDATE_INTERVAL
                     ): cv.positive_int,
                     vol.Optional("advanced", default=False): cv.boolean,
+                    vol.Optional(CONF_WALK_TIME, default=0): cv.positive_int,
                 }
             )
 
@@ -411,6 +414,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_PLATFORMS, default=""): cv.string,
                 vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
                 vol.Optional(CONF_DIRECTION, default=""): cv.string,
+                vol.Optional(CONF_FAVORITE_TRAINS, default=""): cv.string,
             }
         )
 
@@ -531,6 +535,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_OFFSET,
                         default=self._get_config_value(CONF_OFFSET, DEFAULT_OFFSET),
                     ): cv.string,
+                    vol.Optional(
+                        CONF_WALK_TIME,
+                        default=self._get_config_value(CONF_WALK_TIME, 0),
+                    ): cv.positive_int,
                 }
             ),
         )
@@ -590,6 +598,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_EXCLUDE_CANCELLED,
                         default=self._get_config_value(CONF_EXCLUDE_CANCELLED, False),
                     ): cv.boolean,
+                    vol.Optional(
+                        CONF_FAVORITE_TRAINS,
+                        default=self._get_config_value(CONF_FAVORITE_TRAINS, ""),
+                    ): cv.string,
                 }
             ),
         )

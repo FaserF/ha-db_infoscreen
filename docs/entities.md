@@ -25,6 +25,69 @@ The primary sensor that displays the next departure time.
 - `isCancelled` - Whether the train is cancelled
 - `route` - Intermediate stops (if enabled)
 - `messages` - Quality notes and warnings
+- `wagon_order` - Raw wagon order data (if available and detailed)
+- `wagon_order_html` - HTML summary of wagon order (e.g. "1. Class in A")
+- `alternative_connections` - List of later trains to the same destination (if detailed enabled)
+
+---
+
+### Leave Now Alarm Sensor
+**Entity ID**: `sensor.db_infoscreen_{station}_leave_now_alarm`
+
+!!! note "Disabled by Default"
+    This sensor is disabled by default. Enable it if you want to be notified when it's time to leave for the station.
+
+| State | Meaning |
+| :--- | :--- |
+| **{Time to leave}** | Time until you need to leave to reach the station on time |
+| **On Time** | You are on time to leave |
+| **Delayed** | You are delayed to leave |
+| **Unknown** | No data available |
+
+**Attributes:**
+- `time_to_leave` - Time in minutes until you need to leave
+- `departure_time` - Scheduled departure time of the train
+- `travel_time` - Configured travel time to the station
+- `delay` - Current delay of the train in minutes
+
+---
+
+### Station Punctuality Sensor
+**Entity ID**: `sensor.db_infoscreen_{station}_station_punctuality`
+
+!!! note "Disabled by Default"
+    This sensor is disabled by default. It tracks the punctuality of all trains at this station over a rolling 24-hour window.
+
+| State | Meaning |
+| :--- | :--- |
+| **{Percentage}** | The percentage of trains departing on time (delay <= 5 min) |
+| **Unknown** | No historical data collected yet |
+
+**Attributes:**
+- `total_trains` - Total number of trains tracked in the last 24h
+- `delayed_trains` - Number of trains with delay > 5 min
+- `cancelled_trains` - Number of cancelled trains
+- `average_delay` - Average delay in minutes for all non-cancelled trains
+- `punctuality_percent` - Number value for graphs
+
+---
+
+### Trip Watchdog Sensor
+**Entity ID**: `sensor.db_infoscreen_{station}_trip_watchdog`
+
+!!! note "Disabled by Default"
+    This sensor is disabled by default. Enable it if you want to monitor the status of the next train at its previous stop.
+
+| State | Meaning |
+| :--- | :--- |
+| **{Station}: +X min** | Train left previous station with X minute delay |
+| **{Station}: On Time** | Train left previous station on time |
+| **Unknown** | No route data available |
+
+**Attributes:**
+- `train` - Train identifier (e.g. "ICE 578")
+- `previous_station_name` - Name of the previous station
+- `previous_delay` - Delay in minutes at previous station
 
 ---
 
@@ -94,6 +157,25 @@ Three binary sensors are automatically created to provide quick status indicator
 **Attributes:**
 - `last_successful_update` - Timestamp of last successful data fetch
 - `consecutive_errors` - Number of consecutive API failures
+
+---
+
+---
+
+### Accessibility Sensor (Elevator)
+**Entity ID**: `binary_sensor.db_infoscreen_{station}_elevator_{platform}` or `_general_`
+
+!!! note "Disabled by Default"
+    This sensor is disabled by default. Enable it in the entity settings if you require accessibility information.
+
+| State | Meaning |
+| :--- | :--- |
+| **ON** | Elevator or escalator issue detected |
+| **OFF** | No reported issues |
+
+**Attributes:**
+- `issues` - List of specific issue messages (e.g. "Aufzug zu Gleis 1 defekt")
+- `issue_count` - Number of active issues
 
 ---
 

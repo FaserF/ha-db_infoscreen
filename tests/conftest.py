@@ -40,7 +40,12 @@ if not PYTEST_HA_AVAILABLE:
     if "homeassistant.components.binary_sensor" not in sys.modules:
         ha_bsensor = types.ModuleType("homeassistant.components.binary_sensor")
         ha_bsensor.BinarySensorEntity = MagicMock
-        ha_bsensor.BinarySensorDeviceClass = MagicMock
+
+        class MockBinarySensorDeviceClass:
+            PROBLEM = "problem"
+            CONNECTIVITY = "connectivity"
+
+        ha_bsensor.BinarySensorDeviceClass = MockBinarySensorDeviceClass
         sys.modules["homeassistant.components.binary_sensor"] = ha_bsensor
 
     if "homeassistant.components.calendar" not in sys.modules:
@@ -175,7 +180,12 @@ if not PYTEST_HA_AVAILABLE:
 
     if "homeassistant.helpers.entity" not in sys.modules:
         ha_entity = types.ModuleType("homeassistant.helpers.entity")
-        ha_entity.EntityCategory = MagicMock
+
+        class MockEntityCategory:
+            CONFIG = "config"
+            DIAGNOSTIC = "diagnostic"
+
+        ha_entity.EntityCategory = MockEntityCategory
         sys.modules["homeassistant.helpers.entity"] = ha_entity
 
     if "homeassistant.helpers.entity_platform" not in sys.modules:

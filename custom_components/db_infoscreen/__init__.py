@@ -9,9 +9,11 @@ import asyncio
 import logging
 import json
 import re
+import voluptuous as vol
 from urllib.parse import quote, urlencode
 
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import homeassistant.helpers.config_validation as cv
 
 from . import repairs
 
@@ -43,6 +45,7 @@ from .const import (
     TRAIN_TYPE_MAPPING,
     CONF_EXCLUDE_CANCELLED,
     CONF_SHOW_OCCUPANCY,
+    CONF_FAVORITE_TRAINS,
     normalize_data_source,
     DATA_SOURCE_MAP,
 )
@@ -68,6 +71,68 @@ async def async_setup_entry(
 
     # Add an update listener for options
     config_entry.add_update_listener(update_listener)
+
+    # Register Service
+    async def async_watch_train(service_call):
+        """Handle the watch_train service call."""
+        train_id = service_call.data["train_id"]
+        notify_service = service_call.data["notify_service"]
+        delay_threshold = service_call.data.get("delay_threshold", 5)
+        notify_on_platform_change = service_call.data.get(
+            "notify_on_platform_change", True
+        )
+        notify_on_cancellation = service_call.data.get("notify_on_cancellation", True)
+
+        coordinator.watched_trips[train_id] = {
+            "notify_service": notify_service,
+            "delay_threshold": delay_threshold,
+            "notify_on_platform_change": notify_on_platform_change,
+            "notify_on_cancellation": notify_on_cancellation,
+            "last_notified_delay": -1,
+            "last_notified_platform": None,
+            "last_notified_cancellation": False,
+        }
+        _LOGGER.debug("Trip %s added to Watchlist", train_id)
+
+    hass.services.async_register(
+        DOMAIN,
+        "watch_train",
+        async_watch_train,
+        schema=vol.Schema(
+            {
+                vol.Required("train_id"): cv.string,
+                vol.Required("notify_service"): cv.string,
+                vol.Optional("delay_threshold", default=5): cv.positive_int,
+                vol.Optional("notify_on_platform_change", default=True): cv.boolean,
+                vol.Optional("notify_on_cancellation", default=True): cv.boolean,
+            }
+        ),
+    )
+
+    async def async_track_connection(service_call):
+        """Handle the track_connection service call."""
+        my_train_id = service_call.data["my_train_id"]
+        change_station = service_call.data["change_station"]
+        next_train_id = service_call.data["next_train_id"]
+
+        coordinator.tracked_connections[my_train_id] = {
+            "change_station": change_station,
+            "next_train_id": next_train_id,
+        }
+        _LOGGER.debug("Connection %s -> %s tracked", my_train_id, next_train_id)
+
+    hass.services.async_register(
+        DOMAIN,
+        "track_connection",
+        async_track_connection,
+        schema=vol.Schema(
+            {
+                vol.Required("my_train_id"): cv.string,
+                vol.Required("change_station"): cv.string,
+                vol.Required("next_train_id"): cv.string,
+            }
+        ),
+    )
 
     return True
 
@@ -108,6 +173,16 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
         self.station = config[CONF_STATION]
         self.next_departures = config.get(CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES)
+        self.favorite_trains = []
+        fav_raw = config.get(CONF_FAVORITE_TRAINS, "")
+        if isinstance(fav_raw, str) and fav_raw.strip():
+            self.favorite_trains = [
+                s.strip() for s in re.split(r",|\|", fav_raw) if s.strip()
+            ]
+
+        self.watched_trips = {}
+        self.tracked_connections = {}
+        self.departure_history = {}
         self.hide_low_delay = config.get(CONF_HIDE_LOW_DELAY, False)
         self.detailed = config.get(CONF_DETAILED, False)
         self.past_60_minutes = config.get(CONF_PAST_60_MINUTES, False)
@@ -138,8 +213,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         station_cleaned = " ".join(self.station.split())
         encoded_station = quote(station_cleaned, safe=",-")
 
-        base_url = custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
-        url = f"{base_url}/{encoded_station}.json"
+        self._base_url = (
+            custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
+        )
+        url = f"{self._base_url}/{encoded_station}.json"
 
         data_source_map = DATA_SOURCE_MAP
 
@@ -163,6 +240,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             params["hidelowdelay"] = "1"
         if self.detailed:
             params["detailed"] = "1"
+            params["wagonorder"] = "1"
         if self.past_60_minutes:
             params["past"] = "1"
 
@@ -217,6 +295,65 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             _LOGGER.error("Invalid offset format: %s", offset)
             return 0
 
+    def _process_wagon_order(self, wagon_order_data: list) -> str | None:
+        """
+        Process the wagon order list and return a human-readable HTML summary.
+        Example output: "1. Klasse: A-B | Bordbistro: C"
+        """
+        if not wagon_order_data:
+            return None
+
+        sectors_first_class = set()
+        sectors_second_class = set()
+        sectors_bistro = set()
+
+        for wagon in wagon_order_data:
+            sections = wagon.get("sections", [])
+            if not sections:
+                continue
+
+            wagon_type = wagon.get("type", "")
+            wagon_class = str(wagon.get("class", ""))
+
+            # 1. Class
+            if wagon_class == "1" or wagon_class == "12":
+                sectors_first_class.update(sections)
+
+            # 2. Class
+            if wagon_class == "2" or wagon_class == "12":
+                sectors_second_class.update(sections)
+
+            # Bistro/Restaurant
+            if "WR" in wagon_type or "AR" in wagon_type or "Bistro" in wagon_type:
+                sectors_bistro.update(sections)
+
+        def format_sectors(sectors: set) -> str:
+            sorted_sectors = sorted(list(sectors))
+            if not sorted_sectors:
+                return ""
+            if len(sorted_sectors) > 1:
+                return ", ".join(sorted_sectors)
+            return sorted_sectors[0]
+
+        parts = []
+
+        s1 = format_sectors(sectors_first_class)
+        if s1:
+            parts.append(f"<b>1. Klasse:</b> {s1}")
+
+        s2 = format_sectors(sectors_second_class)
+        if s2:
+            parts.append(f"<b>2. Klasse:</b> {s2}")
+
+        sb = format_sectors(sectors_bistro)
+        if sb:
+            parts.append(f"<b>Bordbistro:</b> {sb}")
+
+        if not parts:
+            return None
+
+        return " | ".join(parts)
+
     async def _async_update_data(self):
         """
         Retrieve and process next departures for the configured station.
@@ -232,8 +369,18 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         try:
             async with async_timeout.timeout(10):
                 async with session.get(self.api_url) as response:
-                    response.raise_for_status()
+                    # Handle both sync and async raise_for_status for better test compatibility
+                    res_status = response.raise_for_status()
+                    if asyncio.iscoroutine(res_status):
+                        await res_status
+
                     data = await response.json()
+                    # Fallback for some mock environments where json() returns a coroutine
+                    if asyncio.iscoroutine(data) or (
+                        hasattr(data, "__await__")
+                        and not isinstance(data, (dict, list))
+                    ):
+                        data = await data
 
             raw_departures = data.get("departures", [])
             if raw_departures is None:
@@ -457,12 +604,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         )
                         continue
 
+                is_cancelled = (
+                    departure.get("cancelled", False)
+                    or departure.get("isCancelled", False)
+                    or departure.get("is_cancelled", False)
+                )
+                departure["is_cancelled"] = is_cancelled  # Normalize
+
                 if self.exclude_cancelled:
-                    if (
-                        departure.get("cancelled", False)
-                        or departure.get("isCancelled", False)
-                        or departure.get("is_cancelled", False)
-                    ):
+                    if is_cancelled:
                         _LOGGER.debug(
                             "Skipping cancelled departure: %s",
                             departure,
@@ -574,9 +724,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 else:
                     departure["changed_platform"] = False
 
-                # Wagon Order (Pass-through + Sector Extraction)
-                if "wagonorder" in departure:
-                    departure["wagon_order"] = departure["wagonorder"]
+                # Wagon Order (Pass-through + Sector Extraction + HTML Generation)
+                wagon_order_data = departure.get("wagonorder")
+                if wagon_order_data:
+                    # If it's a list, it's the detailed structure
+                    if isinstance(wagon_order_data, list):
+                        wagon_html = self._process_wagon_order(wagon_order_data)
+                        if wagon_html:
+                            departure["wagon_order_html"] = wagon_html
+                    departure["wagon_order"] = wagon_order_data
 
                 # Extract sectors from platform string (e.g. "5 D-G")
                 if platform and isinstance(platform, str):
@@ -801,12 +957,108 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 "Number of departures added to the filtered list: %d",
                 len(filtered_departures),
             )
-            if filtered_departures:
-                self._last_valid_value = filtered_departures[: self.next_departures]
+
+            # --- Feature 4: Alternative Connections ---
+            # For each departure, find other trains going to the same destination
+            # that depart later. This helps users find backup options.
+            if self.detailed and len(filtered_departures) > 1:
+                for i, dep in enumerate(filtered_departures):
+                    dest = dep.get("destination")
+                    if not dest:
+                        continue
+
+                    alternatives = []
+                    for j, other_dep in enumerate(filtered_departures):
+                        if i == j:
+                            continue
+                        if other_dep.get("destination") == dest:
+                            # Only include if it departs later
+                            my_time = dep.get("departure_timestamp")
+                            other_time = other_dep.get("departure_timestamp")
+                            if my_time and other_time and other_time > my_time:
+                                alternatives.append(
+                                    {
+                                        "train": other_dep.get("train"),
+                                        "scheduledDeparture": other_dep.get(
+                                            "scheduledDeparture"
+                                        ),
+                                        "platform": other_dep.get("platform"),
+                                    }
+                                )
+
+                    if alternatives:
+                        dep["alternative_connections"] = alternatives[:3]  # Limit to 3
+
+            # --- Feature 7: Favorite Trains Filtering ---
+            # Capture the full list for background tasks (notifications, history) BEFORE filtering
+            pre_filtered_departures = filtered_departures
+
+            if self.favorite_trains:
+                fav_filtered = []
+                for dep in filtered_departures:
+                    train_name = dep.get("train", "")
+                    # Match if train_name contains any of the favorite strings
+                    if any(fav in train_name for fav in self.favorite_trains):
+                        fav_filtered.append(dep)
+                filtered_departures = fav_filtered
                 _LOGGER.debug(
-                    "Fetched and cached %d valid departures",
+                    "Filtered departures by favorite trains. Remaining: %d",
                     len(filtered_departures),
                 )
+
+            if filtered_departures or pre_filtered_departures:
+                # Cache the visible ones if available, otherwise just keep going.
+                # Actually _last_valid_value is used for sensor display, so it SHOULD be the filtered list.
+                if filtered_departures:
+                    self._last_valid_value = filtered_departures[: self.next_departures]
+
+                _LOGGER.debug(
+                    "Fetched %d valid departures (pre-filter), %d visible",
+                    len(pre_filtered_departures),
+                    len(filtered_departures),
+                )
+
+                # --- Feature 6: Watch Train Notifications ---
+                await self._check_watched_trips(pre_filtered_departures)
+
+                # --- Feature 9: Full Connection Tracking ---
+                if self.tracked_connections:
+                    for (
+                        dep
+                    ) in (
+                        pre_filtered_departures
+                    ):  # Check connection tracking on all trains
+
+                        my_train_id = dep.get("train")
+                        if not my_train_id:
+                            continue
+
+                        conn_config = self.tracked_connections.get(my_train_id)
+                        if not conn_config:
+                            trip_id = dep.get("trip_id")
+                            if trip_id:
+                                conn_config = self.tracked_connections.get(trip_id)
+
+                        if conn_config:
+                            change_station = conn_config["change_station"]
+                            # If we have trip_id, we can potentially get full route.
+                            # For now, let's just make the second API call.
+                            next_train_id = conn_config["next_train_id"]
+                            next_dep = await self._get_train_departure_at_station(
+                                change_station, next_train_id
+                            )
+
+                            if next_dep:
+                                dep["connection_info"] = {
+                                    "target_train": next_dep.get("train"),
+                                    "target_platform": next_dep.get("platform"),
+                                    "target_delay": next_dep.get("delayDeparture"),
+                                    "transfer_station": change_station,
+                                }
+
+                # --- Feature 10: Punctuality Statistics ---
+                self._update_history(pre_filtered_departures)
+
                 return filtered_departures[: self.next_departures]
             else:
                 _LOGGER.warning(
@@ -832,9 +1084,180 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             self._handle_update_error(f"Invalid response from server: {e}")
             return self._last_valid_value or []
         except Exception as e:
-            _LOGGER.error("Unexpected error fetching data: %s", e)
+            _LOGGER.exception("Unexpected error fetching data: %s", e)
             self._handle_update_error(f"Unexpected error: {e}")
             return self._last_valid_value or []
+
+    async def _check_watched_trips(self, departures):
+        """Check if any watched trips need notifications."""
+        if not self.watched_trips:
+            return
+
+        to_remove = []
+
+        for train_id_to_watch, watch_config in self.watched_trips.items():
+            # Find the trip in current departures
+            trip_found = None
+            for dep in departures:
+                if (
+                    dep.get("train") == train_id_to_watch
+                    or dep.get("trip_id") == train_id_to_watch
+                ):
+                    trip_found = dep
+                    break
+
+            if not trip_found:
+                # Increment missed counter
+                missed = watch_config.get("missed_update_count", 0) + 1
+                watch_config["missed_update_count"] = missed
+                if missed >= 3:
+                    to_remove.append(train_id_to_watch)
+                continue
+
+            # Found it, reset counter
+            watch_config["missed_update_count"] = 0
+
+            delay = trip_found.get("delayDeparture", 0)
+            platform = trip_found.get("platform")
+            is_cancelled = trip_found.get("is_cancelled", False)
+            destination = trip_found.get("destination")
+
+            notify = False
+            message = f"Update for {trip_found.get('train')} to {destination}: "
+
+            # 1. Check Delay
+            try:
+                delay_int = int(delay) if delay else 0
+                if (
+                    delay_int >= watch_config["delay_threshold"]
+                    and delay_int != watch_config["last_notified_delay"]
+                ):
+                    notify = True
+                    message += f"Delay is now {delay_int} min. "
+                    watch_config["last_notified_delay"] = delay_int
+            except (ValueError, TypeError):
+                pass
+
+            # 2. Check Platform
+            if (
+                watch_config["notify_on_platform_change"]
+                and platform
+                and platform != watch_config["last_notified_platform"]
+            ):
+                if watch_config["last_notified_platform"] is not None:
+                    notify = True
+                    message += f"Platform changed to {platform}. "
+                watch_config["last_notified_platform"] = platform
+
+            # 3. Check Cancellation
+            if (
+                watch_config["notify_on_cancellation"]
+                and is_cancelled
+                and not watch_config["last_notified_cancellation"]
+            ):
+                notify = True
+                message += "Train is CANCELLED! "
+                watch_config["last_notified_cancellation"] = True
+
+            if notify:
+                try:
+                    if "." not in watch_config["notify_service"]:
+                        raise ValueError("Invalid notify service format (missing '.')")
+
+                    service_parts = watch_config["notify_service"].split(".")
+                    domain = service_parts[0]
+                    service = ".".join(service_parts[1:])
+
+                    if not domain or not service:
+                        raise ValueError(
+                            "Invalid notify service format (empty domain or service)"
+                        )
+
+                    await self.hass.services.async_call(
+                        domain, service, {"message": message, "title": "🚆 DB Watcher"}
+                    )
+                    _LOGGER.info(
+                        "Sent notification for trip %s: %s", train_id_to_watch, message
+                    )
+                except Exception as e:
+                    _LOGGER.error(
+                        "Failed to send notification for trip %s: %s",
+                        train_id_to_watch,
+                        e,
+                    )
+
+        for train_id in to_remove:
+            _LOGGER.debug("Removing stale watch for %s", train_id)
+            self.watched_trips.pop(train_id, None)
+
+    async def _get_train_departure_at_station(self, station, train_id):
+        """Fetch departure data for a specific train at another station."""
+        station_cleaned = " ".join(station.split())
+        encoded_station = quote(station_cleaned, safe=",-")
+
+        # Build URL for second call - using configured base URL
+        url = f"{self._base_url}/{encoded_station}.json"
+
+        try:
+            session = async_get_clientsession(self.hass)
+            async with async_timeout.timeout(10):
+                async with session.get(url) as response:
+                    # Handle both sync and async raise_for_status for better test compatibility
+                    res_status = response.raise_for_status()
+                    if asyncio.iscoroutine(res_status):
+                        await res_status
+
+                    data = await response.json()
+                    # Fallback for some mock environments where json() returns a coroutine
+                    if asyncio.iscoroutine(data) or (
+                        hasattr(data, "__await__")
+                        and not isinstance(data, (dict, list))
+                    ):
+                        data = await data
+
+            for dep in data.get("departures", []):
+                if dep.get("train") == train_id or dep.get("trip_id") == train_id:
+                    return dep
+        except Exception as e:
+            _LOGGER.debug("Failed to fetch cascaded data for %s: %s", station, e)
+        return None
+
+    def _update_history(self, departures):
+        """Update historical data for punctuality statistics."""
+        now = dt_util.now()
+        threshold_24h = now - timedelta(hours=24)
+
+        # 1. Purge old history
+        self.departure_history = {
+            tid: data
+            for tid, data in self.departure_history.items()
+            if data["timestamp"] > threshold_24h
+        }
+
+        # 2. Record/Update current departures
+        for dep in departures:
+            # Create a unique key for this specific departure instance
+            # Use trip_id if available, otherwise train + scheduled time
+            train = dep.get("train")
+            sched_time = dep.get("scheduledDeparture") or dep.get("scheduledArrival")
+            trip_id = dep.get("trip_id")
+
+            # Key should be unique for the specific instance (e.g. today's 10:00 train)
+            history_key = trip_id if trip_id else f"{train}_{sched_time}"
+
+            if not history_key:
+                continue
+
+            # We store the latest known status.
+            # In a real system, we'd record it when it departs, but we don't always know when it's "gone".
+            # So we just keep the latest info we saw for this train.
+            self.departure_history[history_key] = {
+                "train": train,
+                "timestamp": now,
+                "scheduled": sched_time,
+                "delay": dep.get("delayDeparture") or dep.get("delayArrival") or 0,
+                "cancelled": dep.get("is_cancelled", False),
+            }
 
     def _handle_update_error(self, error_message: str) -> None:
         """Handle update errors and create repair issues if needed."""

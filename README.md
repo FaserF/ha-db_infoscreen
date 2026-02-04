@@ -26,7 +26,8 @@ The `db-infoscreen` sensor provides detailed **departure times** and train infor
 | 👥 **Train Occupancy** | View predicted load factor (1st/2nd class) where available. |
 | 🌍 **Wide Coverage** | Supports DB and many local transport associations (via HAFAS/EFA). |
 | ⚙️ **Highly Configurable** | Filter by direction, train type, specific platforms, and more. |
-| ℹ️ **Detailed Attributes** | Access route info, warnings, platform changes (`changed_platform`), wagon order (`wagon_order`), sector info (`platform_sectors`), facilities (`facilities`), real-time route progress (`route_details`), and unique trip ID (`trip_id`). |
+| 💖 **Favorite Trains** | Filter for specific "Favorite Trains" (Commuter Profile). |
+| ℹ️ **Detailed Attributes** | Access route info, warnings, platform changes (`changed_platform`), wagon order (`wagon_order`), wagon order summary (`wagon_order_html`), sector info (`platform_sectors`), facilities (`facilities`), real-time route progress (`route_details`), and unique trip ID (`trip_id`). |
 
 ---
 
@@ -93,7 +94,7 @@ All other settings are available via the **Configure** button on the integration
 | `hide_low_delay` | `False` | Hide departures with < 5 min delay. |
 | `drop_late_trains` | `False` | Hide past departures even if they are delayed. |
 | `deduplicate_departures` | `False` | Filter out duplicate entries. |
-| `detailed` | `False` | Show extra attributes (messages, ids, keys, etc.). |
+| `detailed` | `False` | Show extra attributes (messages, ids, keys, wagon order, etc.). |
 | `past_60_minutes` | `False` | Show departures from the past 60 minutes. |
 | `keep_route` | `False` | Keep full route (stopover) details in attributes. |
 | `keep_endstation` | `False` | Keep departure if station is also the endstation. |
