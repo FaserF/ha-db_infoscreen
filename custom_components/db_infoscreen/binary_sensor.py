@@ -249,8 +249,6 @@ class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
 
         # Keywords to look for
         keywords = ["aufzug", "aufzüge", "fahrstuhl", "lift", "rolltreppe"]
-        # Error states (usually implied by the presence of a message, but safeguards help)
-        error_words = ["defekt", "gestört", "außer betrieb", "nicht verfügbar"]
 
         for departure in departures:
             messages = departure.get("messages", {})

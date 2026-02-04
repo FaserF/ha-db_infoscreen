@@ -19,3 +19,4 @@ debug_dbf.py
 temp_autocomplete.js
 test_output*.txt
 test_warnings*.txt
+test_results.txt

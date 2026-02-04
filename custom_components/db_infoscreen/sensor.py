@@ -1,7 +1,7 @@
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from typing import Any
-from .const import DOMAIN, CONF_ENABLE_TEXT_VIEW, CONF_STATION, CONF_WALK_TIME, CONF_NEXT_DEPARTURES
+from .const import DOMAIN, CONF_ENABLE_TEXT_VIEW, CONF_STATION, CONF_WALK_TIME
 from .entity import DBInfoScreenBaseEntity
 import logging
 from homeassistant.util import dt as dt_util

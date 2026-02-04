@@ -372,7 +372,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                     data = await response.json()
                     # Fallback for some mock environments where json() returns a coroutine
-                    if asyncio.iscoroutine(data):
+                    if asyncio.iscoroutine(data) or (hasattr(data, "__await__") and not isinstance(data, (dict, list))):
                         data = await data
 
             raw_departures = data.get("departures", [])
@@ -1146,7 +1146,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                     data = await response.json()
                     # Fallback for some mock environments where json() returns a coroutine
-                    if asyncio.iscoroutine(data):
+                    if asyncio.iscoroutine(data) or (hasattr(data, "__await__") and not isinstance(data, (dict, list))):
                         data = await data
 
             for dep in data.get("departures", []):
