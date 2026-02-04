@@ -22,6 +22,7 @@
         "data": {
           "next_departures": "Number of Upcoming Departures to show",
           "update_interval": "Update Interval (minutes)",
+          "walk_time": "Walk Time to Station (minutes)",
           "advanced": "Show Advanced Options (Change Data Source / Filter Settings)"
         }
       },
@@ -46,7 +47,8 @@
           "excluded_directions": "Exclude Final Destinations",
           "ignored_train_types": "Ignored Train Types (e.g. 'ICE')",
           "show_occupancy": "Show Occupancy Information (if available)",
-          "exclude_cancelled": "Remove Cancelled Trains"
+          "exclude_cancelled": "Remove Cancelled Trains",
+          "favorite_trains": "Multiple Favorite Trains (comma separated e.g. 'ICE 1, RE 2')"
         }
       },
       "manual_config": {
@@ -108,7 +110,8 @@
         "data": {
           "next_departures": "Number of Upcoming Departures",
           "update_interval": "Update Interval (minutes)",
-          "offset": "Offset Time"
+          "offset": "Offset (HH:MM)",
+          "walk_time": "Walk Time to Station (minutes)"
         }
       },
       "filter_options": {
@@ -120,7 +123,8 @@
           "direction": "Direction",
           "excluded_directions": "Excluded Directions",
           "ignored_train_types": "Ignored Train Types",
-          "exclude_cancelled": "Exclude Cancelled Trains"
+          "exclude_cancelled": "Exclude Cancelled Trains",
+          "favorite_trains": "Multiple Favorite Trains (comma separated e.g. 'ICE 1, RE 2')"
         }
       },
       "display_options": {
@@ -162,7 +166,8 @@
             }
           }
         }
-      }
+      },
+      "description": "Data for station **{station}** has not been updated for {hours} hours. The backend may be experiencing issues or the station is no longer supported."
     },
     "api_error": {
       "title": "API error for station",
@@ -183,7 +188,8 @@
             }
           }
         }
-      }
+      },
+      "description": "Errors occurred while fetching data for **{station}**: {error}"
     },
     "station_unsupported": {
       "title": "Station may no longer be supported",
@@ -204,11 +210,54 @@
             }
           }
         }
-      }
+      },
+      "description": "Station **{station}** using **{data_source}** may no longer be supported. Please check the station name or try a different data source."
     },
     "connection_error": {
       "title": "Connection error",
       "description": "Could not connect to the departure API for **{station}**. This issue will resolve automatically when the connection is restored."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "leave_now": {
+        "name": "Leave Now Alarm",
+        "state": {
+          "leave_now": "Leave now!",
+          "delayed": "Delayed",
+          "on_time": "On Time"
+        }
+      },
+      "punctuality": {
+        "name": "Station Punctuality"
+      },
+      "trip_watchdog": {
+        "name": "Trip Watchdog"
+      }
+    }
+  },
+  "services": {
+    "watch_train": {
+      "name": "Watch Train",
+      "description": "Registers a background task to monitor a specific train departure from a station.",
+      "fields": {
+        "train": {
+          "name": "Train",
+          "description": "The train number to watch (e.g., 'ICE 123'). Must match exactly what is shown in the sensor."
+        },
+        "start_station": {
+          "name": "Start Station",
+          "description": "The exact name of the station where you will board."
+        },
+        "notify_service": {
+          "name": "Notify Service",
+          "description": "The notification service to call (e.g. 'mobile_app_my_phone'). Do not include the domain 'notify.', just the service name."
+        },
+        "notify_data": {
+          "name": "Notify Data",
+          "description": "Additional data to pass to the notify service (JSON)."
+        }
+      }
     }
   }
 }

@@ -1117,9 +1117,16 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                 if notify:
                     try:
+                        if "." not in watch_config["notify_service"]:
+                             raise ValueError("Invalid notify service format (missing '.')")
+
                         service_parts = watch_config["notify_service"].split(".")
                         domain = service_parts[0]
                         service = ".".join(service_parts[1:])
+
+                        if not domain or not service:
+                             raise ValueError("Invalid notify service format (empty domain or service)")
+
                         await self.hass.services.async_call(
                             domain, service, {"message": message, "title": "🚆 DB Watcher"}
                         )
@@ -1151,7 +1158,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
             for dep in data.get("departures", []):
                 if dep.get("train") == train_id or dep.get("trip_id") == train_id:
-                    return dep
                     return dep
         except Exception as e:
             _LOGGER.debug("Failed to fetch cascaded data for %s: %s", station, e)

@@ -50,7 +50,7 @@ async def async_setup_entry(
                 [DBInfoScreenElevatorBinarySensor(coordinator, config_entry, platform)]
             )
     else:
-         async_add_entities(
+        async_add_entities(
             [DBInfoScreenElevatorBinarySensor(coordinator, config_entry, None)]
         )
 
@@ -255,14 +255,14 @@ class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
             # Collect all message texts
             texts = []
             if isinstance(messages, dict):
-                 for msg_type in messages:
-                     msg_list = messages[msg_type]
-                     if isinstance(msg_list, list):
-                         for m in msg_list:
-                             if isinstance(m, dict):
-                                 texts.append(m.get("text", ""))
-                             elif isinstance(m, str):
-                                 texts.append(m)
+                for msg_type in messages:
+                    msg_list = messages[msg_type]
+                    if isinstance(msg_list, list):
+                        for m in msg_list:
+                            if isinstance(m, dict):
+                                texts.append(m.get("text", ""))
+                            elif isinstance(m, str):
+                                texts.append(m)
 
             for text in texts:
                 lower_text = text.lower()
@@ -278,16 +278,14 @@ class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
                         # Regex to find platform number in text
                         match = re.search(r"(?:gleis|bahnsteig)\s*(\d+)", lower_text)
                         if match:
-                             if match.group(1) == self.platform_filter:
-                                 is_relevant = True
+                            if match.group(1) == self.platform_filter:
+                                is_relevant = True
                         else:
-                             # No platform mentioned? Maybe global or applies to current departure's platform?
-                             # Let's assume if it is attached to a departure on this platform, it is relevant.
-                             # But IRIS often puts all station messages on all departures.
-                             # So we MUST check text if possible.
-                             # If no platform number in text, assume relevant?
-                             # "Aufzug zur Haupthalle defekt" -> Relevant for everyone.
-                             is_relevant = True
+                            # No platform mentioned?
+                            # If we are filtering for a specific platform, assume specific messages only
+                            # unless we explicitly decide otherwise.
+                            # Changing default behavior as requested:
+                            is_relevant = False
                     else:
                         # No filter -> All matches are relevant
                         is_relevant = True

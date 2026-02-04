@@ -1,5 +1,6 @@
 """Test the translation files."""
 
+import re
 import json
 import os
 import pytest
@@ -66,8 +67,23 @@ def test_translations_consistency(translations_path, strings_path):
 
         flat_trans = flatten_json(translations)
         missing_keys = []
+        mismatched_placeholders = []
         for key in flat_strings:
             if key not in flat_trans:
                 missing_keys.append(key)
+                continue
+
+            # Check placeholders
+            val_strings = str(flat_strings[key])
+            val_trans = str(flat_trans[key])
+
+            vars_strings = set(re.findall(r"\{(\w+)\}", val_strings))
+            vars_trans = set(re.findall(r"\{(\w+)\}", val_trans))
+
+            if vars_strings != vars_trans:
+                mismatched_placeholders.append(
+                    f"{key}: Expected {vars_strings}, got {vars_trans}"
+                )
 
         assert not missing_keys, f"Missing keys in {filename}: {missing_keys}"
+        assert not mismatched_placeholders, f"Placeholder mismatch in {filename}: {mismatched_placeholders}"
