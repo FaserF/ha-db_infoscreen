@@ -166,8 +166,7 @@
             }
           }
         }
-      },
-      "description": "Daten für Station **{station}** wurden seit {hours} Stunden nicht aktualisiert. Das Backend hat möglicherweise Probleme oder die Station wird nicht mehr unterstützt."
+      }
     },
     "api_error": {
       "title": "API-Fehler für Station",
@@ -188,8 +187,7 @@
             }
           }
         }
-      },
-      "description": "Fehler beim Abrufen der Daten für **{station}**: {error}"
+      }
     },
     "station_unsupported": {
       "title": "Station wird möglicherweise nicht mehr unterstützt",
@@ -210,8 +208,7 @@
             }
           }
         }
-      },
-      "description": "Station **{station}** mit Datenquelle **{data_source}** wird möglicherweise nicht mehr unterstützt. Bitte überprüfe den Stationsnamen oder versuche eine andere Datenquelle."
+      }
     },
     "connection_error": {
       "title": "Verbindungsfehler",
