@@ -1,0 +1,33 @@
+watch_train:
+  description: Watches a specific train and notifies when there are delays or changes.
+  fields:
+    train_id:
+      description: The ID or Number of the train to watch (e.g. ICE 123).
+      example: ICE 123
+      required: true
+      selector:
+        text:
+    notify_service:
+      description: The service to use for notifications (e.g. notify.mobile_app_iphone).
+      example: notify.mobile_app_iphone
+      required: true
+      selector:
+        text:
+    delay_threshold:
+      description: Minimum delay in minutes to trigger a notification.
+      default: 5
+      selector:
+        number:
+          min: 0
+          max: 60
+          unit_of_measurement: min
+    notify_on_platform_change:
+      description: Whether to notify on platform changes.
+      default: true
+      selector:
+        boolean:
+    notify_on_cancellation:
+      description: Whether to notify if the train is cancelled.
+      default: true
+      selector:
+        boolean:

@@ -9,9 +9,11 @@ import asyncio
 import logging
 import json
 import re
+import voluptuous as vol
 from urllib.parse import quote, urlencode
 
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import homeassistant.helpers.config_validation as cv
 
 from . import repairs
 
@@ -69,6 +71,41 @@ async def async_setup_entry(
     # Add an update listener for options
     config_entry.add_update_listener(update_listener)
 
+    # Register Service
+    async def async_watch_train(service_call):
+        """Handle the watch_train service call."""
+        train_id = service_call.data["train_id"]
+        notify_service = service_call.data["notify_service"]
+        delay_threshold = service_call.data.get("delay_threshold", 5)
+        notify_on_platform_change = service_call.data.get("notify_on_platform_change", True)
+        notify_on_cancellation = service_call.data.get("notify_on_cancellation", True)
+
+        coordinator.watched_trips[train_id] = {
+            "notify_service": notify_service,
+            "delay_threshold": delay_threshold,
+            "notify_on_platform_change": notify_on_platform_change,
+            "notify_on_cancellation": notify_on_cancellation,
+            "last_notified_delay": -1,
+            "last_notified_platform": None,
+            "last_notified_cancellation": False,
+        }
+        _LOGGER.debug("Trip %s added to Watchlist", train_id)
+
+    hass.services.async_register(
+        DOMAIN,
+        "watch_train",
+        async_watch_train,
+        schema=vol.Schema(
+            {
+                vol.Required("train_id"): cv.string,
+                vol.Required("notify_service"): cv.string,
+                vol.Optional("delay_threshold", default=5): cv.positive_int,
+                vol.Optional("notify_on_platform_change", default=True): cv.boolean,
+                vol.Optional("notify_on_cancellation", default=True): cv.boolean,
+            }
+        ),
+    )
+
     return True
 
 
@@ -107,7 +144,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         config = {**config_entry.data, **config_entry.options}
 
         self.station = config[CONF_STATION]
-        self.next_departures = config.get(CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES)
+        self.next_departures = config_entry.data.get(
+            CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES
+        )
+        self.watched_trips = {}
         self.hide_low_delay = config.get(CONF_HIDE_LOW_DELAY, False)
         self.detailed = config.get(CONF_DETAILED, False)
         self.past_60_minutes = config.get(CONF_PAST_60_MINUTES, False)
@@ -901,6 +941,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     "Fetched and cached %d valid departures",
                     len(filtered_departures),
                 )
+
+                # --- Feature 6: Watch Train Notifications ---
+                await self._check_watched_trips(filtered_departures)
+
                 return filtered_departures[: self.next_departures]
             else:
                 _LOGGER.warning(
@@ -929,6 +973,63 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             _LOGGER.error("Unexpected error fetching data: %s", e)
             self._handle_update_error(f"Unexpected error: {e}")
             return self._last_valid_value or []
+
+    async def _check_watched_trips(self, departures):
+        """Check if any watched trips need notifications."""
+        if not self.watched_trips:
+            return
+
+        for train_id_to_watch, watch_config in self.watched_trips.items():
+            # Find the trip in current departures
+            trip_found = None
+            for dep in departures:
+                if dep.get("train") == train_id_to_watch or dep.get("trip_id") == train_id_to_watch:
+                    trip_found = dep
+                    break
+
+            if trip_found:
+                delay = trip_found.get("delayDeparture", 0)
+                platform = trip_found.get("platform")
+                cancelled = trip_found.get("isCancelled", False)
+                destination = trip_found.get("destination")
+
+                notify = False
+                message = f"Update for {trip_found.get('train')} to {destination}: "
+
+                # 1. Check Delay
+                try:
+                    delay_int = int(delay) if delay else 0
+                    if delay_int >= watch_config["delay_threshold"] and delay_int != watch_config["last_notified_delay"]:
+                        notify = True
+                        message += f"Delay is now {delay_int} min. "
+                        watch_config["last_notified_delay"] = delay_int
+                except (ValueError, TypeError):
+                    pass
+
+                # 2. Check Platform
+                if watch_config["notify_on_platform_change"] and platform and platform != watch_config["last_notified_platform"]:
+                    if watch_config["last_notified_platform"] is not None:
+                         notify = True
+                         message += f"Platform changed to {platform}. "
+                    watch_config["last_notified_platform"] = platform
+
+                # 3. Check Cancellation
+                if watch_config["notify_on_cancellation"] and cancelled and not watch_config["last_notified_cancellation"]:
+                    notify = True
+                    message += "Train is CANCELLED! "
+                    watch_config["last_notified_cancellation"] = True
+
+                if notify:
+                    try:
+                        service_parts = watch_config["notify_service"].split(".")
+                        domain = service_parts[0]
+                        service = ".".join(service_parts[1:])
+                        await self.hass.services.async_call(
+                            domain, service, {"message": message, "title": "🚆 DB Watcher"}
+                        )
+                        _LOGGER.info("Sent notification for trip %s: %s", train_id_to_watch, message)
+                    except Exception as e:
+                        _LOGGER.error("Failed to send notification for trip %s: %s", train_id_to_watch, e)
 
     def _handle_update_error(self, error_message: str) -> None:
         """Handle update errors and create repair issues if needed."""
