@@ -39,7 +39,7 @@ async def test_leave_now_sensor_logic(hass, mock_coordinator):
     # 3. Verify: 25 - 10 = 15 minutes left
     # Note: Use mock for now to be precise
     with patch("homeassistant.util.dt.now", return_value=now):
-        assert sensor.native_value == 15
+        assert sensor.native_value == "15"
 
 
 @pytest.mark.asyncio

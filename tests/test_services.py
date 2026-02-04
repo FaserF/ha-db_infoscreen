@@ -103,7 +103,7 @@ async def test_watch_train_cancellation(hass, mock_coordinator):
             "destination": "Berlin",
             "delayDeparture": 0,
             "platform": "1",
-            "isCancelled": True,
+            "is_cancelled": True,
         }
     ]
 
