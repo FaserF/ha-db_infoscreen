@@ -43,7 +43,10 @@ async def async_setup_entry(
     # For now, if 'platforms' config exists, we create one for each.
     # If not, we create a general "Station Accessibility" sensor.
     # Priority: Options > Data
-    platforms_str = config_entry.options.get("platforms", config_entry.data.get("platforms", ""))
+    platforms_raw = config_entry.options.get("platforms")
+    if platforms_raw is None:
+        platforms_raw = config_entry.data.get("platforms", "")
+    platforms_str = platforms_raw
 
     unique_platforms = set()
     if platforms_str:
@@ -246,20 +249,35 @@ class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
         self.platform_filter = platform
 
         if platform:
-            self._attr_unique_id = f"db_infoscreen_elevator_{platform}_{config_entry.entry_id}"
+            self._attr_unique_id = (
+                f"db_infoscreen_elevator_{platform}_{config_entry.entry_id}"
+            )
             self._attr_name = f"Elevator Platform {platform}"
         else:
-            self._attr_unique_id = f"db_infoscreen_elevator_general_{config_entry.entry_id}"
+            self._attr_unique_id = (
+                f"db_infoscreen_elevator_general_{config_entry.entry_id}"
+            )
             self._attr_name = "Station Accessibility"
 
         self._attr_icon = "mdi:elevator-passenger-off-outline"
+        self._issues = self._compute_issues()
+
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        self._issues = self._compute_issues()
+        await super().async_added_to_hass()
+
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self._issues = self._compute_issues()
+        super()._handle_coordinator_update()
 
     @property
     def is_on(self) -> bool:
         """Return True if a relevant issue is found."""
-        return len(self.get_issues()) > 0
+        return len(self._issues) > 0
 
-    def get_issues(self) -> list[str]:
+    def _compute_issues(self) -> list[str]:
         """Parse departures for relevant elevator issues."""
         departures = self.coordinator.data or []
         issues = set()
@@ -315,7 +333,7 @@ class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return details about elevator issues."""
-        issues = self.get_issues()
+        issues = self._issues
         return {
             "issues": issues,
             "issue_count": len(issues),

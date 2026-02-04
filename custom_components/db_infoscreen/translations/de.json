@@ -247,7 +247,7 @@
         },
         "notify_service": {
           "name": "Benachrichtigungsdienst",
-          "description": "Der aufzurufende Benachrichtigungsdienst (z.B. 'mobile_app_mein_handy'). Ohne 'notify.'-Domain."
+          "description": "Der aufzurufende Benachrichtigungsdienst (z.B. 'notify.mobile_app_mein_handy'). Inklusive 'notify.'-Präfix."
         },
         "delay_threshold": {
           "name": "Mindestverspätung",

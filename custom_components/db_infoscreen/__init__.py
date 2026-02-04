@@ -117,7 +117,7 @@ async def async_setup_entry(
             "change_station": change_station,
             "next_train_id": next_train_id,
         }
-        _LOGGER.debug("Connection ICE %s -> %s tracked", my_train_id, next_train_id)
+        _LOGGER.debug("Connection %s %s -> %s tracked", my_train_id[:3], my_train_id, next_train_id)
 
     hass.services.async_register(
         DOMAIN,
@@ -209,8 +209,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         station_cleaned = " ".join(self.station.split())
         encoded_station = quote(station_cleaned, safe=",-")
 
-        base_url = custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
-        url = f"{base_url}/{encoded_station}.json"
+        self._base_url = custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
+        url = f"{self._base_url}/{encoded_station}.json"
 
         data_source_map = DATA_SOURCE_MAP
 
@@ -720,9 +720,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 if wagon_order_data:
                     # If it's a list, it's the detailed structure
                     if isinstance(wagon_order_data, list):
-                         wagon_html = self._process_wagon_order(wagon_order_data)
-                         if wagon_html:
-                             departure["wagon_order_html"] = wagon_html
+                        wagon_html = self._process_wagon_order(wagon_order_data)
+                        if wagon_html:
+                            departure["wagon_order_html"] = wagon_html
                     departure["wagon_order"] = wagon_order_data
 
                 # Extract sectors from platform string (e.g. "5 D-G")
@@ -967,11 +967,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             my_time = dep.get("departure_timestamp")
                             other_time = other_dep.get("departure_timestamp")
                             if my_time and other_time and other_time > my_time:
-                                alternatives.append({
-                                    "train": other_dep.get("train"),
-                                    "scheduledDeparture": other_dep.get("scheduledDeparture"),
-                                    "platform": other_dep.get("platform"),
-                                })
+                                alternatives.append(
+                                    {
+                                        "train": other_dep.get("train"),
+                                        "scheduledDeparture": other_dep.get(
+                                            "scheduledDeparture"
+                                        ),
+                                        "platform": other_dep.get("platform"),
+                                    }
+                                )
 
                     if alternatives:
                         dep["alternative_connections"] = alternatives[:3]  # Limit to 3
@@ -1018,9 +1022,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                         conn_config = self.tracked_connections.get(my_train_id)
                         if not conn_config:
-                             trip_id = dep.get("trip_id")
-                             if trip_id:
-                                 conn_config = self.tracked_connections.get(trip_id)
+                            trip_id = dep.get("trip_id")
+                            if trip_id:
+                                conn_config = self.tracked_connections.get(trip_id)
 
                         if conn_config:
                             # 1. Find arrival time at change_station
@@ -1098,12 +1102,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     break
 
             if not trip_found:
-                 # Increment missed counter
-                 missed = watch_config.get("missed_update_count", 0) + 1
-                 watch_config["missed_update_count"] = missed
-                 if missed >= 3:
-                     to_remove.append(train_id_to_watch)
-                 continue
+                # Increment missed counter
+                missed = watch_config.get("missed_update_count", 0) + 1
+                watch_config["missed_update_count"] = missed
+                if missed >= 3:
+                    to_remove.append(train_id_to_watch)
+                continue
 
             # Found it, reset counter
             watch_config["missed_update_count"] = 0
@@ -1142,14 +1146,16 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             if notify:
                 try:
                     if "." not in watch_config["notify_service"]:
-                            raise ValueError("Invalid notify service format (missing '.')")
+                        raise ValueError("Invalid notify service format (missing '.')")
 
                     service_parts = watch_config["notify_service"].split(".")
                     domain = service_parts[0]
                     service = ".".join(service_parts[1:])
 
                     if not domain or not service:
-                            raise ValueError("Invalid notify service format (empty domain or service)")
+                        raise ValueError(
+                            "Invalid notify service format (empty domain or service)"
+                        )
 
                     await self.hass.services.async_call(
                         domain, service, {"message": message, "title": "🚆 DB Watcher"}
@@ -1167,8 +1173,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         station_cleaned = " ".join(station.split())
         encoded_station = quote(station_cleaned, safe=",-")
 
-        # Build URL for second call - assuming default backend for now
-        url = f"https://dbf.finalrewind.org/{encoded_station}.json"
+        # Build URL for second call - using configured base URL
+        url = f"{self._base_url}/{encoded_station}.json"
 
         try:
             session = async_get_clientsession(self.hass)
@@ -1225,7 +1231,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 "timestamp": now,
                 "scheduled": sched_time,
                 "delay": dep.get("delayDeparture") or dep.get("delayArrival") or 0,
-                "cancelled": dep.get("isCancelled", False),
+                "cancelled": dep.get("is_cancelled", False),
             }
 
 

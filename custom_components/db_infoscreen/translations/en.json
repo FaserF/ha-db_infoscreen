@@ -247,7 +247,7 @@
         },
         "notify_service": {
           "name": "Notify Service",
-          "description": "The notification service to call (e.g. 'mobile_app_my_phone'). Do not include the domain 'notify.', just the service name."
+          "description": "The notification service to call (e.g. 'notify.mobile_app_my_phone'). Include the domain 'notify.' prefix."
         },
         "delay_threshold": {
           "name": "Delay Threshold",
