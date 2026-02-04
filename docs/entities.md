@@ -99,6 +99,25 @@ Three binary sensors are automatically created to provide quick status indicator
 
 ---
 
+---
+
+### Accessibility Sensor (Elevator)
+**Entity ID**: `binary_sensor.db_infoscreen_{station}_elevator_{platform}` or `_general_`
+
+!!! note "Disabled by Default"
+    This sensor is disabled by default. Enable it in the entity settings if you require accessibility information.
+
+| State | Meaning |
+| :--- | :--- |
+| **ON** | Elevator or escalator issue detected |
+| **OFF** | No reported issues |
+
+**Attributes:**
+- `issues` - List of specific issue messages (e.g. "Aufzug zu Gleis 1 defekt")
+- `issue_count` - Number of active issues
+
+---
+
 ## 📅 Calendar Entity
 
 **Entity ID**: `calendar.db_infoscreen_{station}_departures`

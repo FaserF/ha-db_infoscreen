@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from homeassistant.components.binary_sensor import (
@@ -36,13 +37,31 @@ async def async_setup_entry(
         ]
     )
 
+    # Add Elevator Sensors
+    # If platforms are filtered, create sensors for those platforms.
+    # Otherwise, we could create a general one or try to infer from typical usage.
+    # For now, if 'platforms' config exists, we create one for each.
+    # If not, we create a general "Station Accessibility" sensor.
+    platforms_str = config_entry.data.get("platforms", "")
+    if platforms_str:
+        platforms = [p.strip() for p in platforms_str.split(",")]
+        for platform in platforms:
+            async_add_entities(
+                [DBInfoScreenElevatorBinarySensor(coordinator, config_entry, platform)]
+            )
+    else:
+         async_add_entities(
+            [DBInfoScreenElevatorBinarySensor(coordinator, config_entry, None)]
+        )
+
 
 class DBInfoScreenBaseBinarySensor(DBInfoScreenBaseEntity, BinarySensorEntity):
     """Base class for DB Infoscreen binary sensors."""
 
-    def __init__(self, coordinator, config_entry: ConfigEntry) -> None:
+    def __init__(self, coordinator, config_entry: ConfigEntry, station: str = None) -> None:
         """Initialize the binary sensor."""
         super().__init__(coordinator, config_entry)
+        self.station_name = station  # Store station or platform context if needed
 
 
 class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
@@ -52,9 +71,9 @@ class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
     _attr_has_entity_name = True
     _attr_entity_registry_enabled_default = False
 
-    def __init__(self, coordinator, config_entry: ConfigEntry, station: str) -> None:
+    def __init__(self, coordinator, config_entry: ConfigEntry) -> None:
         """Initialize the delay sensor."""
-        super().__init__(coordinator, config_entry, station)
+        super().__init__(coordinator, config_entry)
         self._attr_unique_id = f"db_infoscreen_delay_{config_entry.entry_id}"
         self._attr_name = "Delay"
         self._attr_icon = "mdi:clock-alert"
@@ -111,9 +130,9 @@ class DBInfoScreenCancellationBinarySensor(DBInfoScreenBaseBinarySensor):
     _attr_has_entity_name = True
     _attr_entity_registry_enabled_default = False
 
-    def __init__(self, coordinator, config_entry: ConfigEntry, station: str) -> None:
+    def __init__(self, coordinator, config_entry: ConfigEntry) -> None:
         """Initialize the cancellation sensor."""
-        super().__init__(coordinator, config_entry, station)
+        super().__init__(coordinator, config_entry)
         self._attr_unique_id = f"db_infoscreen_cancelled_{config_entry.entry_id}"
         self._attr_name = "Cancellation"
         self._attr_icon = "mdi:train-car-passenger-door"
@@ -166,9 +185,9 @@ class DBInfoScreenConnectionBinarySensor(DBInfoScreenBaseBinarySensor):
     _attr_has_entity_name = True
     _attr_entity_registry_enabled_default = False  # Disabled by default
 
-    def __init__(self, coordinator, config_entry: ConfigEntry, station: str) -> None:
+    def __init__(self, coordinator, config_entry: ConfigEntry) -> None:
         """Initialize the connection sensor."""
-        super().__init__(coordinator, config_entry, station)
+        super().__init__(coordinator, config_entry)
         self._attr_unique_id = f"db_infoscreen_connection_{config_entry.entry_id}"
         self._attr_name = "API Connection"
         self._attr_icon = "mdi:api"
@@ -194,4 +213,97 @@ class DBInfoScreenConnectionBinarySensor(DBInfoScreenBaseBinarySensor):
                 last_update.isoformat() if last_update else "Never"
             ),
             "consecutive_errors": consecutive_errors,
+        }
+
+
+class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
+    """Binary sensor that indicates if an elevator/escalator is broken."""
+
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_has_entity_name = True
+    _attr_entity_registry_enabled_default = False  # Disabled by default as requested
+
+    def __init__(self, coordinator, config_entry: ConfigEntry, platform: str | None) -> None:
+        """Initialize the elevator sensor."""
+        super().__init__(coordinator, config_entry)
+        self.platform_filter = platform
+
+        if platform:
+            self._attr_unique_id = f"db_infoscreen_elevator_{platform}_{config_entry.entry_id}"
+            self._attr_name = f"Elevator Platform {platform}"
+        else:
+            self._attr_unique_id = f"db_infoscreen_elevator_general_{config_entry.entry_id}"
+            self._attr_name = "Station Accessibility"
+
+        self._attr_icon = "mdi:elevator-passenger-off-outline"
+
+    @property
+    def is_on(self) -> bool:
+        """Return True if a relevant issue is found."""
+        return len(self.get_issues()) > 0
+
+    def get_issues(self) -> list[str]:
+        """Parse departures for relevant elevator issues."""
+        departures = self.coordinator.data or []
+        issues = set()
+
+        # Keywords to look for
+        keywords = ["aufzug", "aufzüge", "fahrstuhl", "lift", "rolltreppe"]
+        # Error states (usually implied by the presence of a message, but safeguards help)
+        error_words = ["defekt", "gestört", "außer betrieb", "nicht verfügbar"]
+
+        for departure in departures:
+            messages = departure.get("messages", {})
+            # Collect all message texts
+            texts = []
+            if isinstance(messages, dict):
+                 for msg_type in messages:
+                     msg_list = messages[msg_type]
+                     if isinstance(msg_list, list):
+                         for m in msg_list:
+                             if isinstance(m, dict):
+                                 texts.append(m.get("text", ""))
+                             elif isinstance(m, str):
+                                 texts.append(m)
+
+            for text in texts:
+                lower_text = text.lower()
+                # Check for elevator keywords
+                if any(k in lower_text for k in keywords):
+                    # Check for platform relevance
+                    # If we filter by platform, only include if matches platform OR is global?
+                    # "Aufzug Gleis 1 defekt" -> Match "1"
+
+                    is_relevant = False
+                    if self.platform_filter:
+                        # Check strictly for this platform
+                        # Regex to find platform number in text
+                        match = re.search(r"(?:gleis|bahnsteig)\s*(\d+)", lower_text)
+                        if match:
+                             if match.group(1) == self.platform_filter:
+                                 is_relevant = True
+                        else:
+                             # No platform mentioned? Maybe global or applies to current departure's platform?
+                             # Let's assume if it is attached to a departure on this platform, it is relevant.
+                             # But IRIS often puts all station messages on all departures.
+                             # So we MUST check text if possible.
+                             # If no platform number in text, assume relevant?
+                             # "Aufzug zur Haupthalle defekt" -> Relevant for everyone.
+                             is_relevant = True
+                    else:
+                        # No filter -> All matches are relevant
+                        is_relevant = True
+
+                    if is_relevant:
+                        issues.add(text)
+
+        return list(issues)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return details about elevator issues."""
+        issues = self.get_issues()
+        return {
+            "issues": issues,
+            "issue_count": len(issues),
         }
