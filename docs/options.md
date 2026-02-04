@@ -41,7 +41,7 @@ Refine which trains are shown.
 ### 🖼️ Display Settings
 Control how the data is presented in Home Assistant.
 
-*   **Detailed Information**: Enables extra attributes for each departure (e.g., full route).
+*   **Detailed Information**: Enables extra attributes for each departure (e.g., full route, wagon order).
 *   **Enable Simplified Text View**: Provides a pre-formatted string for simple markdown cards.
 *   **Display Mode (admode)**:
     *   `preferred departure`: Shows the planned time, but switches to actual time if delayed.

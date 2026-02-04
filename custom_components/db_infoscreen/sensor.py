@@ -240,6 +240,9 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                     dt_util.utc_from_timestamp(int(dep_copy["time"]))
                 ).strftime("%Y-%m-%d %H:%M:%S")
 
+            # Ensure wagon order attributes are carried over if present
+            # (fetched data already has them, but explicit check or comment helps)
+
             next_departures.append(dep_copy)
 
         last_updated = getattr(self.coordinator, "last_update", None)

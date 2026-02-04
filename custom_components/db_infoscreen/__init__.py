@@ -163,6 +163,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             params["hidelowdelay"] = "1"
         if self.detailed:
             params["detailed"] = "1"
+            params["wagonorder"] = "1"
         if self.past_60_minutes:
             params["past"] = "1"
 
@@ -216,6 +217,65 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         except ValueError:
             _LOGGER.error("Invalid offset format: %s", offset)
             return 0
+
+    def _process_wagon_order(self, wagon_order_data: list) -> str | None:
+        """
+        Process the wagon order list and return a human-readable HTML summary.
+        Example output: "1. Klasse: A-B | Bordbistro: C"
+        """
+        if not wagon_order_data:
+            return None
+
+        sectors_first_class = set()
+        sectors_second_class = set()
+        sectors_bistro = set()
+
+        for wagon in wagon_order_data:
+            sections = wagon.get("sections", [])
+            if not sections:
+                continue
+
+            wagon_type = wagon.get("type", "")
+            wagon_class = str(wagon.get("class", ""))
+
+            # 1. Class
+            if wagon_class == "1" or wagon_class == "12":
+                 sectors_first_class.update(sections)
+
+            # 2. Class
+            if wagon_class == "2" or wagon_class == "12":
+                 sectors_second_class.update(sections)
+
+            # Bistro/Restaurant
+            if "WR" in wagon_type or "AR" in wagon_type or "Bistro" in wagon_type:
+                sectors_bistro.update(sections)
+
+        def format_sectors(sectors: set) -> str:
+            sorted_sectors = sorted(list(sectors))
+            if not sorted_sectors:
+                return ""
+            if len(sorted_sectors) > 1:
+                return ", ".join(sorted_sectors)
+            return sorted_sectors[0]
+
+        parts = []
+
+        s1 = format_sectors(sectors_first_class)
+        if s1:
+            parts.append(f"<b>1. Klasse:</b> {s1}")
+
+        s2 = format_sectors(sectors_second_class)
+        if s2:
+            parts.append(f"<b>2. Klasse:</b> {s2}")
+
+        sb = format_sectors(sectors_bistro)
+        if sb:
+            parts.append(f"<b>Bordbistro:</b> {sb}")
+
+        if not parts:
+            return None
+
+        return " | ".join(parts)
 
     async def _async_update_data(self):
         """
@@ -574,9 +634,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 else:
                     departure["changed_platform"] = False
 
-                # Wagon Order (Pass-through + Sector Extraction)
-                if "wagonorder" in departure:
-                    departure["wagon_order"] = departure["wagonorder"]
+                # Wagon Order (Pass-through + Sector Extraction + HTML Generation)
+                wagon_order_data = departure.get("wagonorder")
+                if wagon_order_data:
+                    # If it's a list, it's the detailed structure
+                    if isinstance(wagon_order_data, list):
+                         wagon_html = self._process_wagon_order(wagon_order_data)
+                         if wagon_html:
+                             departure["wagon_order_html"] = wagon_html
+                    departure["wagon_order"] = wagon_order_data
 
                 # Extract sectors from platform string (e.g. "5 D-G")
                 if platform and isinstance(platform, str):

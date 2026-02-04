@@ -227,7 +227,12 @@ async def test_coordinator_wagon_order(hass, mock_config_entry):
                 "destination": "With Sectors",
                 "train": "ICE 1",
                 "platform": "Gl. 5 A-C",
-                "wagonorder": True,
+                "wagonorder": [
+                    {"sections": ["A"], "class": "1", "type": "Apmz"},
+                    {"sections": ["B"], "class": "12", "type": "ABpmz"},
+                    {"sections": ["C"], "class": "2", "type": "Bpmz"},
+                    {"sections": ["C"], "type": "WRmz"}, # Bistro
+                ],
             },
             {
                 "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
@@ -245,8 +250,16 @@ async def test_coordinator_wagon_order(hass, mock_config_entry):
         data = await coordinator._async_update_data()
         assert len(data) == 2
         # Test 1: Full info
-        assert data[0]["wagon_order"] is True
+        assert data[0]["wagon_order"] is not None
         assert data[0]["platform_sectors"] == "A-C"
+
+        # Verify HTML generation
+        html = data[0].get("wagon_order_html")
+        assert html is not None
+        assert "<b>1. Klasse:</b> A, B" in html
+        assert "<b>2. Klasse:</b> B, C" in html
+        assert "<b>Bordbistro:</b> C" in html
+
         # Test 2: Missing info
         assert "wagon_order" not in data[1]
         assert "platform_sectors" not in data[1]

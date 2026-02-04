@@ -25,6 +25,8 @@ The primary sensor that displays the next departure time.
 - `isCancelled` - Whether the train is cancelled
 - `route` - Intermediate stops (if enabled)
 - `messages` - Quality notes and warnings
+- `wagon_order` - Raw wagon order data (if available and detailed)
+- `wagon_order_html` - HTML summary of wagon order (e.g. "1. Class in A")
 
 ---
 
