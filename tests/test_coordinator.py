@@ -13,6 +13,7 @@ from custom_components.db_infoscreen.const import (
     CONF_DATA_SOURCE,
     CONF_DETAILED,
     CONF_HIDE_LOW_DELAY,
+    CONF_FAVORITE_TRAINS,
 )
 from tests.common import patch_session
 
@@ -431,3 +432,24 @@ async def test_coordinator_alternative_connections(hass, mock_config_entry):
 
         # ICE 3 has unique destination, no alternatives
         assert "alternative_connections" not in data[2]
+
+
+@pytest.mark.asyncio
+async def test_coordinator_favorite_trains_filter(hass, mock_config_entry):
+    """Test that departures are filtered by favorite trains."""
+    mock_config_entry.options[CONF_FAVORITE_TRAINS] = "ICE 1, RE 2"
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+
+    mock_data = {
+        "departures": [
+            {"scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M"), "destination": "Berlin", "train": "ICE 1"},
+            {"scheduledDeparture": (dt_util.now() + timedelta(minutes=11)).strftime("%Y-%m-%dT%H:%M"), "destination": "Nürnberg", "train": "ICE 500"},
+            {"scheduledDeparture": (dt_util.now() + timedelta(minutes=12)).strftime("%Y-%m-%dT%H:%M"), "destination": "Salzburg", "train": "RE 2 (Regio)"},
+        ]
+    }
+
+    with patch_session(mock_data):
+        data = await coordinator._async_update_data()
+        assert len(data) == 2
+        assert data[0]["train"] == "ICE 1"
+        assert data[1]["train"] == "RE 2 (Regio)"

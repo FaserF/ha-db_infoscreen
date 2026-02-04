@@ -33,6 +33,7 @@ from .const import (
     CONF_ENABLE_TEXT_VIEW,
     CONF_EXCLUDE_CANCELLED,
     CONF_SHOW_OCCUPANCY,
+    CONF_FAVORITE_TRAINS,
     normalize_data_source,
 )
 from .utils import async_get_stations, find_station_matches
@@ -411,6 +412,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_PLATFORMS, default=""): cv.string,
                 vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
                 vol.Optional(CONF_DIRECTION, default=""): cv.string,
+                vol.Optional(CONF_FAVORITE_TRAINS, default=""): cv.string,
             }
         )
 
@@ -590,6 +592,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_EXCLUDE_CANCELLED,
                         default=self._get_config_value(CONF_EXCLUDE_CANCELLED, False),
                     ): cv.boolean,
+                    vol.Optional(
+                        CONF_FAVORITE_TRAINS,
+                        default=self._get_config_value(CONF_FAVORITE_TRAINS, ""),
+                    ): cv.string,
                 }
             ),
         )

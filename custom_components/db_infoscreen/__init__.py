@@ -45,6 +45,7 @@ from .const import (
     TRAIN_TYPE_MAPPING,
     CONF_EXCLUDE_CANCELLED,
     CONF_SHOW_OCCUPANCY,
+    CONF_FAVORITE_TRAINS,
     normalize_data_source,
     DATA_SOURCE_MAP,
 )
@@ -147,6 +148,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.next_departures = config_entry.data.get(
             CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES
         )
+        self.favorite_trains = []
+        fav_raw = config.get(CONF_FAVORITE_TRAINS, "")
+        if isinstance(fav_raw, str) and fav_raw.strip():
+            self.favorite_trains = [s.strip() for s in re.split(r",|\|", fav_raw) if s.strip()]
+
         self.watched_trips = {}
         self.hide_low_delay = config.get(CONF_HIDE_LOW_DELAY, False)
         self.detailed = config.get(CONF_DETAILED, False)
@@ -935,6 +941,20 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     if alternatives:
                         dep["alternative_connections"] = alternatives[:3]  # Limit to 3
 
+            # --- Feature 7: Favorite Trains Filtering ---
+            if self.favorite_trains:
+                fav_filtered = []
+                for dep in filtered_departures:
+                    train_name = dep.get("train", "")
+                    # Match if train_name contains any of the favorite strings
+                    if any(fav in train_name for fav in self.favorite_trains):
+                        fav_filtered.append(dep)
+                filtered_departures = fav_filtered
+                _LOGGER.debug(
+                    "Filtered departures by favorite trains. Remaining: %d",
+                    len(filtered_departures),
+                )
+
             if filtered_departures:
                 self._last_valid_value = filtered_departures[: self.next_departures]
                 _LOGGER.debug(
@@ -970,7 +990,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             self._handle_update_error(f"Invalid response from server: {e}")
             return self._last_valid_value or []
         except Exception as e:
-            _LOGGER.error("Unexpected error fetching data: %s", e)
+            _LOGGER.exception("Unexpected error fetching data: %s", e)
             self._handle_update_error(f"Unexpected error: {e}")
             return self._last_valid_value or []
 
