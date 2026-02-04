@@ -78,7 +78,9 @@ async def async_setup_entry(
         train_id = service_call.data["train_id"]
         notify_service = service_call.data["notify_service"]
         delay_threshold = service_call.data.get("delay_threshold", 5)
-        notify_on_platform_change = service_call.data.get("notify_on_platform_change", True)
+        notify_on_platform_change = service_call.data.get(
+            "notify_on_platform_change", True
+        )
         notify_on_cancellation = service_call.data.get("notify_on_cancellation", True)
 
         coordinator.watched_trips[train_id] = {
@@ -117,7 +119,7 @@ async def async_setup_entry(
             "change_station": change_station,
             "next_train_id": next_train_id,
         }
-        _LOGGER.debug("Connection %s %s -> %s tracked", my_train_id[:3], my_train_id, next_train_id)
+        _LOGGER.debug("Connection %s -> %s tracked", my_train_id, next_train_id)
 
     hass.services.async_register(
         DOMAIN,
@@ -174,7 +176,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.favorite_trains = []
         fav_raw = config.get(CONF_FAVORITE_TRAINS, "")
         if isinstance(fav_raw, str) and fav_raw.strip():
-            self.favorite_trains = [s.strip() for s in re.split(r",|\|", fav_raw) if s.strip()]
+            self.favorite_trains = [
+                s.strip() for s in re.split(r",|\|", fav_raw) if s.strip()
+            ]
 
         self.watched_trips = {}
         self.tracked_connections = {}
@@ -209,7 +213,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         station_cleaned = " ".join(self.station.split())
         encoded_station = quote(station_cleaned, safe=",-")
 
-        self._base_url = custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
+        self._base_url = (
+            custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
+        )
         url = f"{self._base_url}/{encoded_station}.json"
 
         data_source_map = DATA_SOURCE_MAP
@@ -370,7 +376,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                     data = await response.json()
                     # Fallback for some mock environments where json() returns a coroutine
-                    if asyncio.iscoroutine(data) or (hasattr(data, "__await__") and not isinstance(data, (dict, list))):
+                    if asyncio.iscoroutine(data) or (
+                        hasattr(data, "__await__")
+                        and not isinstance(data, (dict, list))
+                    ):
                         data = await data
 
             raw_departures = data.get("departures", [])
@@ -1014,7 +1023,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                 # --- Feature 9: Full Connection Tracking ---
                 if self.tracked_connections:
-                    for dep in pre_filtered_departures: # Check connection tracking on all trains
+                    for (
+                        dep
+                    ) in (
+                        pre_filtered_departures
+                    ):  # Check connection tracking on all trains
 
                         my_train_id = dep.get("train")
                         if not my_train_id:
@@ -1027,22 +1040,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                 conn_config = self.tracked_connections.get(trip_id)
 
                         if conn_config:
-                            # 1. Find arrival time at change_station
                             change_station = conn_config["change_station"]
-                            my_arrival_ts = None
-                            for stop in dep.get("route", []):
-                                if change_station in stop.get("name", ""):
-                                    # We need arrival time. API detailed=1 provides arr_timestamp or similar?
-                                    # Actually route objects usually have sched_arr and arr_delay.
-                                    # Let's assume we can estimate it or it's there.
-                                    # For now, let's just use scheduled arrival if available.
-                                    # Wait, I'll check my earlier route implementation.
-                                    pass
-
-                            # Better: If we have trip_id, we can potentially get full route.
+                            # If we have trip_id, we can potentially get full route.
                             # For now, let's just make the second API call.
                             next_train_id = conn_config["next_train_id"]
-                            next_dep = await self._get_train_departure_at_station(change_station, next_train_id)
+                            next_dep = await self._get_train_departure_at_station(
+                                change_station, next_train_id
+                            )
 
                             if next_dep:
                                 dep["connection_info"] = {
@@ -1084,8 +1088,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             self._handle_update_error(f"Unexpected error: {e}")
             return self._last_valid_value or []
 
-
-
     async def _check_watched_trips(self, departures):
         """Check if any watched trips need notifications."""
         if not self.watched_trips:
@@ -1097,7 +1099,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             # Find the trip in current departures
             trip_found = None
             for dep in departures:
-                if dep.get("train") == train_id_to_watch or dep.get("trip_id") == train_id_to_watch:
+                if (
+                    dep.get("train") == train_id_to_watch
+                    or dep.get("trip_id") == train_id_to_watch
+                ):
                     trip_found = dep
                     break
 
@@ -1123,7 +1128,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             # 1. Check Delay
             try:
                 delay_int = int(delay) if delay else 0
-                if delay_int >= watch_config["delay_threshold"] and delay_int != watch_config["last_notified_delay"]:
+                if (
+                    delay_int >= watch_config["delay_threshold"]
+                    and delay_int != watch_config["last_notified_delay"]
+                ):
                     notify = True
                     message += f"Delay is now {delay_int} min. "
                     watch_config["last_notified_delay"] = delay_int
@@ -1131,14 +1139,22 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 pass
 
             # 2. Check Platform
-            if watch_config["notify_on_platform_change"] and platform and platform != watch_config["last_notified_platform"]:
+            if (
+                watch_config["notify_on_platform_change"]
+                and platform
+                and platform != watch_config["last_notified_platform"]
+            ):
                 if watch_config["last_notified_platform"] is not None:
-                        notify = True
-                        message += f"Platform changed to {platform}. "
+                    notify = True
+                    message += f"Platform changed to {platform}. "
                 watch_config["last_notified_platform"] = platform
 
             # 3. Check Cancellation
-            if watch_config["notify_on_cancellation"] and is_cancelled and not watch_config["last_notified_cancellation"]:
+            if (
+                watch_config["notify_on_cancellation"]
+                and is_cancelled
+                and not watch_config["last_notified_cancellation"]
+            ):
                 notify = True
                 message += "Train is CANCELLED! "
                 watch_config["last_notified_cancellation"] = True
@@ -1160,9 +1176,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     await self.hass.services.async_call(
                         domain, service, {"message": message, "title": "🚆 DB Watcher"}
                     )
-                    _LOGGER.info("Sent notification for trip %s: %s", train_id_to_watch, message)
+                    _LOGGER.info(
+                        "Sent notification for trip %s: %s", train_id_to_watch, message
+                    )
                 except Exception as e:
-                    _LOGGER.error("Failed to send notification for trip %s: %s", train_id_to_watch, e)
+                    _LOGGER.error(
+                        "Failed to send notification for trip %s: %s",
+                        train_id_to_watch,
+                        e,
+                    )
 
         for train_id in to_remove:
             _LOGGER.debug("Removing stale watch for %s", train_id)
@@ -1187,7 +1209,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                     data = await response.json()
                     # Fallback for some mock environments where json() returns a coroutine
-                    if asyncio.iscoroutine(data) or (hasattr(data, "__await__") and not isinstance(data, (dict, list))):
+                    if asyncio.iscoroutine(data) or (
+                        hasattr(data, "__await__")
+                        and not isinstance(data, (dict, list))
+                    ):
                         data = await data
 
             for dep in data.get("departures", []):
@@ -1233,8 +1258,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 "delay": dep.get("delayDeparture") or dep.get("delayArrival") or 0,
                 "cancelled": dep.get("is_cancelled", False),
             }
-
-
 
     def _handle_update_error(self, error_message: str) -> None:
         """Handle update errors and create repair issues if needed."""

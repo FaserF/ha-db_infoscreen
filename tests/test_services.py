@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch, AsyncMock
 import pytest
 from custom_components.db_infoscreen.__init__ import DBInfoScreenCoordinator
-from homeassistant.core import HomeAssistant
+
 
 @pytest.fixture
 def mock_coordinator(hass):
@@ -10,6 +10,7 @@ def mock_coordinator(hass):
     config_entry.options = {}
     coordinator = DBInfoScreenCoordinator(hass, config_entry)
     return coordinator
+
 
 @pytest.mark.asyncio
 async def test_watch_train_notification_trigger(hass, mock_coordinator):
@@ -33,12 +34,14 @@ async def test_watch_train_notification_trigger(hass, mock_coordinator):
             "destination": "Berlin",
             "delayDeparture": 10,
             "platform": "1",
-            "isCancelled": False
+            "isCancelled": False,
         }
     ]
 
     # 3. Trigger check
-    with patch.object(hass.services, "async_call", new_callable=AsyncMock) as mock_service:
+    with patch.object(
+        hass.services, "async_call", new_callable=AsyncMock
+    ) as mock_service:
         await mock_coordinator._check_watched_trips(departures)
 
         # Verify notification sent
@@ -47,6 +50,7 @@ async def test_watch_train_notification_trigger(hass, mock_coordinator):
         assert args[0] == "notify"
         assert args[1] == "mobile_app"
         assert "Delay is now 10 min" in args[2]["message"]
+
 
 @pytest.mark.asyncio
 async def test_watch_train_no_double_notification(hass, mock_coordinator):
@@ -57,7 +61,7 @@ async def test_watch_train_no_double_notification(hass, mock_coordinator):
         "delay_threshold": 5,
         "notify_on_platform_change": True,
         "notify_on_cancellation": True,
-        "last_notified_delay": 10, # Already notified
+        "last_notified_delay": 10,  # Already notified
         "last_notified_platform": "1",
         "last_notified_cancellation": False,
     }
@@ -68,13 +72,16 @@ async def test_watch_train_no_double_notification(hass, mock_coordinator):
             "destination": "Berlin",
             "delayDeparture": 10,
             "platform": "1",
-            "isCancelled": False
+            "isCancelled": False,
         }
     ]
 
-    with patch.object(hass.services, "async_call", new_callable=AsyncMock) as mock_service:
+    with patch.object(
+        hass.services, "async_call", new_callable=AsyncMock
+    ) as mock_service:
         await mock_coordinator._check_watched_trips(departures)
         mock_service.assert_not_called()
+
 
 @pytest.mark.asyncio
 async def test_watch_train_cancellation(hass, mock_coordinator):
@@ -96,10 +103,12 @@ async def test_watch_train_cancellation(hass, mock_coordinator):
             "destination": "Berlin",
             "delayDeparture": 0,
             "platform": "1",
-            "isCancelled": True
+            "isCancelled": True,
         }
     ]
 
-    with patch.object(hass.services, "async_call", new_callable=AsyncMock) as mock_service:
+    with patch.object(
+        hass.services, "async_call", new_callable=AsyncMock
+    ) as mock_service:
         await mock_coordinator._check_watched_trips(departures)
         assert "CANCELLED" in mock_service.call_args[0][2]["message"]

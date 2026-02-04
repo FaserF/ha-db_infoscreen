@@ -300,7 +300,7 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
 
     _attr_has_entity_name = True
     _attr_icon = "mdi:eye-check-outline"
-    _attr_entity_registry_enabled_default = False # Optional feature
+    _attr_entity_registry_enabled_default = False  # Optional feature
 
     def __init__(self, coordinator, config_entry: ConfigEntry) -> None:
         """Initialize the watchdog sensor."""
@@ -318,7 +318,7 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
         station = data.get("previous_station_name")
         delay = data.get("previous_delay", 0)
 
-        if station :
+        if station:
             if delay and delay > 0:
                 return f"{station}: +{delay} min"
             return f"{station}: On Time"
@@ -353,7 +353,9 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
         for idx, stop in enumerate(route):
             stop_name = stop.get("name", "")
             # Simple check
-            if stop_name == my_station_name or (my_station_name and my_station_name in stop_name):
+            if stop_name == my_station_name or (
+                my_station_name and my_station_name in stop_name
+            ):
                 found_index = idx
                 break
 
@@ -372,7 +374,7 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
                 "current_station_index": found_index,
                 "previous_station_name": prev_name,
                 "previous_delay": int(delay) if delay else 0,
-                "updated": getattr(self.coordinator, "last_update", None)
+                "updated": getattr(self.coordinator, "last_update", None),
             }
 
         return None
@@ -394,11 +396,17 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
     @property
     def walk_time(self):
         """Get the walk time from config data or options."""
-        return self.config_entry.data.get(CONF_WALK_TIME, 0) or self.config_entry.options.get(CONF_WALK_TIME, 0)
+        return self.config_entry.data.get(
+            CONF_WALK_TIME, 0
+        ) or self.config_entry.options.get(CONF_WALK_TIME, 0)
 
     @property
     def native_value(self):
-        if not self.coordinator.data or not isinstance(self.coordinator.data, list) or len(self.coordinator.data) == 0:
+        if (
+            not self.coordinator.data
+            or not isinstance(self.coordinator.data, list)
+            or len(self.coordinator.data) == 0
+        ):
             return None
 
         # Get next departure (first in list)
@@ -419,7 +427,11 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        if not self.coordinator.data or not isinstance(self.coordinator.data, list) or len(self.coordinator.data) == 0:
+        if (
+            not self.coordinator.data
+            or not isinstance(self.coordinator.data, list)
+            or len(self.coordinator.data) == 0
+        ):
             return {}
 
         next_dep = self.coordinator.data[0]
@@ -428,7 +440,7 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
             "destination": next_dep.get("destination"),
             "departure_time": next_dep.get("departure_current"),
             "walk_time": self.walk_time,
-            "next_departures_count": len(self.coordinator.data)
+            "next_departures_count": len(self.coordinator.data),
         }
 
 
@@ -468,14 +480,20 @@ class DBInfoScreenPunctualitySensor(DBInfoScreenBaseEntity, SensorEntity):
             }
 
         total = len(history)
-        delayed = sum(1 for d in history.values() if d["delay"] > 5 and not d["cancelled"])
+        delayed = sum(
+            1 for d in history.values() if d["delay"] > 5 and not d["cancelled"]
+        )
         cancelled = sum(1 for d in history.values() if d["cancelled"])
         on_time = total - delayed - cancelled
 
         punctuality = round((on_time / total) * 100, 1) if total > 0 else 100
 
         total_delay = sum(d["delay"] for d in history.values() if not d["cancelled"])
-        avg_delay = round(total_delay / (total - cancelled), 1) if (total - cancelled) > 0 else 0
+        avg_delay = (
+            round(total_delay / (total - cancelled), 1)
+            if (total - cancelled) > 0
+            else 0
+        )
 
         return {
             "punctuality_percent": punctuality,
@@ -484,8 +502,6 @@ class DBInfoScreenPunctualitySensor(DBInfoScreenBaseEntity, SensorEntity):
             "cancelled_trains": cancelled,
             "average_delay": avg_delay,
         }
-
-
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -499,10 +515,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     platforms = config_entry.data.get("platforms", "")
     enable_text_view = config_entry.options.get(CONF_ENABLE_TEXT_VIEW, False)
 
-    _LOGGER.debug(
-        "Setting up DBInfoScreen sensors for station: %s",
-        station
-    )
+    _LOGGER.debug("Setting up DBInfoScreen sensors for station: %s", station)
 
     entities = [
         DBInfoSensor(
@@ -516,7 +529,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         ),
         DBInfoScreenWatchdogSensor(coordinator, config_entry),
         DBInfoScreenLeaveNowSensor(coordinator, config_entry),
-        DBInfoScreenPunctualitySensor(coordinator, config_entry)
+        DBInfoScreenPunctualitySensor(coordinator, config_entry),
     ]
 
     async_add_entities(entities)

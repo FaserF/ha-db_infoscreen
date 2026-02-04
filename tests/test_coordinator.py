@@ -232,7 +232,7 @@ async def test_coordinator_wagon_order(hass, mock_config_entry):
                     {"sections": ["A"], "class": "1", "type": "Apmz"},
                     {"sections": ["B"], "class": "12", "type": "ABpmz"},
                     {"sections": ["C"], "class": "2", "type": "Bpmz"},
-                    {"sections": ["C"], "type": "WRmz"}, # Bistro
+                    {"sections": ["C"], "type": "WRmz"},  # Bistro
                 ],
             },
             {
@@ -442,9 +442,27 @@ async def test_coordinator_favorite_trains_filter(hass, mock_config_entry):
 
     mock_data = {
         "departures": [
-            {"scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M"), "destination": "Berlin", "train": "ICE 1"},
-            {"scheduledDeparture": (dt_util.now() + timedelta(minutes=11)).strftime("%Y-%m-%dT%H:%M"), "destination": "Nürnberg", "train": "ICE 500"},
-            {"scheduledDeparture": (dt_util.now() + timedelta(minutes=12)).strftime("%Y-%m-%dT%H:%M"), "destination": "Salzburg", "train": "RE 2 (Regio)"},
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Berlin",
+                "train": "ICE 1",
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=11)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Nürnberg",
+                "train": "ICE 500",
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=12)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Salzburg",
+                "train": "RE 2 (Regio)",
+            },
         ]
     }
 

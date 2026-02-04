@@ -72,7 +72,7 @@ class DBInfoScreenBaseBinarySensor(DBInfoScreenBaseEntity, BinarySensorEntity):
         self,
         coordinator,
         config_entry: ConfigEntry,
-        station: str = None,
+        station: str | None = None,
     ) -> None:
         """Initialize the binary sensor."""
         super().__init__(coordinator, config_entry)

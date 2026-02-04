@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 import custom_components.db_infoscreen as db_mod
 
+
 @contextmanager
 def patch_session(mock_data=None, side_effect=None):
     """Patch the async_get_clientsession to return a mock session with data."""
@@ -15,12 +16,14 @@ def patch_session(mock_data=None, side_effect=None):
 
         async def json_func():
             return data
+
         resp.json = MagicMock(side_effect=json_func)
 
         resp.raise_for_status = MagicMock()
 
         async def enter_func():
             return resp
+
         async def exit_func(exc_type, exc, tb):
             return None
 
@@ -44,8 +47,9 @@ def patch_session(mock_data=None, side_effect=None):
     mock_session.get = MagicMock(side_effect=get_side_effect)
 
     # Patch in both the component and the HA source
-    with patch.object(db_mod, "async_get_clientsession") as p1, \
-         patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as p2:
+    with patch.object(db_mod, "async_get_clientsession") as p1, patch(
+        "homeassistant.helpers.aiohttp_client.async_get_clientsession"
+    ) as p2:
 
         p1.return_value = mock_session
         p2.return_value = mock_session

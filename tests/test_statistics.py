@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 import pytest
 from custom_components.db_infoscreen.sensor import DBInfoScreenPunctualitySensor
 from homeassistant.util import dt as dt_util
-from datetime import timedelta
+
 
 @pytest.fixture
 def mock_coordinator():
@@ -12,6 +12,7 @@ def mock_coordinator():
     coord.config_entry.data = {}
     coord.config_entry.options = {}
     return coord
+
 
 @pytest.mark.asyncio
 async def test_punctuality_sensor_calculation(hass, mock_coordinator):
@@ -25,7 +26,9 @@ async def test_punctuality_sensor_calculation(hass, mock_coordinator):
         "trip3": {"train": "ICE 3", "delay": 0, "cancelled": True, "timestamp": now},
     }
 
-    sensor = DBInfoScreenPunctualitySensor(mock_coordinator, mock_coordinator.config_entry)
+    sensor = DBInfoScreenPunctualitySensor(
+        mock_coordinator, mock_coordinator.config_entry
+    )
 
     stats = sensor._get_stats()
 
@@ -39,10 +42,13 @@ async def test_punctuality_sensor_calculation(hass, mock_coordinator):
     # avg_delay = (0 + 10) / (3-1) = 5.0
     assert stats["average_delay"] == 5.0
 
+
 @pytest.mark.asyncio
 async def test_punctuality_sensor_empty(hass, mock_coordinator):
     """Test statistics when history is empty."""
-    sensor = DBInfoScreenPunctualitySensor(mock_coordinator, mock_coordinator.config_entry)
+    sensor = DBInfoScreenPunctualitySensor(
+        mock_coordinator, mock_coordinator.config_entry
+    )
     stats = sensor._get_stats()
 
     assert stats["total_trains"] == 0
