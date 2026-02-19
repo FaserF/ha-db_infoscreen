@@ -11,6 +11,7 @@ from custom_components.db_infoscreen.const import (
 )
 from tests.common import patch_session
 
+
 @pytest.fixture(autouse=True)
 def patch_coordinator():
     """Patch DataUpdateCoordinator to prevent background tasks and simplify tests."""
@@ -19,6 +20,7 @@ def patch_coordinator():
         new_callable=AsyncMock,
     ):
         yield
+
 
 @pytest.mark.asyncio
 async def test_via_single_station_server_side(hass):
@@ -44,7 +46,7 @@ async def test_via_single_station_server_side(hass):
                 "destination": "Hanau Hbf",
                 "train": "RE 54",
                 "via": ["Frankfurt(Main)Hbf", "Offenbach(Main)Hbf"],
-                "route": [{"name": "Frankfurt(Main)Hbf"}]
+                "route": [{"name": "Frankfurt(Main)Hbf"}],
             }
         ]
     }
@@ -52,6 +54,7 @@ async def test_via_single_station_server_side(hass):
     with patch_session(mock_data):
         data = await coordinator._async_update_data()
         assert len(data) == 1
+
 
 @pytest.mark.asyncio
 async def test_via_multiple_stations_or_local(hass):
@@ -78,22 +81,22 @@ async def test_via_multiple_stations_or_local(hass):
                 "destination": "Aschaffenburg",
                 "train": "RE 55",
                 "via": ["Frankfurt(Main)Hbf"],
-                "route": [{"name": "Frankfurt(Main)Hbf"}]
+                "route": [{"name": "Frankfurt(Main)Hbf"}],
             },
             {
                 "scheduledDeparture": (now + timedelta(minutes=15)).strftime("%H:%M"),
                 "destination": "Heidelberg",
                 "train": "RB 68",
                 "via": ["Darmstadt Hbf"],
-                "route": [{"name": "Darmstadt Hbf"}]
+                "route": [{"name": "Darmstadt Hbf"}],
             },
             {
                 "scheduledDeparture": (now + timedelta(minutes=20)).strftime("%H:%M"),
                 "destination": "Koblenz",
                 "train": "RE 2",
                 "via": ["Bingen"],
-                "route": [{"name": "Bingen"}]
-            }
+                "route": [{"name": "Bingen"}],
+            },
         ]
     }
 
@@ -106,6 +109,7 @@ async def test_via_multiple_stations_or_local(hass):
         assert "Aschaffenburg" in dests
         assert "Heidelberg" in dests
         assert "Koblenz" not in dests
+
 
 @pytest.mark.asyncio
 async def test_via_multiple_stations_and_local(hass):
@@ -132,15 +136,15 @@ async def test_via_multiple_stations_and_local(hass):
                 "destination": "Fulda",
                 "train": "RE 50",
                 "via": ["Frankfurt(Main)Hbf", "Hanau Hbf", "Wächtersbach"],
-                "route": [{"name": "Frankfurt(Main)Hbf"}, {"name": "Hanau Hbf"}]
+                "route": [{"name": "Frankfurt(Main)Hbf"}, {"name": "Hanau Hbf"}],
             },
             {
                 "scheduledDeparture": (now + timedelta(minutes=15)).strftime("%H:%M"),
                 "destination": "Aschaffenburg",
                 "train": "RE 55",
                 "via": ["Frankfurt(Main)Hbf", "Offenbach"],
-                "route": [{"name": "Frankfurt(Main)Hbf"}]
-            }
+                "route": [{"name": "Frankfurt(Main)Hbf"}],
+            },
         ]
     }
 

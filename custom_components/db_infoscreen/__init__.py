@@ -4,6 +4,7 @@ Home Assistant integration for Deutsche Bahn (DB) information screens.
 This module provides the core logic and coordinator for fetching train departure
 information from the Deutsche Bahn (DBF) API and regional providers.
 """
+
 from typing import Any
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
@@ -182,6 +183,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
     handles filtering (via stations, directions, train types), and
     manages background tasks like train watching and connection tracking.
     """
+
     def __init__(self, hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
         """
         Initialize coordinator state from a config entry, build the API endpoint, and configure the DataUpdateCoordinator.
@@ -198,7 +200,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         config = {**config_entry.data, **config_entry.options}
 
         self.station = config[CONF_STATION]
-        self.next_departures = int(config.get(CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES))
+        self.next_departures = int(
+            config.get(CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES)
+        )
         self.favorite_trains = []
         fav_raw = config.get(CONF_FAVORITE_TRAINS, "")
         if isinstance(fav_raw, str) and fav_raw.strip():
@@ -231,10 +235,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         custom_api_url = config.get(CONF_CUSTOM_API_URL, "")
         platforms = config.get(CONF_PLATFORMS, "")
         admode = config.get(CONF_ADMODE, "")
-        update_interval = int(max(
-            int(config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)),
-            MIN_UPDATE_INTERVAL,
-        ))
+        update_interval = int(
+            max(
+                int(config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)),
+                MIN_UPDATE_INTERVAL,
+            )
+        )
 
         station_cleaned = " ".join(str(self.station).split())
         encoded_station = quote(station_cleaned, safe=",-")
@@ -650,7 +656,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         )
                         continue
 
-
                 # Get train classes from the departure data.
                 train_classes = (
                     departure.get("trainClasses")
@@ -980,16 +985,26 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     for v_station in self.via_stations:
                         v_lower = v_station.strip().lower()
                         # Check if any trip station contains or is equal to the via station
-                        match_found = any(v_lower in ts or ts in v_lower for ts in trip_stations)
+                        match_found = any(
+                            v_lower in ts or ts in v_lower for ts in trip_stations
+                        )
                         matches.append(match_found)
 
                     if self.via_stations_logic == "AND":
                         if not all(matches):
-                            _LOGGER.debug("Skipping departure: not all via stations (%s) matched for trip to %s", self.via_stations, departure.get("destination"))
+                            _LOGGER.debug(
+                                "Skipping departure: not all via stations (%s) matched for trip to %s",
+                                self.via_stations,
+                                departure.get("destination"),
+                            )
                             continue
-                    else: # OR logic (default)
+                    else:  # OR logic (default)
                         if not any(matches):
-                            _LOGGER.debug("Skipping departure: none of the via stations (%s) matched for trip to %s", self.via_stations, departure.get("destination"))
+                            _LOGGER.debug(
+                                "Skipping departure: none of the via stations (%s) matched for trip to %s",
+                                self.via_stations,
+                                departure.get("destination"),
+                            )
                             continue
 
                 departure_seconds = (effective_departure_time - now).total_seconds()
@@ -997,7 +1012,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     # Compute size with candidate included
                     temp_list = filtered_departures + [departure]
                     try:
-                        json_size = len(json.dumps(temp_list, default=simple_serializer))
+                        json_size = len(
+                            json.dumps(temp_list, default=simple_serializer)
+                        )
                     except TypeError as e:
                         _LOGGER.error("Error serializing for size check: %s", e)
                         # Break to be safe if we can't measure
@@ -1047,7 +1064,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                 )
 
                     if alternatives:
-                        dep["alternative_connections"] = list(alternatives)[:3]  # Limit to 3
+                        dep["alternative_connections"] = list(alternatives)[
+                            :3
+                        ]  # Limit to 3
 
             # Favorite Trains Filtering
             # Capture the full list for background tasks (notifications, history) BEFORE filtering
@@ -1070,7 +1089,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 # Cache the visible ones if available, otherwise just keep going.
                 # Actually _last_valid_value is used for sensor display, so it SHOULD be the filtered list.
                 if filtered_departures:
-                    self._last_valid_value = list(filtered_departures)[: int(self.next_departures)]
+                    self._last_valid_value = list(filtered_departures)[
+                        : int(self.next_departures)
+                    ]
 
                 _LOGGER.debug(
                     "Fetched %d valid departures (pre-filter), %d visible",
@@ -1198,12 +1219,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 if watch_config is not None:
                     delay_int = int(delay) if delay else 0
                     current_threshold = watch_config.get("delay_threshold")
-                    threshold = int(current_threshold if current_threshold is not None else 0)
+                    threshold = int(
+                        current_threshold if current_threshold is not None else 0
+                    )
                     last_delay = watch_config.get("last_notified_delay")
-                    if (
-                        delay_int >= threshold
-                        and delay_int != last_delay
-                    ):
+                    if delay_int >= threshold and delay_int != last_delay:
                         notify = True
                         message += f"Delay is now {delay_int} min. "
                         watch_config["last_notified_delay"] = delay_int
@@ -1234,7 +1254,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             if notify:
                 try:
                     if watch_config is None or not watch_config.get("notify_service"):
-                         raise ValueError("No notify service configured")
+                        raise ValueError("No notify service configured")
 
                     if "." not in str(watch_config["notify_service"]):
                         raise ValueError("Invalid notify service format (missing '.')")

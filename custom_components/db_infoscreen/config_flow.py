@@ -1,4 +1,5 @@
 """Config flow for DB Infoscreen integration."""
+
 import logging
 import re
 import voluptuous as vol
@@ -266,7 +267,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 ): cv.positive_int,
                 vol.Optional(CONF_PLATFORMS, default=""): cv.string,
                 vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
-                vol.Optional(CONF_VIA_STATIONS_LOGIC, default="OR"): vol.In(["OR", "AND"]),
+                vol.Optional(CONF_VIA_STATIONS_LOGIC, default="OR"): vol.In(
+                    ["OR", "AND"]
+                ),
                 vol.Optional(CONF_CUSTOM_API_URL, default=""): cv.string,
             }
         )
@@ -443,7 +446,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 vol.Optional(CONF_OFFSET, default=DEFAULT_OFFSET): cv.string,
                 vol.Optional(CONF_PLATFORMS, default=""): cv.string,
                 vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
-                vol.Optional(CONF_VIA_STATIONS_LOGIC, default="OR"): vol.In(["OR", "AND"]),
+                vol.Optional(CONF_VIA_STATIONS_LOGIC, default="OR"): vol.In(
+                    ["OR", "AND"]
+                ),
                 vol.Optional(CONF_DIRECTION, default=""): cv.string,
                 vol.Optional(CONF_FAVORITE_TRAINS, default=""): cv.string,
             }
@@ -525,6 +530,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     Organizes options into categories (General, Filter, Display, Advanced)
     for a cleaner user experience.
     """
+
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self._config_entry = config_entry

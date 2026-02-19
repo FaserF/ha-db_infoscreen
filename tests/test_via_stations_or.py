@@ -10,6 +10,7 @@ from custom_components.db_infoscreen.const import (
 )
 from tests.common import patch_session
 
+
 @pytest.fixture(autouse=True)
 def patch_coordinator():
     """Patch DataUpdateCoordinator to prevent background tasks and simplify tests."""
@@ -18,6 +19,7 @@ def patch_coordinator():
         new_callable=AsyncMock,
     ):
         yield
+
 
 @pytest.fixture
 def mock_config_entry():
@@ -30,6 +32,7 @@ def mock_config_entry():
     entry.options = {}
     entry.entry_id = "mock_entry_id"
     return entry
+
 
 @pytest.mark.asyncio
 async def test_coordinator_via_stations_or_logic(hass, mock_config_entry):
@@ -48,22 +51,25 @@ async def test_coordinator_via_stations_or_logic(hass, mock_config_entry):
                 "destination": "Darmstadt Hbf",
                 "train": "S 8",
                 "via": ["Frankfurt Hbf (tief)", "Frankfurt(M)Ostendstraße"],
-                "route": [{"name": "Frankfurt Hbf (tief)"}, {"name": "Frankfurt(M)Ostendstraße"}]
+                "route": [
+                    {"name": "Frankfurt Hbf (tief)"},
+                    {"name": "Frankfurt(M)Ostendstraße"},
+                ],
             },
             {
                 "scheduledDeparture": (now + timedelta(minutes=15)).strftime("%H:%M"),
                 "destination": "Aschaffenburg Hbf",
                 "train": "RE 55",
                 "via": ["Frankfurt(Main)Hbf", "Hanau Hbf"],
-                "route": [{"name": "Frankfurt(Main)Hbf"}, {"name": "Hanau Hbf"}]
+                "route": [{"name": "Frankfurt(Main)Hbf"}, {"name": "Hanau Hbf"}],
             },
             {
                 "scheduledDeparture": (now + timedelta(minutes=20)).strftime("%H:%M"),
                 "destination": "Mannheim Hbf",
                 "train": "RE 70",
                 "via": ["Biblis", "Ladenburg"],
-                "route": [{"name": "Biblis"}, {"name": "Ladenburg"}]
-            }
+                "route": [{"name": "Biblis"}, {"name": "Ladenburg"}],
+            },
         ]
     }
 

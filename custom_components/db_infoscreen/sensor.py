@@ -1,4 +1,5 @@
 """Sensor platform for DB Infoscreen integration."""
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from typing import Any
@@ -20,6 +21,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
     Supports optional filtering by platform, via stations, and direction.
     Can also display a formatted text view for simple displays.
     """
+
     _attr_has_entity_name = True
 
     def __init__(
