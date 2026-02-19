@@ -417,6 +417,7 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
     _attr_has_entity_name = True
     _attr_translation_key = "leave_now"
     _attr_entity_registry_enabled_default = False  # Disabled by default
+    _attr_native_unit_of_measurement = "min"
 
     def __init__(self, coordinator, config_entry):
         super().__init__(coordinator, config_entry)
@@ -455,9 +456,9 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
         minutes_until_leave = int(minutes_until_departure - self.walk_time)
 
         if minutes_until_leave <= 0:
-            return 0
+            return "Leave now!"
 
-        return minutes_until_leave
+        return str(minutes_until_leave)
 
     @property
     def extra_state_attributes(self):
@@ -469,10 +470,20 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
             return {}
 
         next_dep = self.coordinator.data[0]
-        next_dep = self.coordinator.data[0]
+
+        departure_timestamp = next_dep.get("departure_timestamp")
+        if not departure_timestamp:
+            return {
+                "train": next_dep.get("train"),
+                "destination": next_dep.get("destination"),
+                "departure_time": next_dep.get("departure_current"),
+                "walk_time": self.walk_time,
+                "next_departures_count": len(self.coordinator.data),
+                "status": None,
+            }
 
         minutes_until_departure = (
-            next_dep.get("departure_timestamp", 0) - dt_util.now().timestamp()
+            departure_timestamp - dt_util.now().timestamp()
         ) / 60
         minutes_until_leave = int(minutes_until_departure - self.walk_time)
         status = "Leave now!" if minutes_until_leave <= 0 else "On time"

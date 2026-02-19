@@ -282,9 +282,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         # Use API filtering for efficiency if exactly one via station is specified
         if len(self.via_stations) == 1:
             params["via"] = self.via_stations[0].strip()
+            self._via_filtered_server_side = True
+        else:
+            self._via_filtered_server_side = False
 
         # Assemble URL
-        query_string = urlencode(params)
+        query_string = urlencode(params, quote_via=quote)
         url = f"{url}?{query_string}" if query_string else url
 
         self.api_url = url
@@ -522,9 +525,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         )
                         continue
 
-                if departure:
-                    departure["departure_datetime"] = departure_time_obj
-                    departures_with_time.append(departure)
+                departure["departure_datetime"] = departure_time_obj
+                departures_with_time.append(departure)
 
             departures_to_process = departures_with_time
 
@@ -957,7 +959,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         departure.pop(key)
 
                 # --- VIA STATION FILTERING ---
-                if self.via_stations:
+                # When a single via station was already sent to the API as a query
+                # parameter, skip client-side filtering to avoid discarding valid results.
+                if self.via_stations and not self._via_filtered_server_side:
                     # Get all possible station names for this trip
                     trip_stations = set()
 
@@ -1322,6 +1326,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     ):
                         data = await data
 
+            if not isinstance(data, dict):
+                _LOGGER.debug(
+                    "Unexpected data type from cascaded fetch for %s: %s",
+                    station,
+                    type(data),
+                )
+                return None
             for dep in data.get("departures", []):
                 if dep.get("train") == train_id or dep.get("trip_id") == train_id:
                     return dep

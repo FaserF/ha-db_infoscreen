@@ -57,6 +57,41 @@ async def test_via_single_station_server_side(hass):
 
 
 @pytest.mark.asyncio
+async def test_via_single_station_no_route_fields(hass):
+    """Test that a single via station still passes when departure has no via/route fields."""
+    entry = MagicMock()
+    entry.data = {
+        CONF_STATION: "Mainz Hbf",
+        CONF_VIA_STATIONS: ["Frankfurt(Main)Hbf"],
+    }
+    entry.options = {}
+    entry.entry_id = "mock_entry_id"
+
+    coordinator = DBInfoScreenCoordinator(hass, entry)
+
+    # Check URL: via parameter is set for API-side filtering
+    assert "via=Frankfurt%28Main%29Hbf" in coordinator.api_url
+
+    now = dt_util.now()
+    mock_data = {
+        "departures": [
+            {
+                # Simulates a non-detailed API response: no "via" or "route" fields
+                "scheduledDeparture": (now + timedelta(minutes=10)).strftime("%H:%M"),
+                "destination": "Hanau Hbf",
+                "train": "RE 54",
+            }
+        ]
+    }
+
+    # Even without via/route fields, the departure should be kept because
+    # the API already pre-filtered it server-side.
+    with patch_session(mock_data):
+        data = await coordinator._async_update_data()
+        assert len(data) == 1
+
+
+@pytest.mark.asyncio
 async def test_via_multiple_stations_or_local(hass):
     """Test that multiple via stations use local OR filtering and no API param."""
     entry = MagicMock()
