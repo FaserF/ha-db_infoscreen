@@ -1,3 +1,4 @@
+"""Sensor platform for DB Infoscreen integration."""
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from typing import Any
@@ -13,6 +14,12 @@ MAX_LENGTH = 70
 
 
 class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
+    """
+    Main sensor for displaying next departures at a station.
+
+    Supports optional filtering by platform, via stations, and direction.
+    Can also display a formatted text view for simple displays.
+    """
     _attr_has_entity_name = True
 
     def __init__(
@@ -61,6 +68,12 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         )
 
     def format_departure_time(self, departure_time):
+        """
+        Format a departure time string or timestamp into a readable HH:MM string.
+
+        Handles various formats (Unix, ISO, HH:MM) and accounts for midnight
+        rollover. Returns YYYY-MM-DD HH:MM if the departure is not today.
+        """
         if departure_time is None:
             _LOGGER.debug("Departure time is None")
             return None
@@ -136,6 +149,11 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
 
     @property
     def native_value(self):
+        """
+        Return the main state of the sensor (e.g., '10:30' or '10:30 +5').
+
+        Calculates the state from the first entry in the coordinator's data.
+        """
         # Check if there is data and if it is valid
         if self.coordinator.data:
             try:
@@ -293,7 +311,12 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
 
 
 class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
-    """Sensor that watches the prev station of the next departing train."""
+    """
+    Diagnostic sensor that monitors the status of the upcoming trip.
+
+    Looks at the previous station of the next departing train to see if it
+    is on time or delayed earlier in its route.
+    """
 
     _attr_has_entity_name = True
     _attr_icon = "mdi:eye-check-outline"
@@ -307,7 +330,11 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
 
     @property
     def native_value(self) -> str | None:
-        """Return the state of the watchdog."""
+        """
+        Return the current watchdog state.
+
+        Shows the name and delay of the previous station for the next train.
+        """
         data = self._get_watchdog_data()
         if not data:
             return "Unknown"
@@ -378,7 +405,11 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
 
 
 class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
-    """Sensor that calculates the time to leave for the next train."""
+    """
+    Utility sensor that calculates the minutes remaining until you must leave.
+
+    Subtracts the configured 'walk time' from the next train's departure time.
+    """
 
     _attr_has_entity_name = True
     _attr_translation_key = "leave_now"
@@ -399,6 +430,11 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
 
     @property
     def native_value(self):
+        """
+        Return the number of minutes until the user must leave.
+
+        Returns 'Leave now!' if the walk time has already passed.
+        """
         if (
             not self.coordinator.data
             or not isinstance(self.coordinator.data, list)
@@ -442,7 +478,12 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
 
 
 class DBInfoScreenPunctualitySensor(DBInfoScreenBaseEntity, SensorEntity):
-    """Sensor that displays punctuality statistics for the station."""
+    """
+    Statistical sensor for station punctuality.
+
+    Displays the percentage of trains that were on time (delay <= 5 min)
+    over the last 24 hours.
+    """
 
     _attr_has_entity_name = True
     _attr_translation_key = "punctuality"
@@ -457,6 +498,7 @@ class DBInfoScreenPunctualitySensor(DBInfoScreenBaseEntity, SensorEntity):
 
     @property
     def native_value(self):
+        """Return the calculated punctuality percentage."""
         stats = self._get_stats()
         return stats.get("punctuality_percent")
 

@@ -1,3 +1,4 @@
+"""Config flow for DB Infoscreen integration."""
 import logging
 import re
 import voluptuous as vol
@@ -34,6 +35,7 @@ from .const import (
     CONF_EXCLUDE_CANCELLED,
     CONF_SHOW_OCCUPANCY,
     CONF_FAVORITE_TRAINS,
+    CONF_VIA_STATIONS_LOGIC,
     CONF_WALK_TIME,
     normalize_data_source,
 )
@@ -42,8 +44,17 @@ from .utils import async_get_stations, find_station_matches
 _LOGGER = logging.getLogger(__name__)
 
 
-class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for the integration."""
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
+    """
+    Handle the initial configuration and setup wizard for DB Infoscreen.
+
+    This class manages the multi-step process:
+    1. Station search (user step)
+    2. Station selection/resolve (choose step)
+    3. Basic configuration (details step)
+    4. Advanced configuration (advanced step)
+    5. Manual entry/Data source selection (manual_config step)
+    """
 
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
@@ -59,6 +70,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None):
         """
         Handle the initial step: Search for a station.
+
+        Asks the user for a station name and attempts to find matches
+        in the IRIS-TTS database.
         """
         errors = {}
 
@@ -112,7 +126,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_choose(self, user_input=None):
         """
-        Handle the selection step if multiple stations were found.
+        Handle the selection step if multiple stations or no matches were found.
+
+        Allows the user to select from a list of matches or proceed with manual entry.
         """
         if user_input is not None:
             self.selected_station = user_input[CONF_STATION]
@@ -147,7 +163,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_details(self, user_input=None):
         """
-        Handle the configuration details step.
+        Handle the configuration details step for verified stations.
+
+        Prompts for common settings like update interval and whether to
+        proceed to advanced options.
         """
         errors = {}
 
@@ -185,7 +204,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_manual_config(self, user_input=None):
         """
         Handle configuration for manually entered (non-IRIS) stations.
-        Data Source is shown prominently here.
+
+        Prompts for a data source (e.g., ÖBB, SBB) and configuration for
+        stations not found in the standard IRIS list.
         """
         errors = {}
 
@@ -245,6 +266,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ): cv.positive_int,
                 vol.Optional(CONF_PLATFORMS, default=""): cv.string,
                 vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
+                vol.Optional(CONF_VIA_STATIONS_LOGIC, default="OR"): vol.In(["OR", "AND"]),
                 vol.Optional(CONF_CUSTOM_API_URL, default=""): cv.string,
             }
         )
@@ -252,6 +274,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_advanced(self, user_input=None):
         """
         Handle advanced configuration options.
+
+        Prompts for filters like train types, route keeping, and custom API URLs.
         """
         errors = {}
 
@@ -284,7 +308,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def _async_create_db_entry(self, user_input):
-        """Finalize the entry creation logic merged from upstream."""
+        """
+        Finalize the entry creation and save to Home Assistant.
+
+        Validates the final station data, removes transient UI markers,
+        and creates the config entry with a unique ID based on the station
+        and its filters.
+        """
         # Validate station data can be retrieved
         station_raw = user_input.get(CONF_STATION, "")
         data_source = normalize_data_source(
@@ -413,6 +443,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_OFFSET, default=DEFAULT_OFFSET): cv.string,
                 vol.Optional(CONF_PLATFORMS, default=""): cv.string,
                 vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
+                vol.Optional(CONF_VIA_STATIONS_LOGIC, default="OR"): vol.In(["OR", "AND"]),
                 vol.Optional(CONF_DIRECTION, default=""): cv.string,
                 vol.Optional(CONF_FAVORITE_TRAINS, default=""): cv.string,
             }
@@ -483,10 +514,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     def async_get_options_flow(config_entry):
+        """Return the options flow handler."""
         return OptionsFlowHandler(config_entry)
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
+    """
+    Handle post-setup configuration changes for DB Infoscreen.
+
+    Organizes options into categories (General, Filter, Display, Advanced)
+    for a cleaner user experience.
+    """
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         self._config_entry = config_entry
@@ -497,7 +535,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         return self._options.get(key, self._config_entry.data.get(key, default))
 
     async def async_step_init(self, user_input=None):
-        """Handle the options flow menu."""
+        """
+        Handle the options flow menu.
+
+        Displays a list of configuration categories for the user to select.
+        """
         return self.async_show_menu(
             step_id="init",
             menu_options=[
@@ -582,6 +624,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_VIA_STATIONS,
                         default=via_stations_str,
                     ): cv.string,
+                    vol.Optional(
+                        CONF_VIA_STATIONS_LOGIC,
+                        default=self._get_config_value(CONF_VIA_STATIONS_LOGIC, "OR"),
+                    ): vol.In(["OR", "AND"]),
                     vol.Optional(
                         CONF_DIRECTION,
                         default=self._get_config_value(CONF_DIRECTION, ""),
