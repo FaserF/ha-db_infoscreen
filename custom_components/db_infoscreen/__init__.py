@@ -650,28 +650,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         )
                         continue
 
-                # Compute size with candidate included
-                temp_departure = departure.copy()
-                if "departure_datetime" in temp_departure:
-                    temp_departure.pop("departure_datetime", None)
-
-                temp_list = filtered_departures + [temp_departure]
-
-                try:
-                    json_size = len(json.dumps(temp_list, default=simple_serializer))
-                except TypeError as e:
-                    _LOGGER.error("Error serializing for size check: %s", e)
-                    # Break to be safe if we can't measure
-                    break
-
-                if json_size > MAX_SIZE_BYTES:
-                    _LOGGER.info(
-                        "Filtered departures JSON size would exceed limit: %d bytes (limit %d) for entry: %s. Stopping here.",
-                        json_size,
-                        MAX_SIZE_BYTES,
-                        self.station,
-                    )
-                    break
 
                 # Get train classes from the departure data.
                 train_classes = (
@@ -1016,6 +994,23 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                 departure_seconds = (effective_departure_time - now).total_seconds()
                 if departure_seconds >= self.offset:
+                    # Compute size with candidate included
+                    temp_list = filtered_departures + [departure]
+                    try:
+                        json_size = len(json.dumps(temp_list, default=simple_serializer))
+                    except TypeError as e:
+                        _LOGGER.error("Error serializing for size check: %s", e)
+                        # Break to be safe if we can't measure
+                        break
+
+                    if json_size > MAX_SIZE_BYTES:
+                        _LOGGER.info(
+                            "Filtered departures JSON size would exceed limit: %d bytes (limit %d) for entry: %s. Stopping here.",
+                            json_size,
+                            MAX_SIZE_BYTES,
+                            self.station,
+                        )
+                        break
                     filtered_departures.append(departure)
 
             _LOGGER.debug(
