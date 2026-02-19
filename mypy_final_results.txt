@@ -1,7 +1,0 @@
-custom_components\db_infoscreen\__init__.py:208: error: Name "Any" is not defined  [name-defined]
-custom_components\db_infoscreen\__init__.py:208: note: Did you forget to import it from "typing"? (Suggestion: "from typing import Any")
-custom_components\db_infoscreen\__init__.py:209: error: Name "Any" is not defined  [name-defined]
-custom_components\db_infoscreen\__init__.py:209: note: Did you forget to import it from "typing"? (Suggestion: "from typing import Any")
-custom_components\db_infoscreen\__init__.py:210: error: Name "Any" is not defined  [name-defined]
-custom_components\db_infoscreen\__init__.py:210: note: Did you forget to import it from "typing"? (Suggestion: "from typing import Any")
-Found 3 errors in 1 file (checked 5 source files)

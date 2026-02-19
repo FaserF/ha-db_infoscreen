@@ -237,7 +237,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         admode = config.get(CONF_ADMODE, "")
         update_interval = int(
             max(
-                int(config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)),
+                config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
                 MIN_UPDATE_INTERVAL,
             )
         )
@@ -276,17 +276,16 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         if self.past_60_minutes:
             params["past"] = "1"
 
-        # Assemble URL
-        query_string = urlencode(params)
-        url = f"{url}?{query_string}" if query_string else url
-
         # Determine filtering strategy and logic
         self.via_stations_logic = str(config.get(CONF_VIA_STATIONS_LOGIC, "OR")).upper()
 
         # Use API filtering for efficiency if exactly one via station is specified
         if len(self.via_stations) == 1:
-            encoded_via = quote(self.via_stations[0].strip())
-            url += f"?via={encoded_via}" if "?" not in url else f"&via={encoded_via}"
+            params["via"] = self.via_stations[0].strip()
+
+        # Assemble URL
+        query_string = urlencode(params)
+        url = f"{url}?{query_string}" if query_string else url
 
         self.api_url = url
 
@@ -589,6 +588,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
             # --- MAIN FILTERING AND PROCESSING ---
             filtered_departures = []
+            current_size = 2  # Estimate for empty list '[]'
 
             # Map the configured ignored train types to the normalized values for correct comparison.
             # e.g., if config is ['S'], this becomes {'S-Bahn'}.
@@ -956,13 +956,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     for key in keys_to_remove:
                         departure.pop(key)
 
-                if not self.keep_route:
-                    for key in ["route", "via", "prev_route", "next_route"]:
-                        departure.pop(key, None)
-
-                # Remove temporary datetime object
-                departure.pop("departure_datetime", None)
-
                 # --- VIA STATION FILTERING ---
                 if self.via_stations:
                     # Get all possible station names for this trip
@@ -984,10 +977,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     matches = []
                     for v_station in self.via_stations:
                         v_lower = v_station.strip().lower()
-                        # Check if any trip station contains or is equal to the via station
-                        match_found = any(
-                            v_lower in ts or ts in v_lower for ts in trip_stations
-                        )
+                        # Check if the configured via station is a substring of the trip station name
+                        match_found = any(v_lower in ts for ts in trip_stations)
                         matches.append(match_found)
 
                     if self.via_stations_logic == "AND":
@@ -1007,28 +998,44 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             )
                             continue
 
+                if not self.keep_route:
+                    for key in ["route", "via", "prev_route", "next_route"]:
+                        departure.pop(key, None)
+
+                # Remove temporary datetime object
+                departure.pop("departure_datetime", None)
+
                 departure_seconds = (effective_departure_time - now).total_seconds()
                 if departure_seconds >= self.offset:
                     # Compute size with candidate included
-                    temp_list = filtered_departures + [departure]
+                    # We do this by serializing iteratively and checking size.
                     try:
-                        json_size = len(
-                            json.dumps(temp_list, default=simple_serializer)
-                        )
-                    except TypeError as e:
-                        _LOGGER.error("Error serializing for size check: %s", e)
-                        # Break to be safe if we can't measure
-                        break
+                        # Serialize just this item
+                        item_json = json.dumps(departure, default=simple_serializer)
+                        item_size = len(item_json)
 
-                    if json_size > MAX_SIZE_BYTES:
-                        _LOGGER.info(
-                            "Filtered departures JSON size would exceed limit: %d bytes (limit %d) for entry: %s. Stopping here.",
-                            json_size,
-                            MAX_SIZE_BYTES,
-                            self.station,
+                        # Calculate overhead: comma separator if list is not empty
+                        overhead = 1 if filtered_departures else 0
+
+                        potential_size = current_size + item_size + overhead
+
+                        if potential_size > MAX_SIZE_BYTES:
+                            _LOGGER.info(
+                                "Filtered departures JSON size would exceed limit: %d bytes (limit %d) for entry: %s. Stopping here.",
+                                potential_size,
+                                MAX_SIZE_BYTES,
+                                self.station,
+                            )
+                            break
+
+                        filtered_departures.append(departure)
+                        current_size += item_size + overhead
+
+                    except (TypeError, ValueError) as e:
+                        _LOGGER.error(
+                            "Failed to serialize departure for size check: %s", e
                         )
-                        break
-                    filtered_departures.append(departure)
+                        continue
 
             _LOGGER.debug(
                 "Number of departures added to the filtered list: %d",

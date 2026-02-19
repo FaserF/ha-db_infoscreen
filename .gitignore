@@ -21,3 +21,4 @@ test_output*.txt
 test_warnings*.txt
 test_results.txt
 /.github/scripts/__pycache__
+*.txt

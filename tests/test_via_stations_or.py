@@ -7,6 +7,7 @@ from custom_components.db_infoscreen import DBInfoScreenCoordinator
 from custom_components.db_infoscreen.const import (
     CONF_STATION,
     CONF_VIA_STATIONS,
+    CONF_VIA_STATIONS_LOGIC,
 )
 from tests.common import patch_session
 
@@ -28,6 +29,7 @@ def mock_config_entry():
     entry.data = {
         CONF_STATION: "Mainz Hbf",
         CONF_VIA_STATIONS: ["Frankfurt(Main)Hbf", "Frankfurt Hbf (tief)"],
+        CONF_VIA_STATIONS_LOGIC: "OR",
     }
     entry.options = {}
     entry.entry_id = "mock_entry_id"
@@ -41,7 +43,6 @@ async def test_coordinator_via_stations_or_logic(hass, mock_config_entry):
 
     # Verify that the via parameter is NOT in the api_url (moving to client-side filtering)
     # Actually, as per current code, it IS in the api_url.
-    # This test will fail initially and then pass after my changes.
 
     now = dt_util.now()
     mock_data = {

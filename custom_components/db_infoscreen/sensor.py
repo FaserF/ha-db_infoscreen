@@ -171,11 +171,11 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                 )
 
                 # Get the delay in departure, if available
-                delay_departure = (
-                    self.coordinator.data[0].get("delayDeparture")
-                    or self.coordinator.data[0].get("dep_delay")
-                    or self.coordinator.data[0].get("delay", 0)
-                )
+                delay_departure = self.coordinator.data[0].get("delayDeparture")
+                if delay_departure is None:
+                    delay_departure = self.coordinator.data[0].get("dep_delay")
+                if delay_departure is None:
+                    delay_departure = self.coordinator.data[0].get("delay", 0)
 
                 _LOGGER.debug("Raw departure time: %s", departure_time)
 
@@ -262,6 +262,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
             "direction": self.direction,
             "last_updated": last_updated,
             "attribution": attribution,
+            "via_stations_logic": getattr(self.coordinator, "via_stations_logic", "OR"),
         }
 
         if self.enable_text_view:
@@ -358,7 +359,7 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
 
     def _get_watchdog_data(self) -> dict[str, Any] | None:
         """Calculate watchdog data from the first departure."""
-        if not self.coordinator.data or len(self.coordinator.data) == 0:
+        if not self.coordinator.data:
             return None
 
         # Look at the first (next) departure
@@ -426,9 +427,11 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
     @property
     def walk_time(self):
         """Get the walk time from config data or options."""
-        return self.config_entry.data.get(
-            CONF_WALK_TIME, 0
-        ) or self.config_entry.options.get(CONF_WALK_TIME, 0)
+        # Options override data. 0 is a valid value, so check explicitly for None.
+        opt = self.config_entry.options.get(CONF_WALK_TIME)
+        if opt is not None:
+            return opt
+        return self.config_entry.data.get(CONF_WALK_TIME, 0)
 
     @property
     def native_value(self):
@@ -437,11 +440,7 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
 
         Returns 'Leave now!' if the walk time has already passed.
         """
-        if (
-            not self.coordinator.data
-            or not isinstance(self.coordinator.data, list)
-            or len(self.coordinator.data) == 0
-        ):
+        if not self.coordinator.data or not isinstance(self.coordinator.data, list):
             return None
 
         # Get next departure (first in list)
@@ -456,9 +455,9 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
         minutes_until_leave = int(minutes_until_departure - self.walk_time)
 
         if minutes_until_leave <= 0:
-            return "Leave now!"
+            return 0
 
-        return str(minutes_until_leave)
+        return minutes_until_leave
 
     @property
     def extra_state_attributes(self):
@@ -470,12 +469,21 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
             return {}
 
         next_dep = self.coordinator.data[0]
+        next_dep = self.coordinator.data[0]
+
+        minutes_until_departure = (
+            next_dep.get("departure_timestamp", 0) - dt_util.now().timestamp()
+        ) / 60
+        minutes_until_leave = int(minutes_until_departure - self.walk_time)
+        status = "Leave now!" if minutes_until_leave <= 0 else "On time"
+
         return {
             "train": next_dep.get("train"),
             "destination": next_dep.get("destination"),
             "departure_time": next_dep.get("departure_current"),
             "walk_time": self.walk_time,
             "next_departures_count": len(self.coordinator.data),
+            "status": status,
         }
 
 
@@ -522,14 +530,18 @@ class DBInfoScreenPunctualitySensor(DBInfoScreenBaseEntity, SensorEntity):
 
         total = len(history)
         delayed = sum(
-            1 for d in history.values() if d["delay"] > 5 and not d["cancelled"]
+            1
+            for d in history.values()
+            if d.get("delay", 0) > 5 and not d.get("cancelled", False)
         )
-        cancelled = sum(1 for d in history.values() if d["cancelled"])
+        cancelled = sum(1 for d in history.values() if d.get("cancelled", False))
         on_time = total - delayed - cancelled
 
         punctuality = round((on_time / total) * 100, 1) if total > 0 else 100
 
-        total_delay = sum(d["delay"] for d in history.values() if not d["cancelled"])
+        total_delay = sum(
+            d.get("delay", 0) for d in history.values() if not d.get("cancelled", False)
+        )
         avg_delay = (
             round(total_delay / (total - cancelled), 1)
             if (total - cancelled) > 0

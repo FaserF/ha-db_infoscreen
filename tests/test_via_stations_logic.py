@@ -154,3 +154,46 @@ async def test_via_multiple_stations_and_local(hass):
         data = list(data)
         assert len(data) == 1
         assert data[0]["destination"] == "Fulda"
+
+
+@pytest.mark.asyncio
+async def test_via_multiple_stations_and_local_no_match(hass):
+    """Test that AND logic excludes departures that don't match ALL via stations."""
+    entry = MagicMock()
+    entry.data = {
+        CONF_STATION: "Mainz Hbf",
+        CONF_VIA_STATIONS: ["Frankfurt(Main)Hbf", "Hanau Hbf"],
+        CONF_VIA_STATIONS_LOGIC: "AND",
+    }
+    entry.options = {}
+    entry.entry_id = "mock_entry_id"
+
+    coordinator = DBInfoScreenCoordinator(hass, entry)
+
+    now = dt_util.now()
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (now + timedelta(minutes=10)).strftime("%H:%M"),
+                "destination": "Aschaffenburg",
+                "train": "RE 55",
+                # Only matches Frankfurt, missing Hanau
+                "via": ["Frankfurt(Main)Hbf", "Offenbach"],
+                "route": [{"name": "Frankfurt(Main)Hbf"}],
+            },
+            {
+                "scheduledDeparture": (now + timedelta(minutes=15)).strftime("%H:%M"),
+                "destination": "Bamberg",
+                "train": "RE 54",
+                # Only matches Hanau, missing Frankfurt
+                "via": ["Hanau Hbf", "Würzburg"],
+                "route": [{"name": "Hanau Hbf"}],
+            },
+        ]
+    }
+
+    with patch_session(mock_data):
+        data = await coordinator._async_update_data()
+        # Neither train passes through BOTH stations
+        data = list(data)
+        assert len(data) == 0
