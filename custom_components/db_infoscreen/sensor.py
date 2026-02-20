@@ -482,9 +482,7 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
                 "status": None,
             }
 
-        minutes_until_departure = (
-            departure_timestamp - dt_util.now().timestamp()
-        ) / 60
+        minutes_until_departure = (departure_timestamp - dt_util.now().timestamp()) / 60
         minutes_until_leave = int(minutes_until_departure - self.walk_time)
         status = "Leave now!" if minutes_until_leave <= 0 else "On time"
 
