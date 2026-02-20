@@ -11,6 +11,7 @@ MANIFEST_FILE = "custom_components/db_infoscreen/manifest.json"
 
 def get_current_version():
     """Get the current version from git tags (preferred) or manifest.json."""
+    # 1. Try Git Tags (Strict CalVer)
     try:
         # Get tags sorted by version-like reference name (descending)
         tags = (
@@ -21,19 +22,22 @@ def get_current_version():
             .splitlines()
         )
         for tag in tags:
-            # Match CalVer tags like 2026.1.1
-            if re.match(r"^20\d{2}\.\d+\.\d+", tag):
-                return tag.strip()
+            tag = tag.strip()
+            # Match exactly YEAR.MONTH.PATCH or with suffix
+            if re.match(r"^20\d{2}\.\d+\.\d+(?:b\d+|-dev\d+)?$", tag):
+                return tag
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass
 
-    # Fallback to manifest.json
+    # 2. Try manifest.json
     if os.path.exists(MANIFEST_FILE):
         with open(MANIFEST_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return data.get("version", "0.0.0")
+            v = data.get("version", "0.0.0")
+            if v != "0.0.0":
+                return v
 
-    return "0.0.0"
+    return "2024.1.0"  # Safe baseline
 
 
 def write_version(version):
@@ -93,33 +97,49 @@ def calculate_version(release_type, now=None):
         patch = curr_patch
 
     if release_type == "stable":
-        # If we have a suffix, "promoting" means removing the suffix from the current patch
+        # If we have a suffix (beta/dev), stable means "cutting the release" of THIS patch
         if suffix_type is not None:
             return f"{year}.{month}.{patch}"
 
-        # If it's a new cycle, we already have .0, otherwise increment
-        if not is_new_cycle:
-            patch += 1
-        return f"{year}.{month}.{patch}"
+        # If it's a new cycle, we start at .0
+        if is_new_cycle:
+            return f"{year}.{month}.0"
+
+        # Increment patch
+        return f"{year}.{month}.{patch + 1}"
 
     elif release_type == "beta":
+        # If Year/Month changes, we start at .0b0
+        if is_new_cycle:
+            return f"{year}.{month}.0b0"
+
         # Already in beta? Increment beta number
-        if suffix_type == "b" and not is_new_cycle:
+        if suffix_type == "b":
             return f"{year}.{month}.{patch}b{suffix_num + 1}"
 
-        # New beta? Increment patch (if stable and NOT a new cycle) and start at b0
-        if suffix_type is None and not is_new_cycle:
-            patch += 1
+        # Coming from stable or dev?
+        # We want to increment patch if coming from stable of the same cycle
+        # If it was 2026.2.0 (stable), next beta is 2026.2.1b0
+        if suffix_type is None:
+            return f"{year}.{month}.{patch + 1}b0"
+
+        # Coming from dev? Use current patch but change suffix
         return f"{year}.{month}.{patch}b0"
 
-    elif release_type == "nightly" or release_type == "dev":
+    elif release_type == "dev" or release_type == "nightly":
+        # If Year/Month changes, we start at .0-dev0
+        if is_new_cycle:
+            return f"{year}.{month}.0-dev0"
+
         # Already in dev? Increment dev number
-        if suffix_type == "-dev" and not is_new_cycle:
+        if suffix_type == "-dev":
             return f"{year}.{month}.{patch}-dev{suffix_num + 1}"
 
-        # New dev? Increment patch (if stable and NOT a new cycle) and start at dev0
-        if suffix_type is None and not is_new_cycle:
-            patch += 1
+        # New dev? Increment patch if coming from stable
+        if suffix_type is None:
+            return f"{year}.{month}.{patch + 1}-dev0"
+
+        # Coming from beta? Just change suffix
         return f"{year}.{month}.{patch}-dev0"
 
     else:
