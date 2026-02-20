@@ -17,7 +17,7 @@ test_config/.HA_VERSION
 test_config/.ha_run.lock
 debug_dbf.py
 temp_autocomplete.js
-test_output*.txt
-test_warnings*.txt
-test_results.txt
+*test_*.txt
 /.github/scripts/__pycache__
+*errors.txt
+*mypy*.txt

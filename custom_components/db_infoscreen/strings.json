@@ -43,6 +43,7 @@
           "admode": "Display Mode (Arrival vs Departure)",
           "platforms": "Filter by Platforms (comma separated, e.g. 1, 2, 5-7)",
           "via_stations": "Filter by Via Stations (comma separated)",
+          "via_stations_logic": "Via Station Search Logic (AND = all must match, OR = at least one)",
           "direction": "Filter by Final Destination",
           "excluded_directions": "Exclude Final Destinations",
           "ignored_train_types": "Ignored Train Types (e.g. 'ICE')",
@@ -60,6 +61,7 @@
           "update_interval": "Update Interval (minutes)",
           "platforms": "Filter by Platforms",
           "via_stations": "Filter by Via Stations",
+          "via_stations_logic": "Via Station Search Logic",
           "custom_api_url": "Custom API URL (Expert only)"
         }
       }
@@ -120,6 +122,7 @@
         "data": {
           "platforms": "Platforms",
           "via_stations": "Via Stations",
+          "via_stations_logic": "Via Station Search Logic",
           "direction": "Direction",
           "excluded_directions": "Excluded Directions",
           "ignored_train_types": "Ignored Train Types",

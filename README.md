@@ -76,6 +76,7 @@ When adding the integration, you will be asked for the most important settings:
 | `next_departures` | int | No | Number of upcoming departures to display. Default: `4`. |
 | `platforms` | string | No | Filter by comma-separated platforms (e.g., `1, 2, 5`). |
 | `via_stations` | string | No | Filter by stations the train must pass through. |
+| `via_stations_logic` | string | No | Logic for multiple via stations (**OR** / **AND**). Default: `OR`. |
 | `direction` | string | No | Filter by direction text (API dependent). |
 
 **Options Menu (Configure)**:
@@ -190,6 +191,11 @@ Direct migration is not possible due to API differences. The old integration sup
 
 **To replicate "Start -> Destination" behavior:**
 1.  **Via Stations**: Use `via_stations` to filter trains going *through* your destination or key stops.
+    *   **Single Station**: If only one station is entered, filtering is performed **server-side** (at the API) for maximum efficiency.
+    *   **Multiple Stations**: If multiple stations are entered, the sensor switches to **local filtering** to support complex logic.
+    *   **Logic (AND/OR)**:
+        *   **OR** (Default): Includes trains passing through *at least one* of the specified stations. Ideal for stations with multiple platform names (e.g., "Frankfurt Hbf" vs "Frankfurt Hbf (tief)").
+        *   **AND**: Includes only trains passing through *all* specified stations.
 2.  **Platforms**: Filter by platform if trains to your destination always use specific tracks.
 3.  **Two Sensors**: Create two sensors (one for Start, one for typical changeover stations) to track complex routes.
 

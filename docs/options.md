@@ -33,6 +33,7 @@ Refine which trains are shown.
 
 *   **Platforms**: Filter by platform names.
 *   **Via Stations**: Comma-separated list of stations the train must pass.
+*   **Via Station Logic**: Choose between **OR** (default) or **AND** logic for multiple via stations.
 *   **Direction**: Only show trains with this final destination.
 *   **Excluded Directions**: Hide trains heading toward these destinations.
 *   **Ignored Train Types**: Multi-select list to hide `S-Bahn`, `Bus`, `ICE`, etc.

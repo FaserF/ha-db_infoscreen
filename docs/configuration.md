@@ -43,10 +43,13 @@ Once a sensor is created, click **Configure** on the integration card to access 
     **Always use a comma `,`** to separate multiple values in text fields.
 
 -   **Platforms**: Enter a list of tracks you care about (e.g. `4, 5, 21`).
--   **Via Stations**: This is an **OR** filter.
-    -   *Example*: `Köln, Düsseldorf`. The sensor will show any train that stops at EITHER Cologne OR Düsseldorf.
+-   **Via Stations**: Enter stations the train must pass through. If you enter multiple stations (separated by `,` or `|`), you can choose between **AND** (must pass all) and **OR** (must pass at least one) logic.
+-   **Via Station Logic**:
+    -   **OR** (Default): Shows trains stopping at *any* of the listed stations.
+        *   *Example*: `Köln, Düsseldorf`. Catch trains to either city.
+    -   **AND**: Shows only trains stopping at *all* listed stations.
 -   **Direction**: A substring search for the destination.
-    -   *Example*: Entering `Paris` will catch `Paris Gare du Nord` and `Paris Est`.
+    -   *Example*: Entering `München` will catch `München Hbf` and `München Ost`.
 -   **Excluded Directions**: Hide specific destinations. Useful for stations where many lines overlap.
 -   **Exclude Cancelled Trains**:
     -   `True`: Cancelled trains vanish from your dashboard entirely.

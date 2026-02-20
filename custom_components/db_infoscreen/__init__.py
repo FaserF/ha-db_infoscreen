@@ -1,3 +1,11 @@
+"""
+Home Assistant integration for Deutsche Bahn (DB) information screens.
+
+This module provides the core logic and coordinator for fetching train departure
+information from the Deutsche Bahn (DBF) API and regional providers.
+"""
+
+from typing import Any
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -42,6 +50,7 @@ from .const import (
     CONF_KEEP_ROUTE,
     CONF_KEEP_ENDSTATION,
     CONF_DEDUPLICATE_DEPARTURES,
+    CONF_VIA_STATIONS_LOGIC,
     TRAIN_TYPE_MAPPING,
     CONF_EXCLUDE_CANCELLED,
     CONF_SHOW_OCCUPANCY,
@@ -56,6 +65,12 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(
     hass: HomeAssistant, config_entry: config_entries.ConfigEntry
 ):
+    """
+    Set up DB Infoscreen from a config entry.
+
+    Initializes the data coordinator, registers services (watch_train, track_connection),
+    and sets up the platforms (sensor, calendar, binary_sensor).
+    """
     hass.data.setdefault(DOMAIN, {})
 
     # Set up the coordinator
@@ -140,6 +155,11 @@ async def async_setup_entry(
 async def async_unload_entry(
     hass: HomeAssistant, config_entry: config_entries.ConfigEntry
 ):
+    """
+    Unload a config entry.
+
+    Unloads all platforms and removes the coordinator from hass.data.
+    """
     unload_ok = await hass.config_entries.async_unload_platforms(
         config_entry, ["sensor", "calendar", "binary_sensor"]
     )
@@ -156,6 +176,14 @@ async def update_listener(
 
 
 class DBInfoScreenCoordinator(DataUpdateCoordinator):
+    """
+    Data update coordinator for DB Infoscreen.
+
+    Fetches data from the DBF/Regional API, processes train departures,
+    handles filtering (via stations, directions, train types), and
+    manages background tasks like train watching and connection tracking.
+    """
+
     def __init__(self, hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
         """
         Initialize coordinator state from a config entry, build the API endpoint, and configure the DataUpdateCoordinator.
@@ -172,7 +200,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         config = {**config_entry.data, **config_entry.options}
 
         self.station = config[CONF_STATION]
-        self.next_departures = config.get(CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES)
+        self.next_departures = int(
+            config.get(CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES)
+        )
         self.favorite_trains = []
         fav_raw = config.get(CONF_FAVORITE_TRAINS, "")
         if isinstance(fav_raw, str) and fav_raw.strip():
@@ -180,9 +210,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 s.strip() for s in re.split(r",|\|", fav_raw) if s.strip()
             ]
 
-        self.watched_trips = {}
-        self.tracked_connections = {}
-        self.departure_history = {}
+        self.watched_trips: dict[str, Any] = {}
+        self.tracked_connections: dict[str, Any] = {}
+        self.departure_history: dict[str, Any] = {}
         self.hide_low_delay = config.get(CONF_HIDE_LOW_DELAY, False)
         self.detailed = config.get(CONF_DETAILED, False)
         self.past_60_minutes = config.get(CONF_PAST_60_MINUTES, False)
@@ -190,7 +220,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             config.get(CONF_DATA_SOURCE, "IRIS-TTS")
         )
         self.offset = self.convert_offset_to_seconds(
-            config.get(CONF_OFFSET, DEFAULT_OFFSET)
+            str(config.get(CONF_OFFSET, DEFAULT_OFFSET))
         )
         self.via_stations = config.get(CONF_VIA_STATIONS, [])
         self.direction = config.get(CONF_DIRECTION, "")
@@ -205,12 +235,14 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         custom_api_url = config.get(CONF_CUSTOM_API_URL, "")
         platforms = config.get(CONF_PLATFORMS, "")
         admode = config.get(CONF_ADMODE, "")
-        update_interval = max(
-            config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
-            MIN_UPDATE_INTERVAL,
+        update_interval = int(
+            max(
+                config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
+                MIN_UPDATE_INTERVAL,
+            )
         )
 
-        station_cleaned = " ".join(self.station.split())
+        station_cleaned = " ".join(str(self.station).split())
         encoded_station = quote(station_cleaned, safe=",-")
 
         self._base_url = (
@@ -244,15 +276,20 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         if self.past_60_minutes:
             params["past"] = "1"
 
+        # Determine filtering strategy and logic
+        self.via_stations_logic = str(config.get(CONF_VIA_STATIONS_LOGIC, "OR")).upper()
+
+        # Use API filtering for efficiency if exactly one via station is specified
+        if len(self.via_stations) == 1:
+            params["via"] = self.via_stations[0].strip()
+            self._via_filtered_server_side = True
+        else:
+            self._via_filtered_server_side = False
+
         # Assemble URL
-        query_string = urlencode(params)
+        query_string = urlencode(params, quote_via=quote)
         url = f"{url}?{query_string}" if query_string else url
-        if self.via_stations:
-            encoded_via_stations = [
-                quote(station.strip()) for station in self.via_stations
-            ]
-            via_param = ",".join(encoded_via_stations)
-            url += f"?via={via_param}" if "?" not in url else f"&via={via_param}"
+
         self.api_url = url
 
         super().__init__(
@@ -278,6 +315,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         if hasattr(self, "api_url") and self.api_url:
             # Remove .json from the URL to get the web page
             return self.api_url.replace(".json", "")
+        return None
 
     def convert_offset_to_seconds(self, offset: str) -> int:
         """
@@ -382,6 +420,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     ):
                         data = await data
 
+            if not isinstance(data, dict):
+                _LOGGER.error("Expected dict from API, got %s", type(data))
+                return self._last_valid_value or []
+
             raw_departures = data.get("departures", [])
             if raw_departures is None:
                 _LOGGER.warning("Encountered empty departures list, skipping.")
@@ -401,14 +443,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             self._consecutive_errors = 0
             self._last_successful_update = now
             self._stale_issue_raised = False
-            repairs.clear_all_issues_for_entry(self.hass, self.config_entry.entry_id)
-            # Ensure connection_error is cleared
-            # Ensure connection_error is cleared
-
             # --- PRE-PROCESSING: Parse time for all departures ---
             departures_with_time = []
             for departure in raw_departures:
-                if departure is None:
+                if not departure:
                     continue
 
                 departure_time_str = (
@@ -552,6 +590,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
             # --- MAIN FILTERING AND PROCESSING ---
             filtered_departures = []
+            current_size = 2  # Estimate for empty list '[]'
 
             # Map the configured ignored train types to the normalized values for correct comparison.
             # e.g., if config is ['S'], this becomes {'S-Bahn'}.
@@ -618,29 +657,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             departure,
                         )
                         continue
-
-                # Compute size with candidate included
-                temp_departure = departure.copy()
-                if "departure_datetime" in temp_departure:
-                    temp_departure.pop("departure_datetime", None)
-
-                temp_list = filtered_departures + [temp_departure]
-
-                try:
-                    json_size = len(json.dumps(temp_list, default=simple_serializer))
-                except TypeError as e:
-                    _LOGGER.error("Error serializing for size check: %s", e)
-                    # Break to be safe if we can't measure
-                    break
-
-                if json_size > MAX_SIZE_BYTES:
-                    _LOGGER.info(
-                        "Filtered departures JSON size would exceed limit: %d bytes (limit %d) for entry: %s. Stopping here.",
-                        json_size,
-                        MAX_SIZE_BYTES,
-                        self.station,
-                    )
-                    break
 
                 # Get train classes from the departure data.
                 train_classes = (
@@ -942,6 +958,50 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     for key in keys_to_remove:
                         departure.pop(key)
 
+                # --- VIA STATION FILTERING ---
+                # When a single via station was already sent to the API as a query
+                # parameter, skip client-side filtering to avoid discarding valid results.
+                if self.via_stations and not self._via_filtered_server_side:
+                    # Get all possible station names for this trip
+                    trip_stations = set()
+
+                    # 1. From 'via' list (if present)
+                    api_via = departure.get("via", [])
+                    if isinstance(api_via, list):
+                        trip_stations.update([s.lower() for s in api_via])
+
+                    # 2. From 'route_details' (if present)
+                    route_details = departure.get("route_details", [])
+                    if isinstance(route_details, list):
+                        for stop in route_details:
+                            if isinstance(stop, dict) and "name" in stop:
+                                trip_stations.add(stop["name"].lower())
+
+                    # 3. Check matches
+                    matches = []
+                    for v_station in self.via_stations:
+                        v_lower = v_station.strip().lower()
+                        # Check if the configured via station is a substring of the trip station name
+                        match_found = any(v_lower in ts for ts in trip_stations)
+                        matches.append(match_found)
+
+                    if self.via_stations_logic == "AND":
+                        if not all(matches):
+                            _LOGGER.debug(
+                                "Skipping departure: not all via stations (%s) matched for trip to %s",
+                                self.via_stations,
+                                departure.get("destination"),
+                            )
+                            continue
+                    else:  # OR logic (default)
+                        if not any(matches):
+                            _LOGGER.debug(
+                                "Skipping departure: none of the via stations (%s) matched for trip to %s",
+                                self.via_stations,
+                                departure.get("destination"),
+                            )
+                            continue
+
                 if not self.keep_route:
                     for key in ["route", "via", "prev_route", "next_route"]:
                         departure.pop(key, None)
@@ -951,14 +1011,42 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                 departure_seconds = (effective_departure_time - now).total_seconds()
                 if departure_seconds >= self.offset:
-                    filtered_departures.append(departure)
+                    # Compute size with candidate included
+                    # We do this by serializing iteratively and checking size.
+                    try:
+                        # Serialize just this item
+                        item_json = json.dumps(departure, default=simple_serializer)
+                        item_size = len(item_json)
+
+                        # Calculate overhead: comma separator if list is not empty
+                        overhead = 1 if filtered_departures else 0
+
+                        potential_size = current_size + item_size + overhead
+
+                        if potential_size > MAX_SIZE_BYTES:
+                            _LOGGER.info(
+                                "Filtered departures JSON size would exceed limit: %d bytes (limit %d) for entry: %s. Stopping here.",
+                                potential_size,
+                                MAX_SIZE_BYTES,
+                                self.station,
+                            )
+                            break
+
+                        filtered_departures.append(departure)
+                        current_size += item_size + overhead
+
+                    except (TypeError, ValueError) as e:
+                        _LOGGER.error(
+                            "Failed to serialize departure for size check: %s", e
+                        )
+                        continue
 
             _LOGGER.debug(
                 "Number of departures added to the filtered list: %d",
                 len(filtered_departures),
             )
 
-            # --- Feature 4: Alternative Connections ---
+            # Alternative Connections
             # For each departure, find other trains going to the same destination
             # that depart later. This helps users find backup options.
             if self.detailed and len(filtered_departures) > 1:
@@ -987,9 +1075,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                 )
 
                     if alternatives:
-                        dep["alternative_connections"] = alternatives[:3]  # Limit to 3
+                        dep["alternative_connections"] = list(alternatives)[
+                            :3
+                        ]  # Limit to 3
 
-            # --- Feature 7: Favorite Trains Filtering ---
+            # Favorite Trains Filtering
             # Capture the full list for background tasks (notifications, history) BEFORE filtering
             pre_filtered_departures = filtered_departures
 
@@ -1010,7 +1100,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 # Cache the visible ones if available, otherwise just keep going.
                 # Actually _last_valid_value is used for sensor display, so it SHOULD be the filtered list.
                 if filtered_departures:
-                    self._last_valid_value = filtered_departures[: self.next_departures]
+                    self._last_valid_value = list(filtered_departures)[
+                        : int(self.next_departures)
+                    ]
 
                 _LOGGER.debug(
                     "Fetched %d valid departures (pre-filter), %d visible",
@@ -1018,10 +1110,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     len(filtered_departures),
                 )
 
-                # --- Feature 6: Watch Train Notifications ---
+                # Watch Train Notifications
                 await self._check_watched_trips(pre_filtered_departures)
 
-                # --- Feature 9: Full Connection Tracking ---
+                # Full Connection Tracking
                 if self.tracked_connections:
                     for (
                         dep
@@ -1056,10 +1148,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                                     "transfer_station": change_station,
                                 }
 
-                # --- Feature 10: Punctuality Statistics ---
+                # Punctuality Statistics
                 self._update_history(pre_filtered_departures)
 
-                return filtered_departures[: self.next_departures]
+                return list(filtered_departures)[: int(self.next_departures)]
             else:
                 _LOGGER.warning(
                     "Departures fetched but all were filtered out. Using cached data."
@@ -1089,7 +1181,14 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             return self._last_valid_value or []
 
     async def _check_watched_trips(self, departures):
-        """Check if any watched trips need notifications."""
+        """
+        Check for important updates on watched trains and send notifications.
+
+        Compares current departures against the 'watched_trips' list. If a delay
+        passes the threshold, a platform changes, or a train is cancelled, it
+        triggers a notification via the configured Home Assistant notify service.
+        Includes a retry/stale check for trains that disappear from the board.
+        """
         if not self.watched_trips:
             return
 
@@ -1108,7 +1207,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
             if not trip_found:
                 # Increment missed counter
-                missed = watch_config.get("missed_update_count", 0) + 1
+                # watch_config should not be None here as it comes from keys()
+                missed = int(watch_config.get("missed_update_count") or 0) + 1
                 watch_config["missed_update_count"] = missed
                 if missed >= 3:
                     to_remove.append(train_id_to_watch)
@@ -1127,14 +1227,17 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
             # 1. Check Delay
             try:
-                delay_int = int(delay) if delay else 0
-                if (
-                    delay_int >= watch_config["delay_threshold"]
-                    and delay_int != watch_config["last_notified_delay"]
-                ):
-                    notify = True
-                    message += f"Delay is now {delay_int} min. "
-                    watch_config["last_notified_delay"] = delay_int
+                if watch_config is not None:
+                    delay_int = int(delay) if delay else 0
+                    current_threshold = watch_config.get("delay_threshold")
+                    threshold = int(
+                        current_threshold if current_threshold is not None else 0
+                    )
+                    last_delay = watch_config.get("last_notified_delay")
+                    if delay_int >= threshold and delay_int != last_delay:
+                        notify = True
+                        message += f"Delay is now {delay_int} min. "
+                        watch_config["last_notified_delay"] = delay_int
             except (ValueError, TypeError):
                 pass
 
@@ -1161,10 +1264,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
             if notify:
                 try:
-                    if "." not in watch_config["notify_service"]:
+                    if watch_config is None or not watch_config.get("notify_service"):
+                        raise ValueError("No notify service configured")
+
+                    if "." not in str(watch_config["notify_service"]):
                         raise ValueError("Invalid notify service format (missing '.')")
 
-                    service_parts = watch_config["notify_service"].split(".")
+                    service_parts = str(watch_config["notify_service"]).split(".")
                     domain = service_parts[0]
                     service = ".".join(service_parts[1:])
 
@@ -1191,7 +1297,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             self.watched_trips.pop(train_id, None)
 
     async def _get_train_departure_at_station(self, station, train_id):
-        """Fetch departure data for a specific train at another station."""
+        """
+        Fetch departure/arrival information for a specific train at a different station.
+
+        Used for connection tracking to see if a connecting train at a transfer
+        station is delayed or on time.
+        """
         station_cleaned = " ".join(station.split())
         encoded_station = quote(station_cleaned, safe=",-")
 
@@ -1215,6 +1326,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     ):
                         data = await data
 
+            if not isinstance(data, dict):
+                _LOGGER.debug(
+                    "Unexpected data type from cascaded fetch for %s: %s",
+                    station,
+                    type(data),
+                )
+                return None
             for dep in data.get("departures", []):
                 if dep.get("train") == train_id or dep.get("trip_id") == train_id:
                     return dep
@@ -1223,7 +1341,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         return None
 
     def _update_history(self, departures):
-        """Update historical data for punctuality statistics."""
+        """
+        Update the 24-hour departure history for punctuality statistics.
+
+        Records the final seen status (delay, cancellation) for each train instance.
+        Used to calculate percentage-based punctuality metrics in sensors.
+        """
         now = dt_util.now()
         threshold_24h = now - timedelta(hours=24)
 
@@ -1260,7 +1383,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             }
 
     def _handle_update_error(self, error_message: str) -> None:
-        """Handle update errors and create repair issues if needed."""
+        """
+        Register a data fetch error and check for stale data issues.
+
+        Increments consecutive error counts and raises a Home Assistant repair
+        issue if the data has not been successfully updated for more than 24 hours.
+        """
         self._consecutive_errors += 1
         now = dt_util.now()
         entry_id = self.config_entry.entry_id

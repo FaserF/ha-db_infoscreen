@@ -43,6 +43,7 @@
           "admode": "Anzeigemodus (Abfahrt vs Ankunft)",
           "platforms": "Nach Gleisen filtern (kommagetrennt, z.B. 1, 2, 5-7)",
           "via_stations": "Nach Via-Stationen filtern (kommagetrennt)",
+          "via_stations_logic": "Via-Station Suchlogik (UND = alle müssen passen, OR = mindestens eine)",
           "direction": "Nach Fahrtrichtung filtern",
           "excluded_directions": "Fahrtrichtungen ausschließen",
           "ignored_train_types": "Zugtypen ignorieren (z.B. 'ICE')",
@@ -60,6 +61,7 @@
           "update_interval": "Update-Intervall (Minuten)",
           "platforms": "Nach Gleisen filtern",
           "via_stations": "Nach Via-Stationen filtern",
+          "via_stations_logic": "Via-Station Suchlogik",
           "custom_api_url": "Benutzerdefinierte API-URL (Experten)"
         }
       }
@@ -120,6 +122,7 @@
         "data": {
           "platforms": "Gleise",
           "via_stations": "Via Stationen",
+          "via_stations_logic": "Via-Station Suchlogik",
           "direction": "Richtung",
           "excluded_directions": "Ausgeschlossene Richtungen",
           "ignored_train_types": "Exkludiere bestimmte Zugarten (z.B. ICE)",

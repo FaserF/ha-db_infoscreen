@@ -1,3 +1,5 @@
+"""Sensor platform for DB Infoscreen integration."""
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from typing import Any
@@ -13,6 +15,13 @@ MAX_LENGTH = 70
 
 
 class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
+    """
+    Main sensor for displaying next departures at a station.
+
+    Supports optional filtering by platform, via stations, and direction.
+    Can also display a formatted text view for simple displays.
+    """
+
     _attr_has_entity_name = True
 
     def __init__(
@@ -61,6 +70,12 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         )
 
     def format_departure_time(self, departure_time):
+        """
+        Format a departure time string or timestamp into a readable HH:MM string.
+
+        Handles various formats (Unix, ISO, HH:MM) and accounts for midnight
+        rollover. Returns YYYY-MM-DD HH:MM if the departure is not today.
+        """
         if departure_time is None:
             _LOGGER.debug("Departure time is None")
             return None
@@ -136,6 +151,11 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
 
     @property
     def native_value(self):
+        """
+        Return the main state of the sensor (e.g., '10:30' or '10:30 +5').
+
+        Calculates the state from the first entry in the coordinator's data.
+        """
         # Check if there is data and if it is valid
         if self.coordinator.data:
             try:
@@ -151,11 +171,11 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                 )
 
                 # Get the delay in departure, if available
-                delay_departure = (
-                    self.coordinator.data[0].get("delayDeparture")
-                    or self.coordinator.data[0].get("dep_delay")
-                    or self.coordinator.data[0].get("delay", 0)
-                )
+                delay_departure = self.coordinator.data[0].get("delayDeparture")
+                if delay_departure is None:
+                    delay_departure = self.coordinator.data[0].get("dep_delay")
+                if delay_departure is None:
+                    delay_departure = self.coordinator.data[0].get("delay", 0)
 
                 _LOGGER.debug("Raw departure time: %s", departure_time)
 
@@ -242,6 +262,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
             "direction": self.direction,
             "last_updated": last_updated,
             "attribution": attribution,
+            "via_stations_logic": getattr(self.coordinator, "via_stations_logic", "OR"),
         }
 
         if self.enable_text_view:
@@ -293,7 +314,12 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
 
 
 class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
-    """Sensor that watches the prev station of the next departing train."""
+    """
+    Diagnostic sensor that monitors the status of the upcoming trip.
+
+    Looks at the previous station of the next departing train to see if it
+    is on time or delayed earlier in its route.
+    """
 
     _attr_has_entity_name = True
     _attr_icon = "mdi:eye-check-outline"
@@ -307,7 +333,11 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
 
     @property
     def native_value(self) -> str | None:
-        """Return the state of the watchdog."""
+        """
+        Return the current watchdog state.
+
+        Shows the name and delay of the previous station for the next train.
+        """
         data = self._get_watchdog_data()
         if not data:
             return "Unknown"
@@ -329,7 +359,7 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
 
     def _get_watchdog_data(self) -> dict[str, Any] | None:
         """Calculate watchdog data from the first departure."""
-        if not self.coordinator.data or len(self.coordinator.data) == 0:
+        if not self.coordinator.data:
             return None
 
         # Look at the first (next) departure
@@ -378,11 +408,16 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
 
 
 class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
-    """Sensor that calculates the time to leave for the next train."""
+    """
+    Utility sensor that calculates the minutes remaining until you must leave.
+
+    Subtracts the configured 'walk time' from the next train's departure time.
+    """
 
     _attr_has_entity_name = True
     _attr_translation_key = "leave_now"
     _attr_entity_registry_enabled_default = False  # Disabled by default
+    _attr_native_unit_of_measurement = "min"
 
     def __init__(self, coordinator, config_entry):
         super().__init__(coordinator, config_entry)
@@ -393,17 +428,20 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
     @property
     def walk_time(self):
         """Get the walk time from config data or options."""
-        return self.config_entry.data.get(
-            CONF_WALK_TIME, 0
-        ) or self.config_entry.options.get(CONF_WALK_TIME, 0)
+        # Options override data. 0 is a valid value, so check explicitly for None.
+        opt = self.config_entry.options.get(CONF_WALK_TIME)
+        if opt is not None:
+            return opt
+        return self.config_entry.data.get(CONF_WALK_TIME, 0)
 
     @property
     def native_value(self):
-        if (
-            not self.coordinator.data
-            or not isinstance(self.coordinator.data, list)
-            or len(self.coordinator.data) == 0
-        ):
+        """
+        Return the number of minutes until the user must leave.
+
+        Returns 'Leave now!' if the walk time has already passed.
+        """
+        if not self.coordinator.data or not isinstance(self.coordinator.data, list):
             return None
 
         # Get next departure (first in list)
@@ -432,17 +470,39 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
             return {}
 
         next_dep = self.coordinator.data[0]
+
+        departure_timestamp = next_dep.get("departure_timestamp")
+        if not departure_timestamp:
+            return {
+                "train": next_dep.get("train"),
+                "destination": next_dep.get("destination"),
+                "departure_time": next_dep.get("departure_current"),
+                "walk_time": self.walk_time,
+                "next_departures_count": len(self.coordinator.data),
+                "status": None,
+            }
+
+        minutes_until_departure = (departure_timestamp - dt_util.now().timestamp()) / 60
+        minutes_until_leave = int(minutes_until_departure - self.walk_time)
+        status = "Leave now!" if minutes_until_leave <= 0 else "On time"
+
         return {
             "train": next_dep.get("train"),
             "destination": next_dep.get("destination"),
             "departure_time": next_dep.get("departure_current"),
             "walk_time": self.walk_time,
             "next_departures_count": len(self.coordinator.data),
+            "status": status,
         }
 
 
 class DBInfoScreenPunctualitySensor(DBInfoScreenBaseEntity, SensorEntity):
-    """Sensor that displays punctuality statistics for the station."""
+    """
+    Statistical sensor for station punctuality.
+
+    Displays the percentage of trains that were on time (delay <= 5 min)
+    over the last 24 hours.
+    """
 
     _attr_has_entity_name = True
     _attr_translation_key = "punctuality"
@@ -457,6 +517,7 @@ class DBInfoScreenPunctualitySensor(DBInfoScreenBaseEntity, SensorEntity):
 
     @property
     def native_value(self):
+        """Return the calculated punctuality percentage."""
         stats = self._get_stats()
         return stats.get("punctuality_percent")
 
@@ -478,14 +539,18 @@ class DBInfoScreenPunctualitySensor(DBInfoScreenBaseEntity, SensorEntity):
 
         total = len(history)
         delayed = sum(
-            1 for d in history.values() if d["delay"] > 5 and not d["cancelled"]
+            1
+            for d in history.values()
+            if d.get("delay", 0) > 5 and not d.get("cancelled", False)
         )
-        cancelled = sum(1 for d in history.values() if d["cancelled"])
+        cancelled = sum(1 for d in history.values() if d.get("cancelled", False))
         on_time = total - delayed - cancelled
 
         punctuality = round((on_time / total) * 100, 1) if total > 0 else 100
 
-        total_delay = sum(d["delay"] for d in history.values() if not d["cancelled"])
+        total_delay = sum(
+            d.get("delay", 0) for d in history.values() if not d.get("cancelled", False)
+        )
         avg_delay = (
             round(total_delay / (total - cancelled), 1)
             if (total - cancelled) > 0
