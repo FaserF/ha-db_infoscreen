@@ -17,11 +17,19 @@ with patch("subprocess.check_output") as mock_git:
 
 class TestVersionManager(unittest.TestCase):
     @patch("subprocess.check_output")
-    def test_get_current_version_git(self, mock_git):
-        # Case with normal and beta tags
-        mock_git.return_value = b"2026.2.0b0\n2026.2.0\n2026.1.2\n"
+    def test_get_current_version_logical_sorting(self, mock_git):
+        # Stable 2026.2.0 should be preferred over logical "later" in string sort 2026.2.0b0
+        # and 2026.2.2b0 should be highest if it exists
+        mock_git.return_value = b"2026.2.0\n2026.2.0b0\n2026.2.2b0\n"
         version = vm.get_current_version()
-        self.assertEqual(version, "2026.2.0b0")
+        self.assertEqual(version, "2026.2.2b0")
+
+    @patch("subprocess.check_output")
+    def test_get_current_version_stable_over_beta_same_patch(self, mock_git):
+        # 2026.2.0 should be picked over 2026.2.0b99
+        mock_git.return_value = b"2026.2.0b99\n2026.2.0\n"
+        version = vm.get_current_version()
+        self.assertEqual(version, "2026.2.0")
 
     @patch("subprocess.check_output")
     def test_get_current_version_git_invalid_ignored(self, mock_git):

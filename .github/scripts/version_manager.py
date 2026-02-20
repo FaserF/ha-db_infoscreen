@@ -13,19 +13,40 @@ def get_current_version():
     """Get the current version from git tags (preferred) or manifest.json."""
     # 1. Try Git Tags (Strict CalVer)
     try:
-        # Get tags sorted by version-like reference name (descending)
+        # Get all tags
         tags = (
-            subprocess.check_output(
-                ["git", "tag", "--sort=-v:refname"], stderr=subprocess.DEVNULL
-            )
+            subprocess.check_output(["git", "tag"], stderr=subprocess.DEVNULL)
             .decode()
             .splitlines()
         )
+
+        valid_tags = []
         for tag in tags:
             tag = tag.strip()
-            # Match exactly YEAR.MONTH.PATCH or with suffix
-            if re.match(r"^20\d{2}\.\d+\.\d+(?:b\d+|-dev\d+)?$", tag):
-                return tag
+            match = re.match(r"^(\d+)\.(\d+)\.(\d+)(?:(b)(\d+)|(-dev)(\d+))?$", tag)
+            if match:
+                y, m, p, b_p, b_n, d_p, d_n = match.groups()
+                priority = 0
+                s_num = 0
+                if b_p:
+                    priority = 1
+                    s_num = int(b_n)
+                elif d_p:
+                    priority = 0
+                    s_num = int(d_n)
+                else:
+                    priority = 2
+
+                valid_tags.append({
+                    "tag": tag,
+                    "key": (int(y), int(m), int(p), priority, s_num)
+                })
+
+        if valid_tags:
+            # Sort by key descending
+            valid_tags.sort(key=lambda x: x["key"], reverse=True)
+            return valid_tags[0]["tag"]
+
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass
 
