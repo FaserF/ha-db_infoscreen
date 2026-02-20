@@ -32,6 +32,34 @@ If you prefer not to use HACS:
 
 ---
 
+## Installing Beta Releases
+
+Beta releases allow you to test new features or fixes before they are officially released.
+
+### Via HACS
+
+As of **February 2026**, HACS makes switching to beta versions very simple:
+
+1.  Open your Home Assistant instance and navigate to **HACS**.
+2.  Search for or find **db-infoscreen** in your downloaded integrations.
+3.  Click on the integration to open its details page.
+4.  Click the **three dots (overflow menu)** in the top right corner.
+5.  Select **Redownload** (or **Download**).
+6.  In the dialog that appears, enable the toggle **Show beta versions**.
+7.  Select the desired beta version from the dropdown menu.
+8.  Click **Download**.
+9.  **Restart** Home Assistant when prompted.
+
+### Manual Beta Installation
+
+1.  Navigate to the [GitHub Releases page](https://github.com/FaserF/ha-db_infoscreen/releases).
+2.  Look for versions marked with a **Pre-release** badge.
+3.  Download the `Source code (zip)` for that version.
+4.  Follow the standard **Manual Installation** steps above (extract and copy the `custom_components/db_infoscreen` folder).
+5.  **Restart** Home Assistant.
+
+---
+
 ## Post-Installation
 
 Once installed (and after a restart), you need to add the integration to your instance:
