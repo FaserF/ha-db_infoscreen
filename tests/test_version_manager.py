@@ -18,7 +18,15 @@ with patch("subprocess.check_output") as mock_git:
 class TestVersionManager(unittest.TestCase):
     @patch("subprocess.check_output")
     def test_get_current_version_git(self, mock_git):
-        mock_git.return_value = b"2026.1.2\n2026.1.1\n2025.12.5\n"
+        # Case with normal and beta tags
+        mock_git.return_value = b"2026.2.0b0\n2026.2.0\n2026.1.2\n"
+        version = vm.get_current_version()
+        self.assertEqual(version, "2026.2.0b0")
+
+    @patch("subprocess.check_output")
+    def test_get_current_version_git_invalid_ignored(self, mock_git):
+        # Invalid format tags should be ignored
+        mock_git.return_value = b"v1.0.0\n2026.1.2\n"
         version = vm.get_current_version()
         self.assertEqual(version, "2026.1.2")
 
@@ -32,48 +40,71 @@ class TestVersionManager(unittest.TestCase):
         self.assertEqual(version, "2026.1.5")
 
     @patch("subprocess.check_output")
-    def test_rollover_new_month_stable(self, mock_git):
-        # Current release 2026.1.2, it's now Feb 2026
+    def test_stable_to_stable(self, mock_git):
+        # 2026.2.0 -> bump stable -> 2026.2.1
+        mock_git.return_value = b"2026.2.0\n"
+        now = datetime.datetime(2026, 2, 4)
+        new_v = vm.calculate_version("stable", now=now)
+        self.assertEqual(new_v, "2026.2.1")
+
+    @patch("subprocess.check_output")
+    def test_stable_to_beta(self, mock_git):
+        # 2026.2.0 -> bump beta -> 2026.2.1b0
+        mock_git.return_value = b"2026.2.0\n"
+        now = datetime.datetime(2026, 2, 4)
+        new_v = vm.calculate_version("beta", now=now)
+        self.assertEqual(new_v, "2026.2.1b0")
+
+    @patch("subprocess.check_output")
+    def test_beta_to_beta(self, mock_git):
+        # 2026.2.1b0 -> bump beta -> 2026.2.1b1
+        mock_git.return_value = b"2026.2.1b0\n"
+        now = datetime.datetime(2026, 2, 4)
+        new_v = vm.calculate_version("beta", now=now)
+        self.assertEqual(new_v, "2026.2.1b1")
+
+    @patch("subprocess.check_output")
+    def test_beta_to_stable(self, mock_git):
+        # 2026.2.1b1 -> bump stable -> 2026.2.1
+        mock_git.return_value = b"2026.2.1b1\n"
+        now = datetime.datetime(2026, 2, 4)
+        new_v = vm.calculate_version("stable", now=now)
+        self.assertEqual(new_v, "2026.2.1")
+
+    @patch("subprocess.check_output")
+    def test_stable_to_dev(self, mock_git):
+        # 2026.2.1 -> bump dev -> 2026.2.2-dev0
+        mock_git.return_value = b"2026.2.1\n"
+        now = datetime.datetime(2026, 2, 4)
+        new_v = vm.calculate_version("dev", now=now)
+        self.assertEqual(new_v, "2026.2.2-dev0")
+
+    @patch("subprocess.check_output")
+    def test_dev_to_beta(self, mock_git):
+        # 2026.2.2-dev0 -> bump beta -> 2026.2.2b0
+        mock_git.return_value = b"2026.2.2-dev0\n"
+        now = datetime.datetime(2026, 2, 4)
+        new_v = vm.calculate_version("beta", now=now)
+        self.assertEqual(new_v, "2026.2.2b0")
+
+    @patch("subprocess.check_output")
+    def test_rollover_new_month(self, mock_git):
+        # 2026.1.2 -> bump stable in Feb -> 2026.2.0
         mock_git.return_value = b"2026.1.2\n"
         now = datetime.datetime(2026, 2, 4)
         new_v = vm.calculate_version("stable", now=now)
-        # Should be 2026.2.0 (new cycle, patch starts at 0, no extra increment)
         self.assertEqual(new_v, "2026.2.0")
 
     @patch("subprocess.check_output")
     def test_rollover_new_month_beta(self, mock_git):
-        # Current release 2026.1.2, it's now Feb 2026, user wants beta
+        # 2026.1.2 -> bump beta in Feb -> 2026.2.0b0
         mock_git.return_value = b"2026.1.2\n"
         now = datetime.datetime(2026, 2, 4)
         new_v = vm.calculate_version("beta", now=now)
-        # Should be 2026.2.0b0
         self.assertEqual(new_v, "2026.2.0b0")
 
-    @patch("subprocess.check_output")
-    def test_increment_same_month_beta(self, mock_git):
-        # Current version is 2026.2.0b0, user wants next beta in same month
-        mock_git.return_value = b"2026.2.0b0\n"
-        now = datetime.datetime(2026, 2, 4)
-        new_v = vm.calculate_version("beta", now=now)
-        self.assertEqual(new_v, "2026.2.0b1")
-
-    @patch("subprocess.check_output")
-    def test_increment_same_month_stable_after_beta(self, mock_git):
-        # Current version is 2026.2.0b1, user wants stable in same month
-        mock_git.return_value = b"2026.2.0b1\n"
-        now = datetime.datetime(2026, 2, 4)
-        new_v = vm.calculate_version("stable", now=now)
-        # Should be 2026.2.0 (suffix removed)
-        self.assertEqual(new_v, "2026.2.0")
-
-    @patch("subprocess.check_output")
-    def test_increment_same_month_stable_after_stable(self, mock_git):
-        # Current version is 2026.2.0, user wants stable in same month
-        mock_git.return_value = b"2026.2.0\n"
-        now = datetime.datetime(2026, 2, 4)
-        new_v = vm.calculate_version("stable", now=now)
-        # Should be 2026.2.1
-        self.assertEqual(new_v, "2026.2.1")
+if __name__ == "__main__":
+    unittest.main()
 
 
 if __name__ == "__main__":
