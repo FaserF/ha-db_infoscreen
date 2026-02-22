@@ -10,6 +10,21 @@
 
 ---
 
+## ❤️ Support This Project
+
+> I maintain this integration in my **free time alongside my regular job** — bug hunting, new features, and testing on real hardware. Test devices cost money, and every donation helps me stay independent and free up more time for open-source work.
+>
+> Donations are completely voluntary — but the more support I receive, the less I depend on other income sources and the more time I can realistically invest into these GitHub projects. 💪
+
+<div align="center">
+
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor%20on-GitHub-%23EA4AAA?style=for-the-badge&logo=github-sponsors&logoColor=white)](https://github.com/sponsors/FaserF)&nbsp;&nbsp;
+[![PayPal](https://img.shields.io/badge/Donate%20via-PayPal-%2300457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/FaserF)
+
+</div>
+
+---
+
 The `db-infoscreen` sensor provides detailed **departure times** and train information for a given station directly in Home Assistant. Aggregating data from multiple sources (primarily **Deutsche Bahn IRIS-TTS**), it offers a powerful and comprehensive departure board for stations across Germany and Europe.
 
 📚 **[View the Full Documentation](https://faserf.github.io/ha-db_infoscreen/)**
