@@ -95,6 +95,7 @@ async def async_setup_entry(
 
     # Register Services (only once)
     if not hass.services.has_service(DOMAIN, "watch_train"):
+
         async def async_watch_train(service_call):
             """Handle the watch_train service call."""
             train_id = service_call.data["train_id"]
@@ -106,8 +107,12 @@ async def async_setup_entry(
                     coord.watched_trips[train_id] = {
                         "notify_service": notify_service,
                         "delay_threshold": service_call.data.get("delay_threshold", 5),
-                        "notify_on_platform_change": service_call.data.get("notify_on_platform_change", True),
-                        "notify_on_cancellation": service_call.data.get("notify_on_cancellation", True),
+                        "notify_on_platform_change": service_call.data.get(
+                            "notify_on_platform_change", True
+                        ),
+                        "notify_on_cancellation": service_call.data.get(
+                            "notify_on_cancellation", True
+                        ),
                         "last_notified_delay": -1,
                         "last_notified_platform": None,
                         "last_notified_cancellation": False,
@@ -130,6 +135,7 @@ async def async_setup_entry(
         )
 
     if not hass.services.has_service(DOMAIN, "track_connection"):
+
         async def async_track_connection(service_call):
             """Handle the track_connection service call."""
             my_train_id = service_call.data["my_train_id"]
@@ -142,7 +148,11 @@ async def async_setup_entry(
                         "change_station": change_station,
                         "next_train_id": next_train_id,
                     }
-            _LOGGER.debug("Connection %s -> %s tracked in all coordinators", my_train_id, next_train_id)
+            _LOGGER.debug(
+                "Connection %s -> %s tracked in all coordinators",
+                my_train_id,
+                next_train_id,
+            )
 
         hass.services.async_register(
             DOMAIN,

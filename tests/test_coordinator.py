@@ -32,6 +32,7 @@ def patch_coordinator():
 def clear_cache():
     """Clear the global RESPONSE_CACHE between tests."""
     from custom_components.db_infoscreen import RESPONSE_CACHE
+
     RESPONSE_CACHE.clear()
     yield
     RESPONSE_CACHE.clear()
