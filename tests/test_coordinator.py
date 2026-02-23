@@ -497,6 +497,7 @@ async def test_coordinator_retry(hass, mock_config_entry):
 
     # Simulate transient failures and then success
     counts = 0
+
     def side_effect(url, **kwargs):
         nonlocal counts
         counts += 1

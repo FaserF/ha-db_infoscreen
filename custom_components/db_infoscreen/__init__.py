@@ -539,8 +539,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 departure_direction = departure.get("direction")
                 if (
                     departure_direction
-                    and self.excluded_directions.lower()
-                    in departure_direction.lower()
+                    and self.excluded_directions.lower() in departure_direction.lower()
                 ):
                     _LOGGER.debug(
                         "Skipping departure due to excluded direction match. Excluded: '%s', actual: '%s'",
@@ -842,9 +841,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 departure["route_details"] = route_details
 
             # Trip-ID
-            departure["trip_id"] = departure.get("trainId") or departure.get(
-                "tripId"
-            )
+            departure["trip_id"] = departure.get("trainId") or departure.get("tripId")
 
             scheduled_arrival = departure.get("scheduledArrival")
             delay_arrival = departure.get("delayArrival")
@@ -886,9 +883,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         else:
                             # Fallback for HH:MM format (assume today)
                             try:
-                                temp_dt = datetime.strptime(
-                                    scheduled_arrival, "%H:%M"
-                                )
+                                temp_dt = datetime.strptime(scheduled_arrival, "%H:%M")
                                 arrival_time = now.replace(
                                     hour=temp_dt.hour,
                                     minute=temp_dt.minute,
@@ -940,9 +935,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             if "arrival_timestamp" not in departure and departure.get(
                 "departure_timestamp"
             ):
-                departure["arrival_timestamp"] = departure.get(
-                    "departure_timestamp"
-                )
+                departure["arrival_timestamp"] = departure.get("departure_timestamp")
 
             effective_departure_time = departure_time
             if not self.drop_late_trains:
@@ -1060,9 +1053,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     current_size += item_size + overhead
 
                 except (TypeError, ValueError) as e:
-                    _LOGGER.error(
-                        "Failed to serialize departure for size check: %s", e
-                    )
+                    _LOGGER.error("Failed to serialize departure for size check: %s", e)
                     continue
 
         _LOGGER.debug(
