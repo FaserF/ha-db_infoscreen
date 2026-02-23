@@ -18,15 +18,25 @@ The primary sensor that displays the next departure time.
 | `attribution` | Data source URL |
 
 **Attributes per Departure:**
+
 - `line` - Train line/number (e.g., "ICE 578", "S3")
+
 - `destination` - Final destination
+
 - `platform` / `scheduledPlatform` - Current and planned platform
+
 - `delay` / `delayDeparture` - Delay in minutes
+
 - `isCancelled` - Whether the train is cancelled
+
 - `route` - Intermediate stops (if enabled)
+
 - `messages` - Quality notes and warnings
+
 - `wagon_order` - Raw wagon order data (if available and detailed)
+
 - `wagon_order_html` - HTML summary of wagon order (e.g. "1. Class in A")
+
 - `alternative_connections` - List of later trains to the same destination (if detailed enabled)
 
 ---
@@ -45,6 +55,7 @@ The primary sensor that displays the next departure time.
 | **Unknown** | No data available |
 
 **Attributes:**
+
 - `time_to_leave` - Time in minutes until you need to leave
 - `departure_time` - Scheduled departure time of the train
 - `travel_time` - Configured travel time to the station
@@ -64,6 +75,7 @@ The primary sensor that displays the next departure time.
 | **Unknown** | No historical data collected yet |
 
 **Attributes:**
+
 - `total_trains` - Total number of trains tracked in the last 24h
 - `delayed_trains` - Number of trains with delay > 5 min
 - `cancelled_trains` - Number of cancelled trains
@@ -85,6 +97,7 @@ The primary sensor that displays the next departure time.
 | **Unknown** | No route data available |
 
 **Attributes:**
+
 - `train` - Train identifier (e.g. "ICE 578")
 - `previous_station_name` - Name of the previous station
 - `previous_delay` - Delay in minutes at previous station
@@ -99,6 +112,7 @@ Three binary sensors are automatically created to provide quick status indicator
 **Entity ID**: `binary_sensor.db_infoscreen_{station}_delay`
 
 !!! note "Disabled by Default"
+
     This sensor is disabled by default. Enable it in the entity settings if you wish to track delays.
 
 | State | Meaning |
@@ -107,6 +121,7 @@ Three binary sensors are automatically created to provide quick status indicator
 | **OFF** | All trains are on time |
 
 **Attributes:**
+
 - `delayed_trains` - List of delayed train details
 - `max_delay` - Highest delay in minutes
 - `delayed_count` - Number of delayed trains
@@ -130,6 +145,7 @@ Three binary sensors are automatically created to provide quick status indicator
 **Entity ID**: `binary_sensor.db_infoscreen_{station}_cancellation`
 
 !!! note "Disabled by Default"
+
     This sensor is disabled by default. Enable it in the entity settings if you wish to track cancellations.
 
 | State | Meaning |
@@ -138,6 +154,7 @@ Three binary sensors are automatically created to provide quick status indicator
 | **OFF** | No cancellations |
 
 **Attributes:**
+
 - `cancelled_trains` - List of cancelled train details
 - `cancelled_count` - Number of cancelled trains
 
@@ -147,6 +164,7 @@ Three binary sensors are automatically created to provide quick status indicator
 **Entity ID**: `binary_sensor.db_infoscreen_{station}_api_connection`
 
 !!! note "Disabled by Default"
+
     This sensor is disabled by default. Enable it in the entity settings if you need to monitor API health.
 
 | State | Meaning |
@@ -155,10 +173,9 @@ Three binary sensors are automatically created to provide quick status indicator
 | **OFF** | Connection issues detected |
 
 **Attributes:**
+
 - `last_successful_update` - Timestamp of last successful data fetch
 - `consecutive_errors` - Number of consecutive API failures
-
----
 
 ---
 
@@ -166,6 +183,7 @@ Three binary sensors are automatically created to provide quick status indicator
 **Entity ID**: `binary_sensor.db_infoscreen_{station}_elevator_{platform}` or `_general_`
 
 !!! note "Disabled by Default"
+
     This sensor is disabled by default. Enable it in the entity settings if you require accessibility information.
 
 | State | Meaning |
@@ -174,6 +192,7 @@ Three binary sensors are automatically created to provide quick status indicator
 | **OFF** | No reported issues |
 
 **Attributes:**
+
 - `issues` - List of specific issue messages (e.g. "Aufzug zu Gleis 1 defekt")
 - `issue_count` - Number of active issues
 
@@ -187,6 +206,7 @@ Three binary sensors are automatically created to provide quick status indicator
     The calendar entity is disabled by default. Enable it in the entity settings when you want to visualize departures on a calendar view.
 
 The calendar entity converts each departure into a calendar event, perfect for:
+
 - Visual dashboard calendars
 - Lovelace calendar cards
 - Integration with other calendar tools
@@ -202,6 +222,7 @@ The calendar entity converts each departure into a calendar event, perfect for:
 | **Description** | Line, destination, platform, delay, route details |
 
 **Special Indicators in Summary:**
+
 - `(+Xmin)` - Delay indicator
 - `⚠️ CANCELLED` - Cancellation warning
 
@@ -230,6 +251,7 @@ The integration automatically monitors for issues and creates repair entries in 
 
 ### Self-Healing Actions
 When you view a repair issue, you can choose:
+
 - **Retry** - Attempt to fetch data again
 - **Change Data Source** - Switch to a different backend
 - **Remove Station** - Delete the problematic configuration
@@ -247,6 +269,7 @@ All entities for a station are grouped under a single device:
 | **Model** | Departure Board |
 
 This allows you to:
+
 - View all entities in one place
 - Add the device to areas
 - Use device triggers in automations
@@ -254,6 +277,7 @@ This allows you to:
 ---
 
 ## 🔗 Related Documentation
+
 - [Configuration Reference](configuration.md)
 - [Automation Cookbook](automations.md)
 - [Troubleshooting](troubleshooting.md)

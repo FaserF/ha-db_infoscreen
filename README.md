@@ -205,13 +205,19 @@ This integration allows fetching data from various backend sources via [DBF](htt
 Direct migration is not possible due to API differences. The old integration supported "Start to Destination" routing, which `db-infoscreen` handles differently.
 
 **To replicate "Start -> Destination" behavior:**
+
 1.  **Via Stations**: Use `via_stations` to filter trains going *through* your destination or key stops.
-    *   **Single Station**: If only one station is entered, filtering is performed **server-side** (at the API) for maximum efficiency.
-    *   **Multiple Stations**: If multiple stations are entered, the sensor switches to **local filtering** to support complex logic.
-    *   **Logic (AND/OR)**:
-        *   **OR** (Default): Includes trains passing through *at least one* of the specified stations. Ideal for stations with multiple platform names (e.g., "Frankfurt Hbf" vs "Frankfurt Hbf (tief)").
-        *   **AND**: Includes only trains passing through *all* specified stations.
+
+    -   **Single Station**: If only one station is entered, filtering is performed **server-side** (at the API) for maximum efficiency.
+
+    -   **Multiple Stations**: If multiple stations are entered, the sensor switches to **local filtering** to support complex logic.
+
+    -   **Logic (AND/OR)**:
+        -   **OR** (Default): Includes trains passing through *at least one* of the specified stations. Ideal for stations with multiple platform names (e.g., "Frankfurt Hbf" vs "Frankfurt Hbf (tief)").
+        -   **AND**: Includes only trains passing through *all* specified stations.
+
 2.  **Platforms**: Filter by platform if trains to your destination always use specific tracks.
+
 3.  **Two Sensors**: Create two sensors (one for Start, one for typical changeover stations) to track complex routes.
 
 ---

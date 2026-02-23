@@ -45,7 +45,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         via_suffix_name = f" via {' '.join(via_stations)}" if via_stations else ""
         direction_suffix_name = f" direction {self.direction}" if self.direction else ""
 
-        # Use simple name for entity matching _attr_has_entity_name=True
+        # Entity name
         self._attr_name = (
             f"Departures{platforms_suffix_name}{via_suffix_name}{direction_suffix_name}"
         )
@@ -53,11 +53,11 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         if len(self._attr_name) > MAX_LENGTH:
             self._attr_name = self._attr_name[:MAX_LENGTH]
 
-        # Use config entry ID as guaranteed-unique sensor ID
+        # Unique ID
         self._attr_unique_id = f"db_infoscreen_{config_entry.entry_id}"
         self._attr_icon = "mdi:train"
 
-        # Initialize _last_valid_value in case there is no valid data initially
+        # Initial value
         self._last_valid_value = None
 
         _LOGGER.debug(
@@ -197,9 +197,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                 _LOGGER.debug("Sensor state updated: %s", self._last_valid_value)
                 return self._last_valid_value
             except Exception as e:
-                # Log the error if there is an issue with data parsing
                 _LOGGER.error("Exception during data parsing: %s", e)
-                # In case of error, return the last valid value or "Error"
                 return self._last_valid_value or "Error"
         else:
             # If no new data is available, return the last valid value or a fallback value

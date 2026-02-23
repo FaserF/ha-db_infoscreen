@@ -9,13 +9,30 @@ While `ha-db_infoscreen` is a powerful tool, it operates within certain technica
 The primary constraint for most users is the rate-limiting imposed by the public [Backend API](https://dbf.finalrewind.org/) (IRIS-TTS).
 
 ### Sensor Count
+
 By default, the integration is configured to support a maximum of **30 sensors** per Home Assistant instance.
+
 -   **Why?**: Every sensor performs its own API calls. A single station might result in multiple calls (IRIS + HAFAS + Quality). To prevent the public infrastructure from being overwhelmed (which could lead to a permanent IP ban for you), we enforce this limit.
+
 -   **Host your own**: If you need more than 30 sensors, you **must** host your own instance of the [db-fakedisplay](https://github.com/derf/db-fakedisplay) backend.
 
 ### Update Frequency
+
 The minimum update interval is **1 minute**.
+
 -   **Why?**: Train data generally doesn't change every few seconds. Requesting data more frequently is counter-productive and puts unnecessary strain on the servers.
+
+### Data Source Specifics
+
+The availability of real-time delay data depends on the **Data Source**.
+
+-   **IRIS-TTS** provides the best live data for Germany.
+
+-   **HAFAS** backends might only update delays every few minutes or not at all for certain train types.
+
+-   **Specific Limits**: The public API at `dbf.finalrewind.org` enforces a limit of **30 requests per minute** total and **1 request per station per minute**.
+
+-   **Service Calls**: Features like "Tracked Connections" or "Watch Train" may trigger additional API calls. Use these sparingly if you have many sensors.
 
 ---
 
@@ -25,6 +42,7 @@ Because this integration provides rich metadata (attributes), it can impact your
 
 ### State Storage (The Recorder)
 If you enable features like **"Detailed Information"** or **"Keep Route"**, the sensor attributes will contain large JSON objects.
+
 -   **The Risk**: These attributes are saved to your Home Assistant database (`home-assistant_v2.db`) every time the sensor updates. Over weeks and months, this can lead to a massive database file, potentially slowing down backups or wearing out SD cards on Raspberry Pi devices.
 -   **Recommendation**:
   - Only enable "Keep Route" if you are actively using that data in a custom card.
@@ -44,8 +62,14 @@ Occasionally, the API might report a train that has been cancelled but the cance
 
 ### Coverage Gaps
 While the backend supports dozens of providers, not all providers offer the same level of detail.
+
 -   **IRIS-TTS**: Highly detailed (platform changes, quality notes).
+
 -   **Some HAFAS backends**: May only provide basic arrival/departure times without platform info or delay reasons.
+
+### Dashboard Examples
+
+-   **[Markdown Card](docs/automations.md#12-premium-departure-board-card)**: Detailed departure board with colors and delays.
 
 ### Routing vs. Departures
 This integration is **not a router**. It will not tell you which train to take to reach a specific destination if that involves changes. It only tells you what is leaving the current station.

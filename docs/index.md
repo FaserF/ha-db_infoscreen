@@ -29,12 +29,8 @@
 
 ## 🎯 Purpose & Motivation
 
-**db-infoscreen** brings the experience of a **physical station departure board** into your smart home.
-
-In the world of home automation, most "Public Transport" integrations focus on **Routing** (how to get from A to B). However, for many users—especially those living near a station—the more important question is:
-> **"I know where I'm going, I just need to know if the next train is on time."**
-
 This integration is designed for:
+
 <div class="grid cards" markdown>
 
 -   :material-tablet-dashboard: **Wall-mounted Dashboards**
@@ -64,8 +60,11 @@ If you have been a Home Assistant user in Germany for a while, you might remembe
 **Why do these projects no longer exist/receive updates?**
 
 1.  **Parsing/Scraping Nightmares**: These older integrations relied on "web scraping"—meaning they downloaded the HTML of public websites and tried to find the departure times in the code. Every time Deutsche Bahn changed a single line of CSS or HTML, the integration would break for everyone.
+
 2.  **Unreliability**: Scraping is inherently fragile. It led to frequent "Unknown" states, broken sensors, and high maintenance overhead.
+
 3.  **Complexity of Routing**: They tried to solve *routing* (finding connections between two points). This requires complex session management and handling of many edge cases that the public-facing websites weren't designed to provide via simple GET requests.
+
 4.  **IP Bans**: Automated scraping is often detected and blocked by providers, leading to users getting temporarily banned from accessing train data.
 
 ### 🚀 The Solution: `ha-db_infoscreen`

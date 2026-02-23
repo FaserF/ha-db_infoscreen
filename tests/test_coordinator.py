@@ -28,6 +28,15 @@ def patch_coordinator():
         yield
 
 
+@pytest.fixture(autouse=True)
+def clear_cache():
+    """Clear the global RESPONSE_CACHE between tests."""
+    from custom_components.db_infoscreen import RESPONSE_CACHE
+    RESPONSE_CACHE.clear()
+    yield
+    RESPONSE_CACHE.clear()
+
+
 @pytest.fixture
 def mock_config_entry():
     """Create a mock config entry."""

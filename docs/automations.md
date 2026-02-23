@@ -7,6 +7,7 @@ Unlock the full power of `ha-db_infoscreen` with these automation examples. Copy
 ## 🚨 Critical Commuter Alerts
 
 ### 1. Platform Change Notification
+
 Get notified immediately if your train moves to a different track.
 
 ```yaml
@@ -37,6 +38,7 @@ action:
 ```
 
 ### 2. High Occupancy Warning
+
 Warn if the next train is overcrowded so you can wait for the next one.
 
 ```yaml

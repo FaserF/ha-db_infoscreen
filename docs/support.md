@@ -48,10 +48,15 @@ Prefer a one-time donation? PayPal is the easiest option.
 Not in a position to donate financially? No problem — there are many other ways to contribute!
 
 - :octicons-star-fill-24: **Star the [GitHub repository](https://github.com/FaserF/ha-db_infoscreen)** — visibility helps a lot.
+
 - :octicons-bug-24: **Report bugs** and provide detailed logs when you encounter issues.
+
 - :octicons-pencil-24: **Improve the documentation** — PRs with corrections are always welcome.
+
 - :octicons-comment-discussion-24: **Help other users** in GitHub Issues and community forums.
+
 - :octicons-megaphone-24: **Spread the word** — share this integration with fellow commuters and HA enthusiasts!
+
 - :fontawesome-brands-github: **Star [derf's db-fakedisplay](https://github.com/derf/db-fakedisplay)** — the backbone of this project!
 
 ---

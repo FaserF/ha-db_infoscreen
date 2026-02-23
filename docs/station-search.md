@@ -15,6 +15,7 @@ Enter a search term for your desired station. The system will query the official
     **Use broader, simpler terms** for better results:
 
     - ✅ **Good**: `München`, `Frankfurt`, `Berlin`
+
     - ❌ **Avoid**: `München Hbf`, `Frankfurt (Main) Hauptbahnhof`
 
     The autocomplete will present you with the exact official names (e.g., "München Hbf", "München Ost", "München Pasing") so you can select the correct one.
@@ -37,34 +38,43 @@ Once the station is selected, you'll configure all sensor options (update interv
 - **Coverage**: Includes all stations supported by DBF (DB, ÖBB, SBB, regional transport associations)
 
 ### Matching Algorithm
+
 The search uses a **4-tier priority matching system**:
 
 1. **Exact Match** (case-insensitive)
    - Query: `Hamburg Hbf` → Result: `["Hamburg Hbf"]`
 
 2. **Starts With** (case-insensitive)
+
    - Query: `München` → Results: `["München Hbf", "München Ost", "München Pasing", ...]`
    - Limited to 10 results to avoid overwhelming the UI
 
 3. **Contains** (case-insensitive)
+
    - Query: `Flughafen` → Results: `["München Flughafen Terminal", "Frankfurt Flughafen", ...]`
    - Also limited to 10 results
 
 4. **Fuzzy Match** (using Python's `difflib`)
+
    - Query: `Muenchen` → Results: `["München Hbf", "München Ost", ...]`
    - Cutoff: 0.6 similarity score
    - Catches typos and alternative spellings
 
 ### Manual Override
+
 If you enter a station that isn't in the official IRIS list (e.g., a very new station or a custom identifier), the integration will:
-- Show a warning: `⚠️ Station not found in the official IRIS list!`
-- Allow you to proceed with your manual entry
-- Attempt to fetch data from the API using your custom identifier
+
+-   Show a warning: `⚠️ Station not found in the official IRIS list!`
+
+-   Allow you to proceed with your manual entry
+
+-   Attempt to fetch data from the API using your custom identifier
 
 This is useful for:
-- **DS100 codes** (e.g., `FF` for Frankfurt Hbf)
-- **EVA numbers** (numeric station IDs)
-- **Trip numbers** (for tracking specific train runs)
+
+-   **DS100 codes** (e.g., `FF` for Frankfurt Hbf)
+-   **EVA numbers** (numeric station IDs)
+-   **Trip numbers** (for tracking specific train runs)
 
 ---
 
@@ -130,9 +140,12 @@ If you know the region, include it:
 1. **Enter the station ID** in the search field (e.g., `901795`)
 2. When it shows "Station not found", select **Manual Entry**
 3. In the manual configuration, select the correct **Data Source** matching your HAFAS backend:
-   - `VBN` for Verkehrsverbund Bremen/Niedersachsen
-   - `VRN` for Verkehrsverbund Rhein-Neckar
-   - etc. (see [Data Sources](data-sources.md) for full list)
+
+-   `VBN` for Verkehrsverbund Bremen/Niedersachsen
+
+-   `VRN` for Verkehrsverbund Rhein-Neckar
+
+-   etc. (see [Data Sources](data-sources.md) for full list)
 
 !!! example "Example: Bremen VBN Station"
     - **Station ID**: `901795`
@@ -144,9 +157,13 @@ If you know the region, include it:
 | Code | Network | Region |
 | :--- | :--- | :--- |
 | `VBN` | Verkehrsverbund Bremen/Niedersachsen | Bremen, Lower Saxony |
+
 | `VRN` | Verkehrsverbund Rhein-Neckar | Rhine-Neckar region |
+
 | `AVV` | Aachener Verkehrsverbund | Aachen area |
+
 | `VMT` | Verkehrsverbund Mittelthüringen | Central Thuringia |
+
 | `NASA` | Nahverkehr Sachsen-Anhalt | Saxony-Anhalt |
 
 For the complete list, see [Data Sources](data-sources.md).

@@ -12,6 +12,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 from datetime import timedelta, datetime
 import aiohttp
+import copy
 import async_timeout
 import asyncio
 import logging
@@ -61,6 +62,11 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Global cache for API responses to consolidate requests for the same station/parameters
+# Key: URL, Value: (Timestamp, Data)
+RESPONSE_CACHE: dict[str, tuple[datetime, dict]] = {}
+CACHE_TTL = timedelta(seconds=55)
+
 
 async def async_setup_entry(
     hass: HomeAssistant, config_entry: config_entries.ConfigEntry
@@ -87,67 +93,69 @@ async def async_setup_entry(
     # Add an update listener for options
     config_entry.add_update_listener(update_listener)
 
-    # Register Service
-    async def async_watch_train(service_call):
-        """Handle the watch_train service call."""
-        train_id = service_call.data["train_id"]
-        notify_service = service_call.data["notify_service"]
-        delay_threshold = service_call.data.get("delay_threshold", 5)
-        notify_on_platform_change = service_call.data.get(
-            "notify_on_platform_change", True
+    # Register Services (only once)
+    if not hass.services.has_service(DOMAIN, "watch_train"):
+        async def async_watch_train(service_call):
+            """Handle the watch_train service call."""
+            train_id = service_call.data["train_id"]
+            notify_service = service_call.data["notify_service"]
+
+            # Broadcast to all coordinators
+            for coord in hass.data[DOMAIN].values():
+                if isinstance(coord, DBInfoScreenCoordinator):
+                    coord.watched_trips[train_id] = {
+                        "notify_service": notify_service,
+                        "delay_threshold": service_call.data.get("delay_threshold", 5),
+                        "notify_on_platform_change": service_call.data.get("notify_on_platform_change", True),
+                        "notify_on_cancellation": service_call.data.get("notify_on_cancellation", True),
+                        "last_notified_delay": -1,
+                        "last_notified_platform": None,
+                        "last_notified_cancellation": False,
+                    }
+            _LOGGER.debug("Trip %s added to all Watchlists", train_id)
+
+        hass.services.async_register(
+            DOMAIN,
+            "watch_train",
+            async_watch_train,
+            schema=vol.Schema(
+                {
+                    vol.Required("train_id"): cv.string,
+                    vol.Required("notify_service"): cv.string,
+                    vol.Optional("delay_threshold", default=5): cv.positive_int,
+                    vol.Optional("notify_on_platform_change", default=True): cv.boolean,
+                    vol.Optional("notify_on_cancellation", default=True): cv.boolean,
+                }
+            ),
         )
-        notify_on_cancellation = service_call.data.get("notify_on_cancellation", True)
 
-        coordinator.watched_trips[train_id] = {
-            "notify_service": notify_service,
-            "delay_threshold": delay_threshold,
-            "notify_on_platform_change": notify_on_platform_change,
-            "notify_on_cancellation": notify_on_cancellation,
-            "last_notified_delay": -1,
-            "last_notified_platform": None,
-            "last_notified_cancellation": False,
-        }
-        _LOGGER.debug("Trip %s added to Watchlist", train_id)
+    if not hass.services.has_service(DOMAIN, "track_connection"):
+        async def async_track_connection(service_call):
+            """Handle the track_connection service call."""
+            my_train_id = service_call.data["my_train_id"]
+            change_station = service_call.data["change_station"]
+            next_train_id = service_call.data["next_train_id"]
 
-    hass.services.async_register(
-        DOMAIN,
-        "watch_train",
-        async_watch_train,
-        schema=vol.Schema(
-            {
-                vol.Required("train_id"): cv.string,
-                vol.Required("notify_service"): cv.string,
-                vol.Optional("delay_threshold", default=5): cv.positive_int,
-                vol.Optional("notify_on_platform_change", default=True): cv.boolean,
-                vol.Optional("notify_on_cancellation", default=True): cv.boolean,
-            }
-        ),
-    )
+            for coord in hass.data[DOMAIN].values():
+                if isinstance(coord, DBInfoScreenCoordinator):
+                    coord.tracked_connections[my_train_id] = {
+                        "change_station": change_station,
+                        "next_train_id": next_train_id,
+                    }
+            _LOGGER.debug("Connection %s -> %s tracked in all coordinators", my_train_id, next_train_id)
 
-    async def async_track_connection(service_call):
-        """Handle the track_connection service call."""
-        my_train_id = service_call.data["my_train_id"]
-        change_station = service_call.data["change_station"]
-        next_train_id = service_call.data["next_train_id"]
-
-        coordinator.tracked_connections[my_train_id] = {
-            "change_station": change_station,
-            "next_train_id": next_train_id,
-        }
-        _LOGGER.debug("Connection %s -> %s tracked", my_train_id, next_train_id)
-
-    hass.services.async_register(
-        DOMAIN,
-        "track_connection",
-        async_track_connection,
-        schema=vol.Schema(
-            {
-                vol.Required("my_train_id"): cv.string,
-                vol.Required("change_station"): cv.string,
-                vol.Required("next_train_id"): cv.string,
-            }
-        ),
-    )
+        hass.services.async_register(
+            DOMAIN,
+            "track_connection",
+            async_track_connection,
+            schema=vol.Schema(
+                {
+                    vol.Required("my_train_id"): cv.string,
+                    vol.Required("change_station"): cv.string,
+                    vol.Required("next_train_id"): cv.string,
+                }
+            ),
+        )
 
     return True
 
@@ -401,53 +409,96 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         Returns:
             list[dict]: Processed departure objects limited to the configured `next_departures` count. If no valid departures can be produced, returns the last cached valid list or an empty list.
         """
-        _LOGGER.debug("Fetching data for station: %s", self.station)
+        now = dt_util.now()
 
-        session = async_get_clientsession(self.hass)
-        max_retries = 2
-        retry_delay = 1
+        # Check cache
+        if self.api_url in RESPONSE_CACHE:
+            timestamp, cached_data = RESPONSE_CACHE[self.api_url]
+            if now - timestamp < CACHE_TTL:
+                _LOGGER.debug("Using cached response for %s", self.api_url)
+                data = copy.deepcopy(cached_data)
+                # Skip to processing
+            else:
+                _LOGGER.debug("Cache expired for %s", self.api_url)
+                del RESPONSE_CACHE[self.api_url]
+                data = None
+        else:
+            data = None
 
-        for attempt in range(max_retries + 1):
-            try:
-                async with async_timeout.timeout(20):
-                    async with session.get(self.api_url) as response:
-                        # Handle both sync and async raise_for_status for better test compatibility
-                        res_status = response.raise_for_status()
-                        if asyncio.iscoroutine(res_status):
-                            await res_status
+        if data is None:
+            session = async_get_clientsession(self.hass)
+            max_retries = 2
+            retry_delay = 1
 
-                        data = await response.json()
-                        # Fallback for some mock environments where json() returns a coroutine
-                        if asyncio.iscoroutine(data) or (
-                            hasattr(data, "__await__")
-                            and not isinstance(data, (dict, list))
-                        ):
-                            data = await data
-                        break  # Success, exit retry loop
-            except (
-                asyncio.TimeoutError,
-                aiohttp.ClientError,
-                ValueError,
-                Exception,
-            ) as err:
-                if attempt < max_retries:
-                    _LOGGER.warning(
-                        "Attempt %d failed fetching data from %s: %s. Retrying in %d seconds...",
-                        attempt + 1,
-                        self.api_url,
-                        err,
-                        retry_delay,
-                    )
-                    await asyncio.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
-                else:
-                    _LOGGER.error(
-                        "Failed to fetch data from %s after %d retries: %s",
-                        self.api_url,
-                        max_retries,
-                        err,
-                    )
-                    return self._last_valid_value or []
+            for attempt in range(max_retries + 1):
+                try:
+                    async with async_timeout.timeout(20):
+                        async with session.get(self.api_url) as response:
+                            if response.status == 429:
+                                _LOGGER.warning(
+                                    "Rate limit hit for %s (429 Too Many Requests). Skipping retries for this cycle.",
+                                    self.api_url,
+                                )
+                                return self._last_valid_value or []
+
+                            data = await response.json()
+                            if asyncio.iscoroutine(data) or (
+                                hasattr(data, "__await__")
+                                and not isinstance(data, (dict, list))
+                            ):
+                                data = await data
+
+                            RESPONSE_CACHE[self.api_url] = (now, copy.deepcopy(data))
+                            break  # Success, exit retry loop
+                except aiohttp.ClientResponseError as err:
+                    if err.status == 429:
+                        _LOGGER.warning(
+                            "Rate limit hit for %s (429 Too Many Requests). skipping retries.",
+                            self.api_url,
+                        )
+                        return self._last_valid_value or []
+                    if attempt < max_retries:
+                        _LOGGER.warning(
+                            "Attempt %d failed fetching data from %s: %s. Retrying in %d seconds...",
+                            attempt + 1,
+                            self.api_url,
+                            err,
+                            retry_delay,
+                        )
+                        await asyncio.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                    else:
+                        _LOGGER.error(
+                            "Failed to fetch data from %s after %d retries: %s",
+                            self.api_url,
+                            max_retries,
+                            err,
+                        )
+                        return self._last_valid_value or []
+                except (
+                    asyncio.TimeoutError,
+                    aiohttp.ClientError,
+                    ValueError,
+                    Exception,
+                ) as err:
+                    if attempt < max_retries:
+                        _LOGGER.warning(
+                            "Attempt %d failed fetching data from %s: %s. Retrying in %d seconds...",
+                            attempt + 1,
+                            self.api_url,
+                            err,
+                            retry_delay,
+                        )
+                        await asyncio.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                    else:
+                        _LOGGER.error(
+                            "Failed to fetch data from %s after %d retries: %s",
+                            self.api_url,
+                            max_retries,
+                            err,
+                        )
+                        return self._last_valid_value or []
 
         if not isinstance(data, dict):
             _LOGGER.error("Expected dict from API, got %s", type(data))
@@ -1122,7 +1173,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             if filtered_departures:
                 self._last_valid_value = list(filtered_departures)
 
-            # Real-time Connection Tracking (Experimental)
+            # Real-time Connection Tracking
             if self.tracked_connections:
                 for dep in filtered_departures:
                     my_train_id = dep.get("train")
@@ -1288,25 +1339,38 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         station_cleaned = " ".join(station.split())
         encoded_station = quote(station_cleaned, safe=",-")
 
-        # Build URL for second call - using configured base URL
-        url = f"{self._base_url}/{encoded_station}.json"
+        # Check cache
+        if url in RESPONSE_CACHE:
+            timestamp, cached_data = RESPONSE_CACHE[url]
+            if dt_util.now() - timestamp < CACHE_TTL:
+                _LOGGER.debug("Using cached response for cascaded fetch at %s", url)
+                data = copy.deepcopy(cached_data)
+            else:
+                del RESPONSE_CACHE[url]
+                data = None
+        else:
+            data = None
 
         try:
-            session = async_get_clientsession(self.hass)
-            async with async_timeout.timeout(10):
-                async with session.get(url) as response:
-                    # Handle both sync and async raise_for_status for better test compatibility
-                    res_status = response.raise_for_status()
-                    if asyncio.iscoroutine(res_status):
-                        await res_status
+            if data is None:
+                session = async_get_clientsession(self.hass)
+                async with async_timeout.timeout(10):
+                    async with session.get(url) as response:
+                        # Handle both sync and async raise_for_status for better test compatibility
+                        res_status = response.raise_for_status()
+                        if asyncio.iscoroutine(res_status):
+                            await res_status
 
-                    data = await response.json()
-                    # Fallback for some mock environments where json() returns a coroutine
-                    if asyncio.iscoroutine(data) or (
-                        hasattr(data, "__await__")
-                        and not isinstance(data, (dict, list))
-                    ):
-                        data = await data
+                        data = await response.json()
+                        # Fallback for some mock environments where json() returns a coroutine
+                        if asyncio.iscoroutine(data) or (
+                            hasattr(data, "__await__")
+                            and not isinstance(data, (dict, list))
+                        ):
+                            data = await data
+
+                        # Store in cache - deepcopy to prevent mutation during processing
+                        RESPONSE_CACHE[url] = (dt_util.now(), copy.deepcopy(data))
 
             if not isinstance(data, dict):
                 _LOGGER.debug(
@@ -1371,6 +1435,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         Increments consecutive error counts and raises a Home Assistant repair
         issue if the data has not been successfully updated for more than 24 hours.
         """
+        if "429" in error_message or "Too Many Requests" in error_message:
+            return
+
         self._consecutive_errors += 1
         now = dt_util.now()
         entry_id = self.config_entry.entry_id

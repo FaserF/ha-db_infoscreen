@@ -7,10 +7,15 @@ You can install `ha-db_infoscreen` via **HACS** (recommended) or manually.
 The easiest way to install and manage updates.
 
 1.  Open your Home Assistant instance.
+
 2.  Go to **HACS** > **Integrations**.
+
 3.  Click the **+ Explore & Download Repositories** button.
+
 4.  Search for `db-infoscreen`.
+
 5.  Click **Download**.
+
 6.  **Restart** Home Assistant.
 
 [![Open HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=FaserF&repository=ha-db_infoscreen&category=integration)
@@ -23,11 +28,14 @@ The easiest way to install and manage updates.
 If you prefer not to use HACS:
 
 1.  Download the latest release zip from the [GitHub Releases page](https://github.com/FaserF/ha-db_infoscreen/releases).
+
 2.  Unzip the file.
+
 3.  Copy the `db_infoscreen` directory into your Home Assistant's `custom_components` directory:
     ```path
     /config/custom_components/db_infoscreen
     ```
+
 4.  **Restart** Home Assistant.
 
 ---
@@ -41,13 +49,21 @@ Beta releases allow you to test new features or fixes before they are officially
 As of **February 2026**, HACS makes switching to beta versions very simple:
 
 1.  Open your Home Assistant instance and navigate to **HACS**.
+
 2.  Search for or find **db-infoscreen** in your downloaded integrations.
+
 3.  Click on the integration to open its details page.
+
 4.  Click the **three dots (overflow menu)** in the top right corner.
+
 5.  Select **Redownload** (or **Download**).
+
 6.  In the dialog that appears, enable the toggle **Show beta versions**.
+
 7.  Select the desired beta version from the dropdown menu.
-8.  Click **Download**.
+
+8.  Download.
+
 9.  **Restart** Home Assistant when prompted.
 
 ### Manual Beta Installation

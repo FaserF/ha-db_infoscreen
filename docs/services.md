@@ -32,9 +32,13 @@ data:
 ```
 
 **What it does:**
+
 1. Adds the train to a temporary "watchlist".
+
 2. On every data update, it checks the status of this specific train.
+
 3. If criteria are met, it sends a notification with details.
+
 4. Auto-cleans up once the train is no longer in the departure list.
 
 ---
@@ -63,7 +67,9 @@ data:
 ```
 
 **What it does:**
+
 - Tracks the status of `RE 456` potentially at a different station.
+
 - Notifies you if the connection becomes risky due to delays.
 
 ---

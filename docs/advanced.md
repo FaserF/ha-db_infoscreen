@@ -6,9 +6,18 @@ For users who want to push the boundaries of their Home Assistant dashboard, `ha
 
 ## 🛠️ Templating & Logic
 
+The departures are provided as a list of dictionaries in the `departures` attribute. You can use standard Jinja2 filters:
+
+-   `| first`: Get the very next train
+
+-   `| selectattr('destination', 'search', 'Mainz')`: Filter for trains going to Mainz
+
+-   `| map(attribute='delayDeparture')`: Extract a specific attribute from all items
+
 The sensor stores its main payload in the `departures` attribute as a JSON list. This makes it incredibly easy to use Jinja2 templates for custom notifications or cards.
 
 ### Example: Delay Notification
+
 Trigger an automation only if the next train toward "Mainz" is delayed by more than 10 minutes.
 
 {% raw %}
@@ -53,6 +62,7 @@ The `departures` list contains rich data objects. Here are the keys available fo
 | `route_details` | **Real-time Route**. List of stops with delays. | `[{"stop": "Hanau", "delay": 2}, ...]` |
 
 ### Example: Wagon Sector & Occupancy
+
 ```yaml
 - type: markdown
   content: >
@@ -80,6 +90,7 @@ The `departures` list contains rich data objects. Here are the keys available fo
 If you have a high number of sensors or want maximum privacy, you can host your own instance of the [db-fakedisplay](https://github.com/derf/db-fakedisplay) API.
 
 ### Docker Compose Example
+
 ```yaml
 services:
   dbf:
@@ -97,9 +108,13 @@ Once running, update the **Custom API URL** in the integration settings to:
 ## 🤖 Automated API Tracking
 
 A unique feature of this project is its tight integration with the upstream backend.
+
 -   **The Version File**: We maintain a `.backend_version` file in our repository.
+
 -   **Renovate**: Our CI system (Renovate) monitors the `derf/db-fakedisplay` project for releases.
+
 -   **Automatic Verification**: When a new version is released, Renovate creates a PR to update our tracked version. This triggers our GitHub Actions to run the full suite of stability tests against the new backend logic **before** you even receive an update.
+
 -   **Reliability**: This ensures that `ha-db_infoscreen` remains compatible with backend changes without manual intervention.
 
 !!! tip "Looking for Automations?"
