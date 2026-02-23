@@ -111,6 +111,7 @@ class TestVersionManager(unittest.TestCase):
         new_v = vm.calculate_version("beta", now=now)
         self.assertEqual(new_v, "2026.2.0b0")
 
+
 if __name__ == "__main__":
     unittest.main()
 

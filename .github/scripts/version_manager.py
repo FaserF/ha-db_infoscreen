@@ -37,10 +37,9 @@ def get_current_version():
                 else:
                     priority = 2
 
-                valid_tags.append({
-                    "tag": tag,
-                    "key": (int(y), int(m), int(p), priority, s_num)
-                })
+                valid_tags.append(
+                    {"tag": tag, "key": (int(y), int(m), int(p), priority, s_num)}
+                )
 
         if valid_tags:
             # Sort by key descending
