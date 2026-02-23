@@ -424,7 +424,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         ):
                             data = await data
                         break  # Success, exit retry loop
-            except (asyncio.TimeoutError, aiohttp.ClientError, ValueError, Exception) as err:
+            except (
+                asyncio.TimeoutError,
+                aiohttp.ClientError,
+                ValueError,
+                Exception,
+            ) as err:
                 if attempt < max_retries:
                     _LOGGER.warning(
                         "Attempt %d failed fetching data from %s: %s. Retrying in %d seconds...",

@@ -8,11 +8,14 @@ import subprocess
 # Dynamic import of version_manager
 script_path = os.path.abspath(".github/scripts/version_manager.py")
 spec = importlib.util.spec_from_file_location("version_manager", script_path)
+if spec is None or spec.loader is None:
+    raise ImportError(f"Could not load spec or loader for {script_path}")
 vm = importlib.util.module_from_spec(spec)
+loader = spec.loader
 # Patch subprocess.check_output BEFORE loading to avoid initial calls
 with patch("subprocess.check_output") as mock_git:
     mock_git.return_value = b""
-    spec.loader.exec_module(vm)
+    loader.exec_module(vm)
 
 
 class TestVersionManager(unittest.TestCase):
