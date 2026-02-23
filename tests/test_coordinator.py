@@ -471,3 +471,70 @@ async def test_coordinator_favorite_trains_filter(hass, mock_config_entry):
         assert len(data) == 2
         assert data[0]["train"] == "ICE 1"
         assert data[1]["train"] == "RE 2 (Regio)"
+
+
+@pytest.mark.asyncio
+async def test_coordinator_retry(hass, mock_config_entry):
+    """Test retry logic on transient failures."""
+    import aiohttp
+    import asyncio
+    from tests.common import patch_session
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Success",
+                "train": "ICE 1",
+                "delayDeparture": 0,
+            }
+        ]
+    }
+
+    # Simulate transient failures and then success
+    counts = 0
+    def side_effect(url, **kwargs):
+        nonlocal counts
+        counts += 1
+        if counts == 1:
+            raise asyncio.TimeoutError("Transient Timeout")
+        if counts == 2:
+            raise aiohttp.ClientError("Transient Error")
+        return mock_data
+
+    with patch_session(side_effect=side_effect) as mock_session:
+        with patch("asyncio.sleep", AsyncMock()) as mock_sleep:
+            data = await coordinator._async_update_data()
+
+            assert len(data) == 1
+            assert data[0]["destination"] == "Success"
+            assert mock_session.get.call_count == 3
+            assert mock_sleep.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_coordinator_retry_max_failure(hass, mock_config_entry):
+    """Test that it returns cached data after max retries fail."""
+    import asyncio
+    from tests.common import patch_session
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    coordinator._last_valid_value = [{"train": "Cached"}]
+
+    def side_effect(url, **kwargs):
+        raise asyncio.TimeoutError("Perm timeout")
+
+    with patch_session(side_effect=side_effect) as mock_session:
+        with patch("asyncio.sleep", AsyncMock()) as mock_sleep:
+            data = await coordinator._async_update_data()
+
+            # Should have tried 3 times (initial + 2 retries)
+            assert mock_session.get.call_count == 3
+            assert mock_sleep.call_count == 2
+            # Should return cached data
+            assert len(data) == 1
+            assert data[0]["train"] == "Cached"

@@ -404,780 +404,766 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         _LOGGER.debug("Fetching data for station: %s", self.station)
 
         session = async_get_clientsession(self.hass)
-        try:
-            async with async_timeout.timeout(10):
-                async with session.get(self.api_url) as response:
-                    # Handle both sync and async raise_for_status for better test compatibility
-                    res_status = response.raise_for_status()
-                    if asyncio.iscoroutine(res_status):
-                        await res_status
+        max_retries = 2
+        retry_delay = 1
 
-                    data = await response.json()
-                    # Fallback for some mock environments where json() returns a coroutine
-                    if asyncio.iscoroutine(data) or (
-                        hasattr(data, "__await__")
-                        and not isinstance(data, (dict, list))
-                    ):
-                        data = await data
+        for attempt in range(max_retries + 1):
+            try:
+                async with async_timeout.timeout(20):
+                    async with session.get(self.api_url) as response:
+                        # Handle both sync and async raise_for_status for better test compatibility
+                        res_status = response.raise_for_status()
+                        if asyncio.iscoroutine(res_status):
+                            await res_status
 
-            if not isinstance(data, dict):
-                _LOGGER.error("Expected dict from API, got %s", type(data))
-                return self._last_valid_value or []
+                        data = await response.json()
+                        # Fallback for some mock environments where json() returns a coroutine
+                        if asyncio.iscoroutine(data) or (
+                            hasattr(data, "__await__")
+                            and not isinstance(data, (dict, list))
+                        ):
+                            data = await data
+                        break  # Success, exit retry loop
+            except (asyncio.TimeoutError, aiohttp.ClientError) as err:
+                if attempt < max_retries:
+                    _LOGGER.warning(
+                        "Attempt %d failed fetching data from %s: %s. Retrying in %d seconds...",
+                        attempt + 1,
+                        self.api_url,
+                        err,
+                        retry_delay,
+                    )
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    _LOGGER.error(
+                        "Failed to fetch data from %s after %d retries: %s",
+                        self.api_url,
+                        max_retries,
+                        err,
+                    )
+                    return self._last_valid_value or []
 
-            raw_departures = data.get("departures", [])
-            if raw_departures is None:
-                _LOGGER.warning("Encountered empty departures list, skipping.")
-                return self._last_valid_value or []
+        if not isinstance(data, dict):
+            _LOGGER.error("Expected dict from API, got %s", type(data))
+            return self._last_valid_value or []
 
-            _LOGGER.debug(
-                "Data fetched successfully: %s",
-                str(data)[:350] + ("..." if len(str(data)) > 350 else ""),
+        raw_departures = data.get("departures", [])
+        if raw_departures is None:
+            _LOGGER.warning("Encountered empty departures list, skipping.")
+            return self._last_valid_value or []
+
+        _LOGGER.debug(
+            "Data fetched successfully: %s",
+            str(data)[:350] + ("..." if len(str(data)) > 350 else ""),
+        )
+
+        # Set last_update timestamp
+        now = dt_util.now()
+        today = now.date()
+        self.last_update = now
+
+        # Success! Clear any error tracking and repair issues
+        self._consecutive_errors = 0
+        self._last_successful_update = now
+        self._stale_issue_raised = False
+        # --- PRE-PROCESSING: Parse time for all departures ---
+        departures_with_time = []
+        for departure in raw_departures:
+            if not departure:
+                continue
+
+            departure_time_str = (
+                departure.get("scheduledDeparture")
+                or departure.get("sched_dep")
+                or departure.get("scheduledArrival")
+                or departure.get("sched_arr")
+                or departure.get("scheduledTime")
+                or departure.get("dep")
+                or departure.get("datetime")
             )
 
-            # Set last_update timestamp
-            now = dt_util.now()
-            today = now.date()
-            self.last_update = now
+            if not departure_time_str:
+                _LOGGER.warning(
+                    "No valid departure time found for entry, skipping: %s",
+                    departure,
+                )
+                continue
 
-            # Success! Clear any error tracking and repair issues
-            self._consecutive_errors = 0
-            self._last_successful_update = now
-            self._stale_issue_raised = False
-            # --- PRE-PROCESSING: Parse time for all departures ---
-            departures_with_time = []
-            for departure in raw_departures:
-                if not departure:
+            if isinstance(departure_time_str, (int, float)):
+                departure_time_obj = dt_util.utc_from_timestamp(
+                    int(departure_time_str)
+                ).astimezone(now.tzinfo)
+            else:
+                # Attempt robust parsing using HA helper
+                parsed_dt = dt_util.parse_datetime(departure_time_str)
+                if parsed_dt:
+                    if parsed_dt.tzinfo is None:
+                        departure_time_obj = now.replace(
+                            year=parsed_dt.year,
+                            month=parsed_dt.month,
+                            day=parsed_dt.day,
+                            hour=parsed_dt.hour,
+                            minute=parsed_dt.minute,
+                            second=parsed_dt.second,
+                            microsecond=parsed_dt.microsecond,
+                        )
+                        # Use a 5-minute grace window to handle next-day rollover
+                        if departure_time_obj < now - timedelta(minutes=5):
+                            departure_time_obj += timedelta(days=1)
+                    else:
+                        departure_time_obj = parsed_dt.astimezone(now.tzinfo)
+                else:
+                    # Fallback for HH:MM format (assume today)
+                    try:
+                        temp_dt = datetime.strptime(departure_time_str, "%H:%M")
+                        departure_time_obj = now.replace(
+                            hour=temp_dt.hour,
+                            minute=temp_dt.minute,
+                            second=0,
+                            microsecond=0,
+                        )
+                        if departure_time_obj < now - timedelta(
+                            minutes=5
+                        ):  # Allow for slight past times
+                            departure_time_obj += timedelta(days=1)
+                    except (ValueError, TypeError):
+                        _LOGGER.error(
+                            "Invalid time format, skipping departure: %s",
+                            departure_time_str,
+                        )
+                        continue
+
+            # Excluded Direction filter
+            if self.excluded_directions:
+                departure_direction = departure.get("direction")
+                if (
+                    departure_direction
+                    and self.excluded_directions.lower()
+                    in departure_direction.lower()
+                ):
+                    _LOGGER.debug(
+                        "Skipping departure due to excluded direction match. Excluded: '%s', actual: '%s'",
+                        self.excluded_directions,
+                        departure_direction,
+                    )
                     continue
 
-                departure_time_str = (
-                    departure.get("scheduledDeparture")
-                    or departure.get("sched_dep")
-                    or departure.get("scheduledArrival")
-                    or departure.get("sched_arr")
-                    or departure.get("scheduledTime")
-                    or departure.get("dep")
-                    or departure.get("datetime")
+            departure["departure_datetime"] = departure_time_obj
+            departures_with_time.append(departure)
+
+        departures_to_process = departures_with_time
+
+        # --- DEDUPLICATION STEP ---
+        if self.deduplicate_departures:
+            _LOGGER.debug("Deduplication is enabled. Processing departures.")
+            unique_departures = {}
+
+            departures_to_process.sort(key=lambda d: d["departure_datetime"])
+
+            for departure in departures_to_process:
+                # Use a robust key for identifying a trip
+                key_line = departure.get("line") or departure.get("train")
+                key_dest = departure.get("destination")
+                # The 'key' field seems to be a reliable trip identifier in some sources (like KVV)
+                key_trip_id = departure.get("key") or departure.get("trainNumber")
+
+                # If we don't have enough info to build a key, treat it as unique.
+                if not key_line or not key_dest:
+                    unique_departures[id(departure)] = departure
+                    continue
+
+                # Build the key. Use trip ID if available, otherwise just line+dest
+                unique_key = (
+                    (key_line, key_dest, key_trip_id)
+                    if key_trip_id
+                    else (key_line, key_dest)
                 )
 
-                if not departure_time_str:
-                    _LOGGER.warning(
-                        "No valid departure time found for entry, skipping: %s",
+                # Check if we have already seen a departure for this trip
+                if unique_key not in unique_departures:
+                    unique_departures[unique_key] = departure
+                else:
+                    # We have seen this trip. Check the time difference.
+                    existing_departure = unique_departures[unique_key]
+                    time_diff = (
+                        departure["departure_datetime"]
+                        - existing_departure["departure_datetime"]
+                    ).total_seconds()
+
+                    # If the new one is within 2 minutes, it's a duplicate. We keep the earlier one.
+                    if abs(time_diff) <= 120:
+                        _LOGGER.debug(
+                            "Found and filtering out duplicate departure. "
+                            "Keeping (earlier): %s, Removing (later): %s",
+                            existing_departure,
+                            departure,
+                        )
+                        # Since the list is sorted, the existing one is always earlier.
+                        # We do nothing and let the later one be discarded.
+                    else:
+                        # Time difference is too large. This is a different trip that happens to share
+                        # the same line and destination. Add it with a more specific key to keep it.
+                        unique_departures[
+                            (unique_key, departure["departure_datetime"])
+                        ] = departure
+
+            departures_to_process = list(unique_departures.values())
+            # Re-sort because dictionary values don't guarantee order if we added time-suffixed keys
+            departures_to_process.sort(key=lambda d: d["departure_datetime"])
+
+        # --- MAIN FILTERING AND PROCESSING ---
+        filtered_departures = []
+        current_size = 2  # Estimate for empty list '[]'
+
+        # Map the configured ignored train types to the normalized values for correct comparison.
+        # e.g., if config is ['S'], this becomes {'S-Bahn'}.
+        ignored_train_types = self.ignored_train_types
+        mapped_ignored_train_types = {
+            TRAIN_TYPE_MAPPING.get(t, t) for t in ignored_train_types
+        }
+
+        # Some data sources might use other values, ensure compatibility.
+        if "S" in ignored_train_types:
+            mapped_ignored_train_types.add("S-Bahn")
+        if "StadtBus" in ignored_train_types:
+            mapped_ignored_train_types.add("MetroBus")
+
+        if mapped_ignored_train_types:
+            _LOGGER.debug(
+                "Ignoring train types (mapped): %s",
+                mapped_ignored_train_types,
+            )
+
+        MAX_SIZE_BYTES = 16000
+
+        def simple_serializer(obj):
+            if isinstance(obj, (datetime, timedelta)):
+                return str(obj)
+            raise TypeError(f"Type {type(obj)} not serializable")
+
+        for departure in departures_to_process:
+            _LOGGER.debug("Processing departure: %s", departure)
+
+            # Direction filter
+            if self.direction:
+                departure_direction = departure.get("direction")
+                if (
+                    not departure_direction
+                    or self.direction.lower() not in departure_direction.lower()
+                ):
+                    _LOGGER.debug(
+                        "Skipping departure due to direction mismatch. Required: '%s', actual: '%s'",
+                        self.direction,
+                        departure_direction,
+                    )
+                    continue
+
+            if not self.keep_endstation:
+                if departure.get("destination") == self.station:
+                    _LOGGER.debug(
+                        "Skipping departure as %s is the final stop.",
+                        self.station,
+                    )
+                    continue
+
+            is_cancelled = (
+                departure.get("cancelled", False)
+                or departure.get("isCancelled", False)
+                or departure.get("is_cancelled", False)
+            )
+            departure["is_cancelled"] = is_cancelled  # Normalize
+
+            if self.exclude_cancelled:
+                if is_cancelled:
+                    _LOGGER.debug(
+                        "Skipping cancelled departure: %s",
                         departure,
                     )
                     continue
 
-                if isinstance(departure_time_str, (int, float)):
-                    departure_time_obj = dt_util.utc_from_timestamp(
-                        int(departure_time_str)
-                    ).astimezone(now.tzinfo)
-                else:
-                    # Attempt robust parsing using HA helper
-                    parsed_dt = dt_util.parse_datetime(departure_time_str)
-                    if parsed_dt:
-                        if parsed_dt.tzinfo is None:
-                            departure_time_obj = now.replace(
-                                year=parsed_dt.year,
-                                month=parsed_dt.month,
-                                day=parsed_dt.day,
-                                hour=parsed_dt.hour,
-                                minute=parsed_dt.minute,
-                                second=parsed_dt.second,
-                                microsecond=parsed_dt.microsecond,
-                            )
-                            # Use a 5-minute grace window to handle next-day rollover
-                            if departure_time_obj < now - timedelta(minutes=5):
-                                departure_time_obj += timedelta(days=1)
-                        else:
-                            departure_time_obj = parsed_dt.astimezone(now.tzinfo)
-                    else:
-                        # Fallback for HH:MM format (assume today)
-                        try:
-                            temp_dt = datetime.strptime(departure_time_str, "%H:%M")
-                            departure_time_obj = now.replace(
-                                hour=temp_dt.hour,
-                                minute=temp_dt.minute,
-                                second=0,
-                                microsecond=0,
-                            )
-                            if departure_time_obj < now - timedelta(
-                                minutes=5
-                            ):  # Allow for slight past times
-                                departure_time_obj += timedelta(days=1)
-                        except (ValueError, TypeError):
-                            _LOGGER.error(
-                                "Invalid time format, skipping departure: %s",
-                                departure_time_str,
-                            )
-                            continue
+            # Get train classes from the departure data.
+            train_classes = (
+                departure.get("trainClasses")
+                or departure.get("train_type")
+                or departure.get("type", [])
+            )
 
-                # Excluded Direction filter
-                if self.excluded_directions:
-                    departure_direction = departure.get("direction")
-                    if (
-                        departure_direction
-                        and self.excluded_directions.lower()
-                        in departure_direction.lower()
-                    ):
-                        _LOGGER.debug(
-                            "Skipping departure due to excluded direction match. Excluded: '%s', actual: '%s'",
-                            self.excluded_directions,
-                            departure_direction,
-                        )
-                        continue
+            if isinstance(train_classes, str):
+                train_classes = [train_classes]
 
-                departure["departure_datetime"] = departure_time_obj
-                departures_with_time.append(departure)
+            # If the API returns an empty list, we treat it as an "unknown" type,
+            # represented by an empty string, so it can be filtered.
+            if not train_classes and isinstance(train_classes, list):
+                api_classes_to_process = [""]
+            else:
+                api_classes_to_process = train_classes
 
-            departures_to_process = departures_with_time
-
-            # --- DEDUPLICATION STEP ---
-            if self.deduplicate_departures:
-                _LOGGER.debug("Deduplication is enabled. Processing departures.")
-                unique_departures = {}
-
-                departures_to_process.sort(key=lambda d: d["departure_datetime"])
-
-                for departure in departures_to_process:
-                    # Use a robust key for identifying a trip
-                    key_line = departure.get("line") or departure.get("train")
-                    key_dest = departure.get("destination")
-                    # The 'key' field seems to be a reliable trip identifier in some sources (like KVV)
-                    key_trip_id = departure.get("key") or departure.get("trainNumber")
-
-                    # If we don't have enough info to build a key, treat it as unique.
-                    if not key_line or not key_dest:
-                        unique_departures[id(departure)] = departure
-                        continue
-
-                    # Build the key. Use trip ID if available, otherwise just line+dest
-                    unique_key = (
-                        (key_line, key_dest, key_trip_id)
-                        if key_trip_id
-                        else (key_line, key_dest)
-                    )
-
-                    # Check if we have already seen a departure for this trip
-                    if unique_key not in unique_departures:
-                        unique_departures[unique_key] = departure
-                    else:
-                        # We have seen this trip. Check the time difference.
-                        existing_departure = unique_departures[unique_key]
-                        time_diff = (
-                            departure["departure_datetime"]
-                            - existing_departure["departure_datetime"]
-                        ).total_seconds()
-
-                        # If the new one is within 2 minutes, it's a duplicate. We keep the earlier one.
-                        if abs(time_diff) <= 120:
-                            _LOGGER.debug(
-                                "Found and filtering out duplicate departure. "
-                                "Keeping (earlier): %s, Removing (later): %s",
-                                existing_departure,
-                                departure,
-                            )
-                            # Since the list is sorted, the existing one is always earlier.
-                            # We do nothing and let the later one be discarded.
-                        else:
-                            # Time difference is too large. This is a different trip that happens to share
-                            # the same line and destination. Add it with a more specific key to keep it.
-                            unique_departures[
-                                (unique_key, departure["departure_datetime"])
-                            ] = departure
-
-                departures_to_process = list(unique_departures.values())
-                # Re-sort because dictionary values don't guarantee order if we added time-suffixed keys
-                departures_to_process.sort(key=lambda d: d["departure_datetime"])
-
-            # --- MAIN FILTERING AND PROCESSING ---
-            filtered_departures = []
-            current_size = 2  # Estimate for empty list '[]'
-
-            # Map the configured ignored train types to the normalized values for correct comparison.
-            # e.g., if config is ['S'], this becomes {'S-Bahn'}.
-            ignored_train_types = self.ignored_train_types
-            mapped_ignored_train_types = {
-                TRAIN_TYPE_MAPPING.get(t, t) for t in ignored_train_types
+            # Normalize the train classes from the API using the mapping.
+            mapped_api_classes = {
+                TRAIN_TYPE_MAPPING.get(tc, tc) for tc in api_classes_to_process
             }
 
-            # Some data sources might use other values, ensure compatibility.
-            if "S" in ignored_train_types:
-                mapped_ignored_train_types.add("S-Bahn")
-            if "StadtBus" in ignored_train_types:
-                mapped_ignored_train_types.add("MetroBus")
+            # Update the departure data with the normalized, more descriptive train classes.
+            departure["trainClasses"] = list(mapped_api_classes)
 
-            if mapped_ignored_train_types:
+            # Filter if any of the departure's train classes are in the ignored list.
+            if mapped_ignored_train_types and not mapped_api_classes.isdisjoint(
+                mapped_ignored_train_types
+            ):
                 _LOGGER.debug(
-                    "Ignoring train types (mapped): %s",
-                    mapped_ignored_train_types,
+                    "Ignoring departure due to train class. Mapped classes: %s",
+                    mapped_api_classes,
+                )
+                continue
+
+            departure_time = departure["departure_datetime"]
+
+            delay_departure = (
+                departure.get("delayDeparture")
+                or departure.get("dep_delay")
+                or departure.get("delay")
+            )
+            try:
+                if delay_departure is None or delay_departure == "":
+                    delay_departure = 0
+                else:
+                    delay_departure = int(delay_departure)
+            except ValueError:
+                delay_departure = 0
+
+            departure_time_adjusted = None
+            if departure_time and delay_departure is not None:
+                departure_time_adjusted = departure_time + timedelta(
+                    minutes=delay_departure
+                )
+                # Keep existing human-readable time string
+                departure["departure_current"] = (
+                    departure_time_adjusted.strftime("%Y-%m-%dT%H:%M")
+                    if departure_time_adjusted.date() != today
+                    else departure_time_adjusted.strftime("%H:%M")
+                )
+                # Add new machine-readable Unix timestamp
+                departure["departure_timestamp"] = int(
+                    departure_time_adjusted.timestamp()
                 )
 
-            MAX_SIZE_BYTES = 16000
+            if self.show_occupancy:
+                occupancy = departure.get("occupancy")
+                if occupancy:
+                    departure["occupancy"] = occupancy
+            else:
+                # Explicitly remove occupancy if disabled
+                departure.pop("occupancy", None)
 
-            def simple_serializer(obj):
-                if isinstance(obj, (datetime, timedelta)):
-                    return str(obj)
-                raise TypeError(f"Type {type(obj)} not serializable")
+            # Platform change detection
+            platform = departure.get("platform")
+            scheduled_platform = departure.get("scheduledPlatform")
+            if platform and scheduled_platform and platform != scheduled_platform:
+                departure["changed_platform"] = True
+            else:
+                departure["changed_platform"] = False
 
-            for departure in departures_to_process:
-                _LOGGER.debug("Processing departure: %s", departure)
+            # Wagon Order (Pass-through + Sector Extraction + HTML Generation)
+            wagon_order_data = departure.get("wagonorder")
+            if wagon_order_data:
+                # If it's a list, it's the detailed structure
+                if isinstance(wagon_order_data, list):
+                    wagon_html = self._process_wagon_order(wagon_order_data)
+                    if wagon_html:
+                        departure["wagon_order_html"] = wagon_html
+                departure["wagon_order"] = wagon_order_data
 
-                # Direction filter
-                if self.direction:
-                    departure_direction = departure.get("direction")
+            # Extract sectors from platform string (e.g. "5 D-G")
+            if platform and isinstance(platform, str):
+                # Matches " D-G", " A", " A-C", with leading space or start
+                sector_match = re.search(r"\s([A-G](-[A-G])?)$", platform)
+                if sector_match:
+                    departure["platform_sectors"] = sector_match.group(1)
+
+            # QoS (Pass-through + Message Parsing)
+            if "qos" in departure:
+                pass
+
+            # Parse facilities from messages
+            facilities = {}
+            msg_texts = []
+            if "messages" in departure and isinstance(departure["messages"], dict):
+                for msg_list in departure["messages"].values():
+                    if isinstance(msg_list, list):
+                        for msg in msg_list:
+                            if isinstance(msg, dict):
+                                msg_texts.append(msg.get("text", ""))
+
+            for text in msg_texts:
+                lower_text = text.lower()
+                if "wlan" in lower_text or "wifi" in lower_text:
                     if (
-                        not departure_direction
-                        or self.direction.lower() not in departure_direction.lower()
+                        "nicht" in lower_text
+                        or "gestört" in lower_text
+                        or "ausfall" in lower_text
+                        or "defekt" in lower_text
                     ):
+                        facilities["wifi"] = False
+                if (
+                    "bistro" in lower_text
+                    or "restaurant" in lower_text
+                    or "catering" in lower_text
+                ):
+                    if (
+                        "nicht" in lower_text
+                        or "gestört" in lower_text
+                        or "geschlossen" in lower_text
+                    ):
+                        facilities["bistro"] = False
+
+            if facilities:
+                departure["facilities"] = facilities
+
+            # Real-time Route Progress
+            route_details = []
+            if "route" in departure and isinstance(departure["route"], list):
+                for stop in departure["route"]:
+                    if isinstance(stop, dict):
+                        stop_name = stop.get("name")
+                        if stop_name:
+                            details = {"name": stop_name}
+                            # Add delay info if available
+                            if "arr_delay" in stop:
+                                details["arr_delay"] = stop["arr_delay"]
+                            if "dep_delay" in stop:
+                                details["dep_delay"] = stop["dep_delay"]
+                            route_details.append(details)
+                    elif isinstance(stop, str):
+                        # Handle simple string list
+                        route_details.append({"name": stop})
+
+            if route_details:
+                departure["route_details"] = route_details
+
+            # Trip-ID
+            departure["trip_id"] = departure.get("trainId") or departure.get(
+                "tripId"
+            )
+
+            scheduled_arrival = departure.get("scheduledArrival")
+            delay_arrival = departure.get("delayArrival")
+            try:
+                if delay_arrival is None or delay_arrival == "":
+                    delay_arrival = 0
+                else:
+                    delay_arrival = int(delay_arrival)
+            except ValueError:
+                delay_arrival = 0
+
+            arrival_time_adjusted = None
+            if scheduled_arrival is not None:
+                try:
+                    arrival_time = None
+                    if isinstance(scheduled_arrival, (int, float)):
+                        arrival_time = dt_util.utc_from_timestamp(
+                            int(scheduled_arrival)
+                        ).astimezone(now.tzinfo)
+                    elif isinstance(scheduled_arrival, str):
+                        # Attempt robust parsing using HA helper
+                        parsed_dt = dt_util.parse_datetime(scheduled_arrival)
+                        if parsed_dt:
+                            if parsed_dt.tzinfo is None:
+                                arrival_time = now.replace(
+                                    year=parsed_dt.year,
+                                    month=parsed_dt.month,
+                                    day=parsed_dt.day,
+                                    hour=parsed_dt.hour,
+                                    minute=parsed_dt.minute,
+                                    second=parsed_dt.second,
+                                    microsecond=parsed_dt.microsecond,
+                                )
+                                # Use a 5-minute grace window to handle next-day rollover
+                                if arrival_time < now - timedelta(minutes=5):
+                                    arrival_time += timedelta(days=1)
+                            else:
+                                arrival_time = parsed_dt.astimezone(now.tzinfo)
+                        else:
+                            # Fallback for HH:MM format (assume today)
+                            try:
+                                temp_dt = datetime.strptime(
+                                    scheduled_arrival, "%H:%M"
+                                )
+                                arrival_time = now.replace(
+                                    hour=temp_dt.hour,
+                                    minute=temp_dt.minute,
+                                    second=0,
+                                    microsecond=0,
+                                )
+                                # Use a 5-minute grace window to handle next-day rollover
+                                if arrival_time < now - timedelta(minutes=5):
+                                    arrival_time += timedelta(days=1)
+                            except (ValueError, TypeError):
+                                _LOGGER.error(
+                                    "Invalid time format for scheduledArrival fallback: %s",
+                                    scheduled_arrival,
+                                )
+                    else:
+                        _LOGGER.warning(
+                            "Unsupported scheduledArrival type: %s",
+                            type(scheduled_arrival),
+                        )
+
+                    if arrival_time:
+                        arrival_delay = int(delay_arrival)
+                        arrival_time_adjusted = arrival_time + timedelta(
+                            minutes=arrival_delay
+                        )
+                        # Keep existing human-readable time string
+                        departure["arrival_current"] = (
+                            arrival_time_adjusted.strftime("%Y-%m-%dT%H:%M")
+                            if arrival_time_adjusted.date() != today
+                            else arrival_time_adjusted.strftime("%H:%M")
+                        )
+                        # Add new machine-readable Unix timestamp
+                        departure["arrival_timestamp"] = int(
+                            arrival_time_adjusted.timestamp()
+                        )
+
+                except (TypeError, ValueError):
+                    _LOGGER.error(
+                        "Invalid time format for scheduledArrival: %s",
+                        scheduled_arrival,
+                    )
+
+            # Fallback for arrival time if not present
+            if "arrival_current" not in departure and departure.get(
+                "departure_current"
+            ):
+                departure["arrival_current"] = departure.get("departure_current")
+            # Fallback for the new timestamp attribute
+            if "arrival_timestamp" not in departure and departure.get(
+                "departure_timestamp"
+            ):
+                departure["arrival_timestamp"] = departure.get(
+                    "departure_timestamp"
+                )
+
+            effective_departure_time = departure_time
+            if not self.drop_late_trains:
+                effective_departure_time += timedelta(minutes=delay_departure or 0)
+
+            # Remove route attributes to lower sensor size limit
+            if not self.detailed:
+                for key in [
+                    "id",
+                    "stop_id_num",
+                    "stateless",
+                    "key",
+                    "messages",
+                    "mot",
+                ]:
+                    departure.pop(key, None)
+                allowed_null_keys = {
+                    "scheduledDeparture",
+                    "scheduledTime",
+                    "delay",
+                    "delayDeparture",
+                    "scheduledArrival",
+                    "arrival_current",
+                    "departure_current",
+                    "sched_dep",
+                    "sched_arr",
+                    "dep",
+                    "datetime",
+                    "trip_id",  # Ensure trip_id is allowed to be None
+                }
+                keys_to_remove = [
+                    k
+                    for k, v in departure.items()
+                    if (v is None or (isinstance(v, str) and not v.strip()))
+                    and k not in allowed_null_keys
+                ]
+                for key in keys_to_remove:
+                    departure.pop(key)
+
+            # --- VIA STATION FILTERING ---
+            # When a single via station was already sent to the API as a query
+            # parameter, skip client-side filtering to avoid discarding valid results.
+            if self.via_stations and not self._via_filtered_server_side:
+                # Get all possible station names for this trip
+                trip_stations = set()
+
+                # 1. From 'via' list (if present)
+                api_via = departure.get("via", [])
+                if isinstance(api_via, list):
+                    trip_stations.update([s.lower() for s in api_via])
+
+                # 2. From 'route_details' (if present)
+                route_details = departure.get("route_details", [])
+                if isinstance(route_details, list):
+                    for stop in route_details:
+                        if isinstance(stop, dict) and "name" in stop:
+                            trip_stations.add(stop["name"].lower())
+
+                # 3. Check matches
+                matches = []
+                for v_station in self.via_stations:
+                    v_lower = v_station.strip().lower()
+                    # Check if the configured via station is a substring of the trip station name
+                    match_found = any(v_lower in ts for ts in trip_stations)
+                    matches.append(match_found)
+
+                if self.via_stations_logic == "AND":
+                    if not all(matches):
                         _LOGGER.debug(
-                            "Skipping departure due to direction mismatch. Required: '%s', actual: '%s'",
-                            self.direction,
-                            departure_direction,
+                            "Skipping departure: not all via stations (%s) matched for trip to %s",
+                            self.via_stations,
+                            departure.get("destination"),
+                        )
+                        continue
+                else:  # OR logic (default)
+                    if not any(matches):
+                        _LOGGER.debug(
+                            "Skipping departure: none of the via stations (%s) matched for trip to %s",
+                            self.via_stations,
+                            departure.get("destination"),
                         )
                         continue
 
-                if not self.keep_endstation:
-                    if departure.get("destination") == self.station:
-                        _LOGGER.debug(
-                            "Skipping departure as %s is the final stop.",
+            if not self.keep_route:
+                for key in ["route", "via", "prev_route", "next_route"]:
+                    departure.pop(key, None)
+
+            # Remove temporary datetime object
+            departure.pop("departure_datetime", None)
+
+            departure_seconds = (effective_departure_time - now).total_seconds()
+            if departure_seconds >= self.offset:
+                # Compute size with candidate included
+                # We do this by serializing iteratively and checking size.
+                try:
+                    # Serialize just this item
+                    item_json = json.dumps(departure, default=simple_serializer)
+                    item_size = len(item_json)
+
+                    # Calculate overhead: comma separator if list is not empty
+                    overhead = 1 if filtered_departures else 0
+
+                    potential_size = current_size + item_size + overhead
+
+                    if potential_size > MAX_SIZE_BYTES:
+                        _LOGGER.info(
+                            "Filtered departures JSON size would exceed limit: %d bytes (limit %d) for entry: %s. Stopping here.",
+                            potential_size,
+                            MAX_SIZE_BYTES,
                             self.station,
                         )
-                        continue
+                        break
 
-                is_cancelled = (
-                    departure.get("cancelled", False)
-                    or departure.get("isCancelled", False)
-                    or departure.get("is_cancelled", False)
-                )
-                departure["is_cancelled"] = is_cancelled  # Normalize
+                    filtered_departures.append(departure)
+                    current_size += item_size + overhead
 
-                if self.exclude_cancelled:
-                    if is_cancelled:
-                        _LOGGER.debug(
-                            "Skipping cancelled departure: %s",
-                            departure,
-                        )
-                        continue
-
-                # Get train classes from the departure data.
-                train_classes = (
-                    departure.get("trainClasses")
-                    or departure.get("train_type")
-                    or departure.get("type", [])
-                )
-
-                if isinstance(train_classes, str):
-                    train_classes = [train_classes]
-
-                # If the API returns an empty list, we treat it as an "unknown" type,
-                # represented by an empty string, so it can be filtered.
-                if not train_classes and isinstance(train_classes, list):
-                    api_classes_to_process = [""]
-                else:
-                    api_classes_to_process = train_classes
-
-                # Normalize the train classes from the API using the mapping.
-                mapped_api_classes = {
-                    TRAIN_TYPE_MAPPING.get(tc, tc) for tc in api_classes_to_process
-                }
-
-                # Update the departure data with the normalized, more descriptive train classes.
-                departure["trainClasses"] = list(mapped_api_classes)
-
-                # Filter if any of the departure's train classes are in the ignored list.
-                if mapped_ignored_train_types and not mapped_api_classes.isdisjoint(
-                    mapped_ignored_train_types
-                ):
-                    _LOGGER.debug(
-                        "Ignoring departure due to train class. Mapped classes: %s",
-                        mapped_api_classes,
+                except (TypeError, ValueError) as e:
+                    _LOGGER.error(
+                        "Failed to serialize departure for size check: %s", e
                     )
                     continue
 
-                departure_time = departure["departure_datetime"]
+        _LOGGER.debug(
+            "Number of departures added to the filtered list: %d",
+            len(filtered_departures),
+        )
 
-                delay_departure = (
-                    departure.get("delayDeparture")
-                    or departure.get("dep_delay")
-                    or departure.get("delay")
-                )
-                try:
-                    if delay_departure is None or delay_departure == "":
-                        delay_departure = 0
-                    else:
-                        delay_departure = int(delay_departure)
-                except ValueError:
-                    delay_departure = 0
+        # Alternative Connections
+        # For each departure, find other trains going to the same destination
+        # that depart later. This helps users find backup options.
+        if self.detailed and len(filtered_departures) > 1:
+            for i, dep in enumerate(filtered_departures):
+                dest = dep.get("destination")
+                if not dest:
+                    continue
 
-                departure_time_adjusted = None
-                if departure_time and delay_departure is not None:
-                    departure_time_adjusted = departure_time + timedelta(
-                        minutes=delay_departure
-                    )
-                    # Keep existing human-readable time string
-                    departure["departure_current"] = (
-                        departure_time_adjusted.strftime("%Y-%m-%dT%H:%M")
-                        if departure_time_adjusted.date() != today
-                        else departure_time_adjusted.strftime("%H:%M")
-                    )
-                    # Add new machine-readable Unix timestamp
-                    departure["departure_timestamp"] = int(
-                        departure_time_adjusted.timestamp()
-                    )
-
-                if self.show_occupancy:
-                    occupancy = departure.get("occupancy")
-                    if occupancy:
-                        departure["occupancy"] = occupancy
-                else:
-                    # Explicitly remove occupancy if disabled
-                    departure.pop("occupancy", None)
-
-                # Platform change detection
-                platform = departure.get("platform")
-                scheduled_platform = departure.get("scheduledPlatform")
-                if platform and scheduled_platform and platform != scheduled_platform:
-                    departure["changed_platform"] = True
-                else:
-                    departure["changed_platform"] = False
-
-                # Wagon Order (Pass-through + Sector Extraction + HTML Generation)
-                wagon_order_data = departure.get("wagonorder")
-                if wagon_order_data:
-                    # If it's a list, it's the detailed structure
-                    if isinstance(wagon_order_data, list):
-                        wagon_html = self._process_wagon_order(wagon_order_data)
-                        if wagon_html:
-                            departure["wagon_order_html"] = wagon_html
-                    departure["wagon_order"] = wagon_order_data
-
-                # Extract sectors from platform string (e.g. "5 D-G")
-                if platform and isinstance(platform, str):
-                    # Matches " D-G", " A", " A-C", with leading space or start
-                    sector_match = re.search(r"\s([A-G](-[A-G])?)$", platform)
-                    if sector_match:
-                        departure["platform_sectors"] = sector_match.group(1)
-
-                # QoS (Pass-through + Message Parsing)
-                if "qos" in departure:
-                    pass
-
-                # Parse facilities from messages
-                facilities = {}
-                msg_texts = []
-                if "messages" in departure and isinstance(departure["messages"], dict):
-                    for msg_list in departure["messages"].values():
-                        if isinstance(msg_list, list):
-                            for msg in msg_list:
-                                if isinstance(msg, dict):
-                                    msg_texts.append(msg.get("text", ""))
-
-                for text in msg_texts:
-                    lower_text = text.lower()
-                    if "wlan" in lower_text or "wifi" in lower_text:
-                        if (
-                            "nicht" in lower_text
-                            or "gestört" in lower_text
-                            or "ausfall" in lower_text
-                            or "defekt" in lower_text
-                        ):
-                            facilities["wifi"] = False
-                    if (
-                        "bistro" in lower_text
-                        or "restaurant" in lower_text
-                        or "catering" in lower_text
-                    ):
-                        if (
-                            "nicht" in lower_text
-                            or "gestört" in lower_text
-                            or "geschlossen" in lower_text
-                        ):
-                            facilities["bistro"] = False
-
-                if facilities:
-                    departure["facilities"] = facilities
-
-                # Real-time Route Progress
-                route_details = []
-                if "route" in departure and isinstance(departure["route"], list):
-                    for stop in departure["route"]:
-                        if isinstance(stop, dict):
-                            stop_name = stop.get("name")
-                            if stop_name:
-                                details = {"name": stop_name}
-                                # Add delay info if available
-                                if "arr_delay" in stop:
-                                    details["arr_delay"] = stop["arr_delay"]
-                                if "dep_delay" in stop:
-                                    details["dep_delay"] = stop["dep_delay"]
-                                route_details.append(details)
-                        elif isinstance(stop, str):
-                            # Handle simple string list
-                            route_details.append({"name": stop})
-
-                if route_details:
-                    departure["route_details"] = route_details
-
-                # Trip-ID
-                departure["trip_id"] = departure.get("trainId") or departure.get(
-                    "tripId"
-                )
-
-                scheduled_arrival = departure.get("scheduledArrival")
-                delay_arrival = departure.get("delayArrival")
-                try:
-                    if delay_arrival is None or delay_arrival == "":
-                        delay_arrival = 0
-                    else:
-                        delay_arrival = int(delay_arrival)
-                except ValueError:
-                    delay_arrival = 0
-
-                arrival_time_adjusted = None
-                if scheduled_arrival is not None:
-                    try:
-                        arrival_time = None
-                        if isinstance(scheduled_arrival, (int, float)):
-                            arrival_time = dt_util.utc_from_timestamp(
-                                int(scheduled_arrival)
-                            ).astimezone(now.tzinfo)
-                        elif isinstance(scheduled_arrival, str):
-                            # Attempt robust parsing using HA helper
-                            parsed_dt = dt_util.parse_datetime(scheduled_arrival)
-                            if parsed_dt:
-                                if parsed_dt.tzinfo is None:
-                                    arrival_time = now.replace(
-                                        year=parsed_dt.year,
-                                        month=parsed_dt.month,
-                                        day=parsed_dt.day,
-                                        hour=parsed_dt.hour,
-                                        minute=parsed_dt.minute,
-                                        second=parsed_dt.second,
-                                        microsecond=parsed_dt.microsecond,
-                                    )
-                                    # Use a 5-minute grace window to handle next-day rollover
-                                    if arrival_time < now - timedelta(minutes=5):
-                                        arrival_time += timedelta(days=1)
-                                else:
-                                    arrival_time = parsed_dt.astimezone(now.tzinfo)
-                            else:
-                                # Fallback for HH:MM format (assume today)
-                                try:
-                                    temp_dt = datetime.strptime(
-                                        scheduled_arrival, "%H:%M"
-                                    )
-                                    arrival_time = now.replace(
-                                        hour=temp_dt.hour,
-                                        minute=temp_dt.minute,
-                                        second=0,
-                                        microsecond=0,
-                                    )
-                                    # Use a 5-minute grace window to handle next-day rollover
-                                    if arrival_time < now - timedelta(minutes=5):
-                                        arrival_time += timedelta(days=1)
-                                except (ValueError, TypeError):
-                                    _LOGGER.error(
-                                        "Invalid time format for scheduledArrival fallback: %s",
-                                        scheduled_arrival,
-                                    )
-                        else:
-                            _LOGGER.warning(
-                                "Unsupported scheduledArrival type: %s",
-                                type(scheduled_arrival),
-                            )
-
-                        if arrival_time:
-                            arrival_delay = int(delay_arrival)
-                            arrival_time_adjusted = arrival_time + timedelta(
-                                minutes=arrival_delay
-                            )
-                            # Keep existing human-readable time string
-                            departure["arrival_current"] = (
-                                arrival_time_adjusted.strftime("%Y-%m-%dT%H:%M")
-                                if arrival_time_adjusted.date() != today
-                                else arrival_time_adjusted.strftime("%H:%M")
-                            )
-                            # Add new machine-readable Unix timestamp
-                            departure["arrival_timestamp"] = int(
-                                arrival_time_adjusted.timestamp()
-                            )
-
-                    except (TypeError, ValueError):
-                        _LOGGER.error(
-                            "Invalid time format for scheduledArrival: %s",
-                            scheduled_arrival,
-                        )
-
-                # Fallback for arrival time if not present
-                if "arrival_current" not in departure and departure.get(
-                    "departure_current"
-                ):
-                    departure["arrival_current"] = departure.get("departure_current")
-                # Fallback for the new timestamp attribute
-                if "arrival_timestamp" not in departure and departure.get(
-                    "departure_timestamp"
-                ):
-                    departure["arrival_timestamp"] = departure.get(
-                        "departure_timestamp"
-                    )
-
-                effective_departure_time = departure_time
-                if not self.drop_late_trains:
-                    effective_departure_time += timedelta(minutes=delay_departure or 0)
-
-                # Remove route attributes to lower sensor size limit
-                if not self.detailed:
-                    for key in [
-                        "id",
-                        "stop_id_num",
-                        "stateless",
-                        "key",
-                        "messages",
-                        "mot",
-                    ]:
-                        departure.pop(key, None)
-                    allowed_null_keys = {
-                        "scheduledDeparture",
-                        "scheduledTime",
-                        "delay",
-                        "delayDeparture",
-                        "scheduledArrival",
-                        "arrival_current",
-                        "departure_current",
-                        "sched_dep",
-                        "sched_arr",
-                        "dep",
-                        "datetime",
-                        "trip_id",  # Ensure trip_id is allowed to be None
-                    }
-                    keys_to_remove = [
-                        k
-                        for k, v in departure.items()
-                        if (v is None or (isinstance(v, str) and not v.strip()))
-                        and k not in allowed_null_keys
-                    ]
-                    for key in keys_to_remove:
-                        departure.pop(key)
-
-                # --- VIA STATION FILTERING ---
-                # When a single via station was already sent to the API as a query
-                # parameter, skip client-side filtering to avoid discarding valid results.
-                if self.via_stations and not self._via_filtered_server_side:
-                    # Get all possible station names for this trip
-                    trip_stations = set()
-
-                    # 1. From 'via' list (if present)
-                    api_via = departure.get("via", [])
-                    if isinstance(api_via, list):
-                        trip_stations.update([s.lower() for s in api_via])
-
-                    # 2. From 'route_details' (if present)
-                    route_details = departure.get("route_details", [])
-                    if isinstance(route_details, list):
-                        for stop in route_details:
-                            if isinstance(stop, dict) and "name" in stop:
-                                trip_stations.add(stop["name"].lower())
-
-                    # 3. Check matches
-                    matches = []
-                    for v_station in self.via_stations:
-                        v_lower = v_station.strip().lower()
-                        # Check if the configured via station is a substring of the trip station name
-                        match_found = any(v_lower in ts for ts in trip_stations)
-                        matches.append(match_found)
-
-                    if self.via_stations_logic == "AND":
-                        if not all(matches):
-                            _LOGGER.debug(
-                                "Skipping departure: not all via stations (%s) matched for trip to %s",
-                                self.via_stations,
-                                departure.get("destination"),
-                            )
-                            continue
-                    else:  # OR logic (default)
-                        if not any(matches):
-                            _LOGGER.debug(
-                                "Skipping departure: none of the via stations (%s) matched for trip to %s",
-                                self.via_stations,
-                                departure.get("destination"),
-                            )
-                            continue
-
-                if not self.keep_route:
-                    for key in ["route", "via", "prev_route", "next_route"]:
-                        departure.pop(key, None)
-
-                # Remove temporary datetime object
-                departure.pop("departure_datetime", None)
-
-                departure_seconds = (effective_departure_time - now).total_seconds()
-                if departure_seconds >= self.offset:
-                    # Compute size with candidate included
-                    # We do this by serializing iteratively and checking size.
-                    try:
-                        # Serialize just this item
-                        item_json = json.dumps(departure, default=simple_serializer)
-                        item_size = len(item_json)
-
-                        # Calculate overhead: comma separator if list is not empty
-                        overhead = 1 if filtered_departures else 0
-
-                        potential_size = current_size + item_size + overhead
-
-                        if potential_size > MAX_SIZE_BYTES:
-                            _LOGGER.info(
-                                "Filtered departures JSON size would exceed limit: %d bytes (limit %d) for entry: %s. Stopping here.",
-                                potential_size,
-                                MAX_SIZE_BYTES,
-                                self.station,
-                            )
-                            break
-
-                        filtered_departures.append(departure)
-                        current_size += item_size + overhead
-
-                    except (TypeError, ValueError) as e:
-                        _LOGGER.error(
-                            "Failed to serialize departure for size check: %s", e
-                        )
+                alternatives = []
+                for j, other_dep in enumerate(filtered_departures):
+                    if i == j:
                         continue
+                    if other_dep.get("destination") == dest:
+                        # Only include if it departs later
+                        my_time = dep.get("departure_timestamp")
+                        other_time = other_dep.get("departure_timestamp")
+                        if my_time and other_time and other_time > my_time:
+                            alternatives.append(
+                                {
+                                    "train": other_dep.get("train"),
+                                    "scheduledDeparture": other_dep.get(
+                                        "scheduledDeparture"
+                                    ),
+                                    "platform": other_dep.get("platform"),
+                                }
+                            )
 
+                if alternatives:
+                    dep["alternative_connections"] = list(alternatives)[
+                        :3
+                    ]  # Limit to 3
+
+        # Favorite Trains Filtering
+        # Capture the full list for background tasks (notifications, history) BEFORE filtering
+        pre_filtered_departures = filtered_departures
+
+        if self.favorite_trains:
+            fav_filtered = []
+            for dep in filtered_departures:
+                train_name = dep.get("train", "")
+                # Match if train_name contains any of the favorite strings
+                if any(fav in train_name for fav in self.favorite_trains):
+                    fav_filtered.append(dep)
+            filtered_departures = fav_filtered
             _LOGGER.debug(
-                "Number of departures added to the filtered list: %d",
+                "Filtered departures by favorite trains. Remaining: %d",
                 len(filtered_departures),
             )
 
-            # Alternative Connections
-            # For each departure, find other trains going to the same destination
-            # that depart later. This helps users find backup options.
-            if self.detailed and len(filtered_departures) > 1:
-                for i, dep in enumerate(filtered_departures):
-                    dest = dep.get("destination")
-                    if not dest:
+        if filtered_departures or pre_filtered_departures:
+            # Cache the visible ones if available, otherwise just keep going.
+            # Actually _last_valid_value is used for sensor display, so it SHOULD be the filtered list.
+            if filtered_departures:
+                self._last_valid_value = list(filtered_departures)
+
+            # Real-time Connection Tracking (Experimental)
+            if self.tracked_connections:
+                for dep in filtered_departures:
+                    my_train_id = dep.get("train")
+                    if not my_train_id:
                         continue
 
-                    alternatives = []
-                    for j, other_dep in enumerate(filtered_departures):
-                        if i == j:
-                            continue
-                        if other_dep.get("destination") == dest:
-                            # Only include if it departs later
-                            my_time = dep.get("departure_timestamp")
-                            other_time = other_dep.get("departure_timestamp")
-                            if my_time and other_time and other_time > my_time:
-                                alternatives.append(
-                                    {
-                                        "train": other_dep.get("train"),
-                                        "scheduledDeparture": other_dep.get(
-                                            "scheduledDeparture"
-                                        ),
-                                        "platform": other_dep.get("platform"),
-                                    }
-                                )
+                    conn_config = self.tracked_connections.get(my_train_id)
+                    if not conn_config:
+                        trip_id = dep.get("trip_id")
+                        if trip_id:
+                            conn_config = self.tracked_connections.get(trip_id)
 
-                    if alternatives:
-                        dep["alternative_connections"] = list(alternatives)[
-                            :3
-                        ]  # Limit to 3
+                    if conn_config:
+                        change_station = conn_config["change_station"]
+                        # If we have trip_id, we can potentially get full route.
+                        # For now, let's just make the second API call.
+                        next_train_id = conn_config["next_train_id"]
+                        next_dep = await self._get_train_departure_at_station(
+                            change_station, next_train_id
+                        )
 
-            # Favorite Trains Filtering
-            # Capture the full list for background tasks (notifications, history) BEFORE filtering
-            pre_filtered_departures = filtered_departures
+                        if next_dep:
+                            dep["connection_info"] = {
+                                "target_train": next_dep.get("train"),
+                                "target_platform": next_dep.get("platform"),
+                                "target_delay": next_dep.get("delayDeparture"),
+                                "transfer_station": change_station,
+                            }
 
-            if self.favorite_trains:
-                fav_filtered = []
-                for dep in filtered_departures:
-                    train_name = dep.get("train", "")
-                    # Match if train_name contains any of the favorite strings
-                    if any(fav in train_name for fav in self.favorite_trains):
-                        fav_filtered.append(dep)
-                filtered_departures = fav_filtered
-                _LOGGER.debug(
-                    "Filtered departures by favorite trains. Remaining: %d",
-                    len(filtered_departures),
-                )
+            # Punctuality Statistics
+            self._update_history(pre_filtered_departures)
 
-            if filtered_departures or pre_filtered_departures:
-                # Cache the visible ones if available, otherwise just keep going.
-                # Actually _last_valid_value is used for sensor display, so it SHOULD be the filtered list.
-                if filtered_departures:
-                    self._last_valid_value = list(filtered_departures)[
-                        : int(self.next_departures)
-                    ]
-
-                _LOGGER.debug(
-                    "Fetched %d valid departures (pre-filter), %d visible",
-                    len(pre_filtered_departures),
-                    len(filtered_departures),
-                )
-
-                # Watch Train Notifications
-                await self._check_watched_trips(pre_filtered_departures)
-
-                # Full Connection Tracking
-                if self.tracked_connections:
-                    for (
-                        dep
-                    ) in (
-                        pre_filtered_departures
-                    ):  # Check connection tracking on all trains
-
-                        my_train_id = dep.get("train")
-                        if not my_train_id:
-                            continue
-
-                        conn_config = self.tracked_connections.get(my_train_id)
-                        if not conn_config:
-                            trip_id = dep.get("trip_id")
-                            if trip_id:
-                                conn_config = self.tracked_connections.get(trip_id)
-
-                        if conn_config:
-                            change_station = conn_config["change_station"]
-                            # If we have trip_id, we can potentially get full route.
-                            # For now, let's just make the second API call.
-                            next_train_id = conn_config["next_train_id"]
-                            next_dep = await self._get_train_departure_at_station(
-                                change_station, next_train_id
-                            )
-
-                            if next_dep:
-                                dep["connection_info"] = {
-                                    "target_train": next_dep.get("train"),
-                                    "target_platform": next_dep.get("platform"),
-                                    "target_delay": next_dep.get("delayDeparture"),
-                                    "transfer_station": change_station,
-                                }
-
-                # Punctuality Statistics
-                self._update_history(pre_filtered_departures)
-
-                return list(filtered_departures)[: int(self.next_departures)]
-            else:
-                _LOGGER.warning(
-                    "Departures fetched but all were filtered out. Using cached data."
-                )
-                return self._last_valid_value or []
-        except asyncio.TimeoutError:
-            _LOGGER.error("Timeout fetching data from %s", self.api_url)
-            self._handle_update_error("Connection timeout")
-            repairs.create_connection_error_issue(
-                self.hass, self.config_entry.entry_id, self.station
+            return list(filtered_departures)[: int(self.next_departures)]
+        else:
+            _LOGGER.warning(
+                "Departures fetched but all were filtered out. Using cached data."
             )
-            return self._last_valid_value or []
-        except aiohttp.ClientError as e:
-            _LOGGER.error("Client error fetching data from %s: %s", self.api_url, e)
-            self._handle_update_error(f"Connection error: {e}")
-            repairs.create_connection_error_issue(
-                self.hass, self.config_entry.entry_id, self.station
-            )
-            return self._last_valid_value or []
-        except json.JSONDecodeError as e:
-            _LOGGER.error("JSON decode error from %s: %s", self.api_url, e)
-            self._handle_update_error(f"Invalid response from server: {e}")
-            return self._last_valid_value or []
-        except Exception as e:
-            _LOGGER.exception("Unexpected error fetching data: %s", e)
-            self._handle_update_error(f"Unexpected error: {e}")
             return self._last_valid_value or []
 
     async def _check_watched_trips(self, departures):
