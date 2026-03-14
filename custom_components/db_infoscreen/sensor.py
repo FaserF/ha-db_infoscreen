@@ -167,7 +167,9 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         # 2. Platform filtering
         if self.platforms:
             platforms = [p.strip() for p in str(self.platforms).split(",")]
-            filtered = [dep for dep in filtered if str(dep.get("platform")) in platforms]
+            filtered = [
+                dep for dep in filtered if str(dep.get("platform")) in platforms
+            ]
 
         return filtered
 
@@ -179,7 +181,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         Calculates the state from the first entry in the filtered data.
         """
         departures = self._get_filtered_departures()
-        
+
         # Check if there is data and if it is valid
         if departures:
             try:

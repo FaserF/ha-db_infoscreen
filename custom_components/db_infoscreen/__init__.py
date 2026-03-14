@@ -739,7 +739,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     )
                     continue
 
-
             if not self.keep_endstation:
                 if departure.get("destination") == self.station:
                     _LOGGER.debug(

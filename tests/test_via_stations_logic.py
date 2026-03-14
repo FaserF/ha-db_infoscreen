@@ -146,8 +146,6 @@ async def test_via_multiple_stations_or_local(hass):
         assert "Koblenz" not in dests
 
 
-
-
 @pytest.mark.asyncio
 async def test_via_multiple_stations_and_local_no_match(hass):
     """Test that AND logic excludes departures that don't match ALL via stations."""
