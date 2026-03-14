@@ -45,12 +45,26 @@ jobs:
           git push origin ${{ steps.version.outputs.version }}
           git push origin main
 
-      - name: Generate Release Notes
+      - name: 📝 Find Previous Tag
+        id: pre_tag
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
+
+      - name: 📝 Generate Changelog
+        if: inputs.release_type != 'nightly'
+        run: |
+          python .github/scripts/changelog_builder.py \
+            --from-tag "${{ steps.pre_tag.outputs.tag }}" \
+            --repo-url "https://github.com/${{ github.repository }}" \
+            --output "CHANGELOG_BODY.md"
+
+      - name: Create Release Notes
         uses: softprops/action-gh-release@v2
         if: inputs.release_type != 'nightly'
         with:
           tag_name: ${{ steps.version.outputs.version }}
-          generate_release_notes: true
+          body_path: CHANGELOG_BODY.md
           prerelease: ${{ inputs.release_type == 'beta' }}
 
       - name: Post-Release Dev Bump
