@@ -32,6 +32,18 @@ def strings_path():
 
 
 @pytest.fixture
+def en_path(translations_path):
+    """Return the path to en.json."""
+    return os.path.join(translations_path, "en.json")
+
+
+@pytest.fixture
+def de_path(translations_path):
+    """Return the path to de.json."""
+    return os.path.join(translations_path, "de.json")
+
+
+@pytest.fixture
 def config_flow_path():
     """Return the path to config_flow.py."""
     return os.path.join(
