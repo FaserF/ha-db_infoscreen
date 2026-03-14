@@ -46,6 +46,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         direction_suffix_name = f" direction {self.direction}" if self.direction else ""
 
         # Entity name
+        self._attr_translation_key = "departures"
         self._attr_name = (
             f"Departures{platforms_suffix_name}{via_suffix_name}{direction_suffix_name}"
         )
@@ -209,8 +210,8 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                 departure_time = self.format_departure_time(departure_time)
                 if departure_time is None:
                     _LOGGER.debug("Formatted departure time is None, skipping update.")
-                    # If the time is not valid, return the last valid value or "Invalid Time"
-                    return self._last_valid_value or "Invalid Time"
+                    # If the time is not valid, return the last valid value or "invalid_time"
+                    return self._last_valid_value or "invalid_time"
 
                 # If there is no delay, update the last valid value with the departure time
                 if delay_departure in (0, None, "None"):
@@ -224,7 +225,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                 return self._last_valid_value
             except Exception as e:
                 _LOGGER.error("Exception during data parsing: %s", e)
-                return self._last_valid_value or "Error"
+                return self._last_valid_value or "error"
         else:
             # If no new data is available, return the last valid value or a fallback value
             if self._last_valid_value:
@@ -240,7 +241,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                     "No departures found for station: %s. No previous value available.",
                     self.station,
                 )
-                return "No Data"
+                return "no_data"
 
     @property
     def extra_state_attributes(self):
@@ -358,7 +359,7 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
         """Initialize the watchdog sensor."""
         super().__init__(coordinator, config_entry)
         self._attr_unique_id = f"db_infoscreen_watchdog_{config_entry.entry_id}"
-        self._attr_name = "Trip Watchdog"
+        self._attr_translation_key = "trip_watchdog"
 
     @property
     def native_value(self) -> str | None:
@@ -450,7 +451,6 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
 
     def __init__(self, coordinator, config_entry):
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Leave Now Alarm"
         self._attr_unique_id = f"leave_now_{config_entry.entry_id}"
         self._attr_icon = "mdi:walk"
 
@@ -540,7 +540,6 @@ class DBInfoScreenPunctualitySensor(DBInfoScreenBaseEntity, SensorEntity):
 
     def __init__(self, coordinator, config_entry):
         super().__init__(coordinator, config_entry)
-        self._attr_name = "Station Punctuality"
         self._attr_unique_id = f"punctuality_{config_entry.entry_id}"
         self._attr_icon = "mdi:chart-line"
 

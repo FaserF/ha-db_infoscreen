@@ -218,8 +218,31 @@
       "description": "Could not connect to the departure API for **{station}**. This issue will resolve automatically when the connection is restored."
     }
   },
+  "train_types": {
+    "s_bahn": "S-Bahn",
+    "regional_db": "Regional (DB)",
+    "regional": "Regional",
+    "long_distance": "Long Distance (ICE/IC/EC)",
+    "bus": "Bus",
+    "unknown": "Unknown"
+  },
+  "repair_actions": {
+    "retry": "Retry fetching data now",
+    "report": "Report issue on GitHub",
+    "change_source": "Change data source",
+    "remove": "Remove this station",
+    "try_again": "Try again"
+  },
   "entity": {
     "sensor": {
+      "departures": {
+        "name": "Departures",
+        "state": {
+          "no_data": "No Data",
+          "invalid_time": "Invalid Time",
+          "error": "Error"
+        }
+      },
       "leave_now": {
         "name": "Leave Now Alarm",
         "state": {
@@ -233,6 +256,25 @@
       },
       "trip_watchdog": {
         "name": "Trip Watchdog"
+      }
+    },
+    "binary_sensor": {
+      "delay": {
+        "name": "Delay"
+      },
+      "cancellation": {
+        "name": "Cancellation"
+      },
+      "api_connection": {
+        "name": "API Connection"
+      },
+      "elevator": {
+        "name": "Station Accessibility"
+      }
+    },
+    "calendar": {
+      "calendar_departures": {
+        "name": "Departures"
       }
     }
   },

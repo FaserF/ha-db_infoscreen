@@ -90,7 +90,7 @@ class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
         """Initialize the delay sensor."""
         super().__init__(coordinator, config_entry)
         self._attr_unique_id = f"db_infoscreen_delay_{config_entry.entry_id}"
-        self._attr_name = "Delay"
+        self._attr_translation_key = "delay"
         self._attr_icon = "mdi:clock-alert"
 
     @property
@@ -149,7 +149,7 @@ class DBInfoScreenCancellationBinarySensor(DBInfoScreenBaseBinarySensor):
         """Initialize the cancellation sensor."""
         super().__init__(coordinator, config_entry)
         self._attr_unique_id = f"db_infoscreen_cancelled_{config_entry.entry_id}"
-        self._attr_name = "Cancellation"
+        self._attr_translation_key = "cancellation"
         self._attr_icon = "mdi:train-car-passenger-door"
 
     @property
@@ -204,7 +204,7 @@ class DBInfoScreenConnectionBinarySensor(DBInfoScreenBaseBinarySensor):
         """Initialize the connection sensor."""
         super().__init__(coordinator, config_entry)
         self._attr_unique_id = f"db_infoscreen_connection_{config_entry.entry_id}"
-        self._attr_name = "API Connection"
+        self._attr_translation_key = "api_connection"
         self._attr_icon = "mdi:api"
 
     @property
@@ -257,8 +257,9 @@ class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
             self._attr_unique_id = (
                 f"db_infoscreen_elevator_general_{config_entry.entry_id}"
             )
-            self._attr_name = "Station Accessibility"
+            self._attr_name = None
 
+        self._attr_translation_key = "elevator"
         self._attr_icon = "mdi:elevator-passenger-off-outline"
         self._issues = self._compute_issues()
 

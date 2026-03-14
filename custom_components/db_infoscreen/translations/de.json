@@ -163,7 +163,7 @@
         "step": {
           "init": {
             "title": "Veraltete Daten für {station}",
-            "description": "Die Abfahrtsdaten für **{station}** wurden seit **{hours} Stunden** nicht aktualisiert.\n\nMögliche Ursachen:\n- Temporäre API-Probleme\n- Die Station wird möglicherweise nicht mehr vom Backend unterstützt\n- Netzwerkprobleme\n\nWas möchtest du tun?",
+            "description": "Die Abfahrtsdaten für **{station}** wurden seit **{hours} Stunden** nicht mehr aktualisiert.\n\nDies könnte folgende Ursachen haben:\n- Temporäre API-Probleme\n- Die Station wird möglicherweise nicht mehr vom Backend unterstützt\n- Netzwerkprobleme\n\nWas möchten Sie tun?",
             "data": {
               "action": "Aktion"
             }
@@ -215,11 +215,34 @@
     },
     "connection_error": {
       "title": "Verbindungsfehler",
-      "description": "Konnte keine Verbindung zur Abfahrts-API für **{station}** herstellen. Dieses Problem wird automatisch behoben, wenn die Verbindung wiederhergestellt wird."
+      "description": "Verbindung zur Abfahrts-API für **{station}** fehlgeschlagen. Dieses Problem wird automatisch behoben, sobald die Verbindung wiederhergestellt ist."
     }
+  },
+  "train_types": {
+    "s_bahn": "S-Bahn",
+    "regional_db": "Regionalbahn (DB)",
+    "regional": "Regionalbahn",
+    "long_distance": "Fernverkehr (ICE/IC/EC)",
+    "bus": "Bus",
+    "unknown": "Unbekannter Zugtyp"
+  },
+  "repair_actions": {
+    "retry": "Daten jetzt erneut abrufen",
+    "report": "Problem auf GitHub melden",
+    "change_source": "Datenquelle ändern",
+    "remove": "Diese Station entfernen",
+    "try_again": "Erneut versuchen"
   },
   "entity": {
     "sensor": {
+      "departures": {
+        "name": "Abfahrten",
+        "state": {
+          "no_data": "Keine Daten",
+          "invalid_time": "Ungültige Zeit",
+          "error": "Fehler"
+        }
+      },
       "leave_now": {
         "name": "Aufbruchalarm",
         "state": {
@@ -233,6 +256,25 @@
       },
       "trip_watchdog": {
         "name": "Reiseüberwachung"
+      }
+    },
+    "binary_sensor": {
+      "delay": {
+        "name": "Verspätung"
+      },
+      "cancellation": {
+        "name": "Ausfall"
+      },
+      "api_connection": {
+        "name": "API Verbindung"
+      },
+      "elevator": {
+        "name": "Barrierefreiheit"
+      }
+    },
+    "calendar": {
+      "calendar_departures": {
+        "name": "Abfahrten"
       }
     }
   },

@@ -32,12 +32,12 @@ CONF_FAVORITE_TRAINS = "favorite_trains"
 CONF_WALK_TIME = "walk_time"
 
 TRAIN_TYPE_MAPPING = {
-    "S": "S-Bahn",
-    "N": "Regionalbahn (DB)",
-    "D": "Regionalbahn",
-    "F": "Intercity (Express) / Eurocity",
-    "Unknown": "Unbekannter Zugtyp",
-    "": "Unbekannter Zugtyp",
+    "S": "s_bahn",
+    "N": "regional_db",
+    "D": "regional",
+    "F": "long_distance",
+    "Unknown": "unknown",
+    "": "unknown",
 }
 
 DATA_SOURCE_MAP = {

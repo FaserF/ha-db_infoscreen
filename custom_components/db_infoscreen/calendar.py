@@ -43,7 +43,7 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
         super().__init__(coordinator, config_entry)
 
         self._attr_unique_id = f"db_infoscreen_calendar_{config_entry.entry_id}"
-        self._attr_name = "Departures"
+        self._attr_translation_key = "calendar_departures"
         self._attr_icon = "mdi:calendar-clock"
 
     @property

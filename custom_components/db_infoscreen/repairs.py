@@ -195,8 +195,8 @@ class StaleDataRepairFlow(RepairsFlow):
                 {
                     vol.Required("action", default="retry"): vol.In(
                         {
-                            "retry": "Retry fetching data now",
-                            "report": "Report issue on GitHub",
+                            "retry": "retry",
+                            "report": "report",
                         }
                     )
                 }
@@ -232,8 +232,8 @@ class APIErrorRepairFlow(RepairsFlow):
                 {
                     vol.Required("action", default="retry"): vol.In(
                         {
-                            "retry": "Retry fetching data",
-                            "change_source": "Change data source",
+                            "retry": "retry",
+                            "change_source": "change_source",
                         }
                     )
                 }
@@ -305,9 +305,9 @@ class StationUnsupportedRepairFlow(RepairsFlow):
                 {
                     vol.Required("action", default="retry"): vol.In(
                         {
-                            "retry": "Try again",
-                            "change_source": "Change data source",
-                            "remove": "Remove this station",
+                            "retry": "retry",
+                            "change_source": "change_source",
+                            "remove": "remove",
                         }
                     )
                 }
