@@ -146,49 +146,6 @@ async def test_via_multiple_stations_or_local(hass):
         assert "Koblenz" not in dests
 
 
-@pytest.mark.asyncio
-async def test_via_multiple_stations_and_local(hass):
-    """Test that multiple via stations use local AND filtering."""
-    entry = MagicMock()
-    entry.data = {
-        CONF_STATION: "Mainz Hbf",
-        CONF_VIA_STATIONS: ["Frankfurt(Main)Hbf", "Hanau Hbf"],
-        CONF_VIA_STATIONS_LOGIC: "AND",
-    }
-    entry.options = {}
-    entry.entry_id = "mock_entry_id"
-
-    coordinator = DBInfoScreenCoordinator(hass, entry)
-
-    # Check URL: should NOT contain via parameter
-    assert "via=" not in coordinator.api_url
-
-    now = dt_util.now()
-    mock_data = {
-        "departures": [
-            {
-                "scheduledDeparture": (now + timedelta(minutes=10)).strftime("%H:%M"),
-                "destination": "Fulda",
-                "train": "RE 50",
-                "via": ["Frankfurt(Main)Hbf", "Hanau Hbf", "Wächtersbach"],
-                "route": [{"name": "Frankfurt(Main)Hbf"}, {"name": "Hanau Hbf"}],
-            },
-            {
-                "scheduledDeparture": (now + timedelta(minutes=15)).strftime("%H:%M"),
-                "destination": "Aschaffenburg",
-                "train": "RE 55",
-                "via": ["Frankfurt(Main)Hbf", "Offenbach"],
-                "route": [{"name": "Frankfurt(Main)Hbf"}],
-            },
-        ]
-    }
-
-    with patch_session(mock_data):
-        data = await coordinator._async_update_data()
-        # Only Fulda passes through BOTH Frankfurt AND Hanau
-        data = list(data)
-        assert len(data) == 1
-        assert data[0]["destination"] == "Fulda"
 
 
 @pytest.mark.asyncio

@@ -26,7 +26,6 @@ def test_markdown_paragraph_spacing(file_path):
     lines = content.splitlines()
     for i in range(1, len(lines)):
         line_raw = lines[i]
-        line = line_raw.strip()
         prev_line = lines[i - 1].strip()
 
         # Rule: Top-level headers or bullets following a text line must have a blank line

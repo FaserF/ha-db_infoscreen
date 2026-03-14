@@ -39,12 +39,12 @@ async def test_leave_now_sensor_logic(hass, mock_coordinator):
     # 3. Verify: 25 - 10 = 15 minutes left
     # Note: Use mock for now to be precise
     with patch("homeassistant.util.dt.now", return_value=now):
-        assert sensor.native_value == "15"
+        assert sensor.native_value == 15
 
 
 @pytest.mark.asyncio
 async def test_leave_now_immediate(hass, mock_coordinator):
-    """Test "Leave now!" state when time is up."""
+    """Test 0 state when time is up."""
     mock_coordinator.config_entry.options[CONF_WALK_TIME] = 10
     sensor = DBInfoScreenLeaveNowSensor(mock_coordinator, mock_coordinator.config_entry)
 
@@ -54,7 +54,7 @@ async def test_leave_now_immediate(hass, mock_coordinator):
     mock_coordinator.data = [{"departure_timestamp": departure_ts}]
 
     with patch("homeassistant.util.dt.now", return_value=now):
-        assert sensor.native_value == "Leave now!"
+        assert sensor.native_value == 0
 
 
 @pytest.mark.asyncio

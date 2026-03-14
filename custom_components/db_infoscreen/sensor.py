@@ -151,24 +151,24 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
 
     def _get_filtered_departures(self):
         """
-        Filter out departures that have already passed based on current time.
+        Filter out departures based on time and sensor-specific settings.
+        Also applies filtering for platforms, direction, and via stations.
         """
         now = dt_util.now().timestamp()
         raw_departures = self.coordinator.data or []
-        
-        # Only keep departures that are still in the future (or very recent past, e.g. within 30s)
-        # Using a 30s grace window to prevent flickering when the time exactly matches.
+
+        # 1. Time filtering (keep future and very recent past trains)
         filtered = [
-            dep for dep in raw_departures
+            dep
+            for dep in raw_departures
             if dep.get("departure_timestamp", 0) > (now - 30)
         ]
-        
-        _LOGGER.debug(
-            "Filtered departures for %s: %d -> %d",
-            self.station,
-            len(raw_departures),
-            len(filtered)
-        )
+
+        # 2. Platform filtering
+        if self.platforms:
+            platforms = [p.strip() for p in str(self.platforms).split(",")]
+            filtered = [dep for dep in filtered if str(dep.get("platform")) in platforms]
+
         return filtered
 
     @property
@@ -291,7 +291,14 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                 line = dep.get("line", "?")
                 destination = dep.get("destination", "?")
                 platform = dep.get("platform", "?")
-                time = dep.get("time", "?")
+                time = (
+                    dep.get("time")
+                    or dep.get("departure_current")
+                    or dep.get("scheduledDeparture")
+                    or dep.get("sched_dep")
+                    or dep.get("datetime")
+                    or "?"
+                )
                 delay = dep.get("delay", 0)
 
                 # Format time if it is an int/timestamp, otherwise use as is

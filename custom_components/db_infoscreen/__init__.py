@@ -265,8 +265,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.deduplicate_departures = config.get(CONF_DEDUPLICATE_DEPARTURES, False)
         self.exclude_cancelled = config.get(CONF_EXCLUDE_CANCELLED, False)
         self.show_occupancy = config.get(CONF_SHOW_OCCUPANCY, False)
-        custom_api_url = config.get(CONF_CUSTOM_API_URL, "")
-        platforms = config.get(CONF_PLATFORMS, "")
+        self.platforms = config.get(CONF_PLATFORMS, "")
+        self.via_stations_logic = config.get(CONF_VIA_STATIONS_LOGIC, "OR")
         admode = config.get(CONF_ADMODE, "")
         raw_update_interval = config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
         update_interval = int(max(raw_update_interval, MIN_UPDATE_INTERVAL))
@@ -277,7 +277,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
         station_cleaned = " ".join(str(self.station).split())
         encoded_station = quote(station_cleaned, safe=",-")
-
+        custom_api_url = config.get(CONF_CUSTOM_API_URL, "")
         self._base_url = (
             custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
         )
@@ -287,8 +287,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
         # Collect parameters
         params = {}
-        if platforms:
-            params["platforms"] = platforms
+        if self.platforms:
+            params["platforms"] = self.platforms
         if admode == "arrival":
             params["admode"] = "arr"
         elif admode == "departure":
@@ -739,6 +739,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     )
                     continue
 
+
             if not self.keep_endstation:
                 if departure.get("destination") == self.station:
                     _LOGGER.debug(
@@ -1086,17 +1087,19 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 if self.via_stations_logic == "AND":
                     if not all(matches):
                         _LOGGER.debug(
-                            "Skipping departure: not all via stations (%s) matched for trip to %s",
+                            "Skipping departure: not all via stations (%s) matched for trip to %s. trip_stations: %s",
                             self.via_stations,
                             departure.get("destination"),
+                            trip_stations,
                         )
                         continue
                 else:  # OR logic (default)
                     if not any(matches):
                         _LOGGER.debug(
-                            "Skipping departure: none of the via stations (%s) matched for trip to %s",
+                            "Skipping departure: none of the via stations (%s) matched for trip to %s. trip_stations: %s",
                             self.via_stations,
                             departure.get("destination"),
+                            trip_stations,
                         )
                         continue
 
@@ -1363,6 +1366,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         """
         station_cleaned = " ".join(station.split())
         encoded_station = quote(station_cleaned, safe=",-")
+        url = f"{self._base_url}/{encoded_station}.json"
 
         # Check cache
         if url in RESPONSE_CACHE:

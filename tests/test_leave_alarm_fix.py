@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import pytest
 from homeassistant.util import dt as dt_util
 from custom_components.db_infoscreen.sensor import DBInfoScreenLeaveNowSensor
@@ -15,7 +15,8 @@ def mock_config_entry():
 async def test_leave_now_numeric_value(hass, mock_config_entry):
     """Test that the leave now sensor returns a numeric value (0) instead of a string."""
     coordinator = MagicMock()
-    now = dt_util.now().timestamp()
+    now_dt = dt_util.now()
+    now = now_dt.timestamp()
     
     # Departure in 4 minutes, walk time 5 minutes -> minutes_until_leave = -1
     coordinator.data = [
@@ -29,9 +30,10 @@ async def test_leave_now_numeric_value(hass, mock_config_entry):
     sensor = DBInfoScreenLeaveNowSensor(coordinator, mock_config_entry)
     
     # native_value should be 0 (numeric)
-    val = sensor.native_value
-    assert val == 0
-    assert isinstance(val, int)
+    with patch("homeassistant.util.dt.now", return_value=now_dt):
+        val = sensor.native_value
+        assert val == 0
+        assert isinstance(val, int)
     
     # Attributes should still have "Leave now!"
     attrs = sensor.extra_state_attributes
@@ -42,7 +44,8 @@ async def test_leave_now_numeric_value(hass, mock_config_entry):
 async def test_leave_later_numeric_value(hass, mock_config_entry):
     """Test that the leave now sensor returns a numeric value when not yet time to leave."""
     coordinator = MagicMock()
-    now = dt_util.now().timestamp()
+    now_dt = dt_util.now()
+    now = now_dt.timestamp()
     
     # Departure in 10 minutes, walk time 5 minutes -> minutes_until_leave = 5
     coordinator.data = [
@@ -56,6 +59,7 @@ async def test_leave_later_numeric_value(hass, mock_config_entry):
     sensor = DBInfoScreenLeaveNowSensor(coordinator, mock_config_entry)
     
     # native_value should be 5 (numeric)
-    val = sensor.native_value
-    assert val == 5
-    assert isinstance(val, int)
+    with patch("homeassistant.util.dt.now", return_value=now_dt):
+        val = sensor.native_value
+        assert val == 5
+        assert isinstance(val, int)

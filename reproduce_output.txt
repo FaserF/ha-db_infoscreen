@@ -1,0 +1,20 @@
+Fetching data for Starnberg Nord from https://dbf.finalrewind.org/Starnberg%20Nord.json...
+Total departures found: 10
+First departure sample keys:
+['delayArrival', 'delayDeparture', 'destination', 'isCancelled', 'messages', 'missingRealtime', 'platform', 'route', 'scheduledArrival', 'scheduledDeparture', 'scheduledPlatform', 'train', 'trainClasses', 'trainNumber', 'via']
+Direction: None
+Train/Line: S S6 / None
+Scheduled Time: 17:22
+Route: [{'name': 'Ebersberg(Oberbay)'}, {'name': 'Grafing Stadt'}, {'name': 'Grafing Bahnhof'}, {'name': 'Kirchseeon'}, {'name': 'Eglharting'}, {'name': 'Zorneding'}, {'name': 'Baldham'}, {'name': 'Vaterstetten'}, {'name': 'Haar'}, {'name': 'Gronsdorf'}, {'name': 'M³nchen-Trudering'}, {'name': 'M³nchen-Berg am Laim'}, {'name': 'M³nchen Leuchtenbergring'}, {'name': 'M³nchen Ost'}, {'name': 'M³nchen Rosenheimer Platz'}, {'name': 'M³nchen Isartor'}, {'name': 'M³nchen Marienplatz'}, {'name': 'M³nchen Karlsplatz'}, {'name': 'M³nchen Hbf (tief)'}, {'name': 'M³nchen Hackerbr³cke'}, {'name': 'M³nchen Donnersbergerbr³cke'}, {'name': 'M³nchen Hirschgarten'}, {'name': 'M³nchen-Laim'}, {'name': 'M³nchen-Pasing'}, {'name': 'M³nchen-Westkreuz'}, {'name': 'Lochham'}, {'name': 'Grõfelfing'}, {'name': 'Planegg'}, {'name': 'Stockdorf'}, {'name': 'Gauting'}, {'name': 'Starnberg Nord'}, {'name': 'Starnberg'}, {'name': 'Possenhofen'}, {'name': 'Feldafing'}, {'name': 'Tutzing'}]
+Via: ['Starnberg', 'Possenhofen', 'Feldafing']
+----------------------------------------
+Fetching data for Zorneding from https://dbf.finalrewind.org/Zorneding.json...
+Total departures found: 18
+First departure sample keys:
+['delayArrival', 'delayDeparture', 'destination', 'isCancelled', 'messages', 'missingRealtime', 'platform', 'route', 'scheduledArrival', 'scheduledDeparture', 'scheduledPlatform', 'train', 'trainClasses', 'trainNumber', 'via']
+Direction: None
+Train/Line: S S6 / None
+Scheduled Time: 15:58
+Route: [{'name': 'Gauting'}, {'name': 'Stockdorf'}, {'name': 'Planegg'}, {'name': 'Grõfelfing'}, {'name': 'Lochham'}, {'name': 'M³nchen-Westkreuz'}, {'name': 'M³nchen-Pasing'}, {'name': 'M³nchen-Laim'}, {'name': 'M³nchen Hirschgarten'}, {'name': 'M³nchen Donnersbergerbr³cke'}, {'name': 'M³nchen Hackerbr³cke'}, {'name': 'M³nchen Hbf (tief)'}, {'name': 'M³nchen Karlsplatz'}, {'name': 'M³nchen Marienplatz'}, {'name': 'M³nchen Isartor'}, {'name': 'M³nchen Rosenheimer Platz'}, {'name': 'M³nchen Ost'}, {'name': 'M³nchen Leuchtenbergring'}, {'name': 'M³nchen-Berg am Laim'}, {'name': 'M³nchen-Trudering'}, {'name': 'Gronsdorf'}, {'name': 'Haar'}, {'name': 'Vaterstetten'}, {'name': 'Baldham'}, {'name': 'Zorneding'}, {'name': 'Eglharting'}, {'name': 'Kirchseeon'}, {'name': 'Grafing Bahnhof'}]
+Via: ['Eglharting', 'Kirchseeon']
+----------------------------------------
