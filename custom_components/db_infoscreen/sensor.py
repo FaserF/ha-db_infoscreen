@@ -476,9 +476,9 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
         minutes_until_leave = int(minutes_until_departure - self.walk_time)
 
         if minutes_until_leave <= 0:
-            return "Leave now!"
+            return 0
 
-        return str(minutes_until_leave)
+        return int(minutes_until_leave)
 
     @property
     def extra_state_attributes(self):
