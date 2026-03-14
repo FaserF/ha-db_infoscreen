@@ -52,3 +52,5 @@ track_connection:
       required: true
       selector:
          text:
+refresh_departures:
+  description: Triggers a manual refresh of train departures for all configured stations.

@@ -167,6 +167,21 @@ async def async_setup_entry(
             ),
         )
 
+    if not hass.services.has_service(DOMAIN, "refresh_departures"):
+
+        async def async_refresh_departures(service_call):
+            """Handle the refresh_departures service call."""
+            for coord in hass.data[DOMAIN].values():
+                if isinstance(coord, DBInfoScreenCoordinator):
+                    await coord.async_refresh()
+            _LOGGER.debug("Manual refresh triggered for all coordinators")
+
+        hass.services.async_register(
+            DOMAIN,
+            "refresh_departures",
+            async_refresh_departures,
+        )
+
     return True
 
 
@@ -253,11 +268,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         custom_api_url = config.get(CONF_CUSTOM_API_URL, "")
         platforms = config.get(CONF_PLATFORMS, "")
         admode = config.get(CONF_ADMODE, "")
-        update_interval = int(
-            max(
-                config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL),
-                MIN_UPDATE_INTERVAL,
-            )
+        raw_update_interval = config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
+        update_interval = int(max(raw_update_interval, MIN_UPDATE_INTERVAL))
+
+        update_timedelta = (
+            timedelta(minutes=update_interval) if update_interval > 0 else None
         )
 
         station_cleaned = " ".join(str(self.station).split())
@@ -314,7 +329,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"DB Info {self.station}",
-            update_interval=timedelta(minutes=update_interval),
+            update_interval=update_timedelta,
         )
         self.config_entry = config_entry
         self._last_valid_value = None

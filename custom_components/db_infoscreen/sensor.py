@@ -149,33 +149,57 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
             _LOGGER.warning("Invalid departure time: %s", departure_time)
             return None
 
+    def _get_filtered_departures(self):
+        """
+        Filter out departures that have already passed based on current time.
+        """
+        now = dt_util.now().timestamp()
+        raw_departures = self.coordinator.data or []
+        
+        # Only keep departures that are still in the future (or very recent past, e.g. within 30s)
+        # Using a 30s grace window to prevent flickering when the time exactly matches.
+        filtered = [
+            dep for dep in raw_departures
+            if dep.get("departure_timestamp", 0) > (now - 30)
+        ]
+        
+        _LOGGER.debug(
+            "Filtered departures for %s: %d -> %d",
+            self.station,
+            len(raw_departures),
+            len(filtered)
+        )
+        return filtered
+
     @property
     def native_value(self):
         """
         Return the main state of the sensor (e.g., '10:30' or '10:30 +5').
 
-        Calculates the state from the first entry in the coordinator's data.
+        Calculates the state from the first entry in the filtered data.
         """
+        departures = self._get_filtered_departures()
+        
         # Check if there is data and if it is valid
-        if self.coordinator.data:
+        if departures:
             try:
                 # Try to get the scheduled departure time
                 departure_time = (
-                    self.coordinator.data[0].get("scheduledDeparture")
-                    or self.coordinator.data[0].get("sched_dep")
-                    or self.coordinator.data[0].get("scheduledArrival")
-                    or self.coordinator.data[0].get("sched_arr")
-                    or self.coordinator.data[0].get("scheduledTime")
-                    or self.coordinator.data[0].get("dep")
-                    or self.coordinator.data[0].get("datetime")
+                    departures[0].get("scheduledDeparture")
+                    or departures[0].get("sched_dep")
+                    or departures[0].get("scheduledArrival")
+                    or departures[0].get("sched_arr")
+                    or departures[0].get("scheduledTime")
+                    or departures[0].get("dep")
+                    or departures[0].get("datetime")
                 )
 
                 # Get the delay in departure, if available
-                delay_departure = self.coordinator.data[0].get("delayDeparture")
+                delay_departure = departures[0].get("delayDeparture")
                 if delay_departure is None:
-                    delay_departure = self.coordinator.data[0].get("dep_delay")
+                    delay_departure = departures[0].get("dep_delay")
                 if delay_departure is None:
-                    delay_departure = self.coordinator.data[0].get("delay", 0)
+                    delay_departure = departures[0].get("delay", 0)
 
                 _LOGGER.debug("Raw departure time: %s", departure_time)
 
@@ -203,18 +227,16 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
             # If no new data is available, return the last valid value or a fallback value
             if self._last_valid_value:
                 _LOGGER.warning(
-                    "No data received for station: %s, via_stations: %s. Keeping previous value: %s.",
+                    "No departures found for station: %s. Keeping previous value: %s.",
                     self.station,
-                    self.via_stations,
                     self._last_valid_value,
                 )
                 return self._last_valid_value
             else:
                 # If no data and no previous valid value, return a fallback message
                 _LOGGER.warning(
-                    "No data received for station: %s, via_stations: %s. No previous value available.",
+                    "No departures found for station: %s. No previous value available.",
                     self.station,
-                    self.via_stations,
                 )
                 return "No Data"
 
@@ -227,7 +249,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         attribution = f"Data provided by API {full_api_url}"
 
         # Create a deep copy or new list of dicts to avoid mutating the coordinator data
-        raw_departures = self.coordinator.data or []
+        raw_departures = self._get_filtered_departures()
         next_departures = []
 
         for departure in raw_departures:

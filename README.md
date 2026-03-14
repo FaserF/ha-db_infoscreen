@@ -130,6 +130,16 @@ All other settings are available via the **Configure** button on the integration
 
 ---
 
+## 🛠️ Services
+
+| Service | Description |
+| :--- | :--- |
+| `watch_train` | Monitor a specific train and notify on delay/platform changes. |
+| `track_connection` | Monitor a connecting train at a transfer station. |
+| `refresh_departures` | Manually trigger a data update for all stations. |
+
+---
+
 ## 📡 Data Sources
 
 This integration allows fetching data from various backend sources via [DBF](https://dbf.finalrewind.org/).
