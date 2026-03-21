@@ -134,9 +134,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         Allows the user to select from a list of matches or proceed with manual entry.
         """
         if user_input is not None:
-            self.selected_station = user_input[CONF_STATION]
+            self.selected_station = user_input.get(CONF_STATION)
             # Check if user selected manual entry
-            if self.selected_station.endswith(" (Manual Entry)"):
+            if self.selected_station and self.selected_station.endswith(" (Manual Entry)"):
                 self.is_manual_entry = True
                 return await self.async_step_manual_config()
             return await self.async_step_details()
@@ -471,12 +471,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         from .const import DATA_SOURCE_MAP
 
         # Clean station name
-        if station.endswith(" (IRIS-TTS)"):
-            station = station[: -len(" (IRIS-TTS)")].strip()
-        elif station.endswith(" (Manual Entry)"):
-            station = station[: -len(" (Manual Entry)")].strip()
+        station_str: str = str(station)
+        if station_str.endswith(" (IRIS-TTS)"):
+            station_str = station_str[: -len(" (IRIS-TTS)")].strip()
+        elif station_str.endswith(" (Manual Entry)"):
+            station_str = station_str[: -len(" (Manual Entry)")].strip()
 
-        station_cleaned = " ".join(station.split())
+        station_cleaned = " ".join(station_str.split())
         encoded_station = quote(station_cleaned, safe=",-")
 
         base_url = custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
@@ -518,9 +519,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                         "valid": False,
                         "error": f"API returned status {response.status}. Please try again later.",
                     }
-        except Exception as e:
-            _LOGGER.error("Validation request failed: %s", e)
-            return {"valid": False, "error": f"Could not connect to API: {str(e)}"}
+
 
     @staticmethod
     def async_get_options_flow(config_entry):
