@@ -271,6 +271,9 @@
       },
       "elevator": {
         "name": "Station Accessibility"
+      },
+      "connectivity": {
+        "name": "Connection Status"
       }
     },
     "calendar": {

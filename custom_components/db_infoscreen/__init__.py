@@ -186,17 +186,22 @@ async def async_setup_entry(
             """Handle the set_offset service call to dynamically adjust time offset."""
             target_station = service_call.data.get("station")
             new_offset = service_call.data.get("offset", "00:00")
-            
+
             for coord in hass.data[DOMAIN].values():
                 if isinstance(coord, DBInfoScreenCoordinator):
-                    if target_station and str(coord.station).lower() != str(target_station).lower():
+                    if (
+                        target_station
+                        and str(coord.station).lower() != str(target_station).lower()
+                    ):
                         continue
-                    
+
                     new_seconds = coord.convert_offset_to_seconds(new_offset)
                     coord.offset = new_seconds
                     _LOGGER.info(
                         "Updating offset for station %s to %s (%d seconds)",
-                        coord.station, new_offset, new_seconds
+                        coord.station,
+                        new_offset,
+                        new_seconds,
                     )
                     await coord.async_refresh()
 
@@ -288,13 +293,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.via_stations = config.get(CONF_VIA_STATIONS, [])
         self.direction = config.get(CONF_DIRECTION, "")
         self.excluded_directions = config.get(CONF_EXCLUDED_DIRECTIONS, "")
-        
+
         ignored_raw = config.get(CONF_IGNORED_TRAINTYPES, "")
         if isinstance(ignored_raw, list):
             self.ignored_train_types = ignored_raw
         else:
-            self.ignored_train_types = [t.strip() for t in str(ignored_raw).split(",") if t.strip()]
-            
+            self.ignored_train_types = [
+                t.strip() for t in str(ignored_raw).split(",") if t.strip()
+            ]
+
         self.drop_late_trains = config.get(CONF_DROP_LATE_TRAINS, False)
         self.keep_route = config.get(CONF_KEEP_ROUTE, False)
         self.keep_endstation = config.get(CONF_KEEP_ENDSTATION, False)
@@ -314,6 +321,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         station_cleaned = " ".join(str(self.station).split())
         encoded_station = quote(station_cleaned, safe=",-")
         custom_api_url = config.get(CONF_CUSTOM_API_URL, "")
+        self._last_valid_value: list[dict[str, Any]] = []
         self._base_url = (
             custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
         )
@@ -370,7 +378,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             update_interval=update_timedelta,
         )
         self.config_entry = config_entry
-        self._last_valid_value = None
         self._consecutive_errors = 0
         self._last_successful_update: datetime | None = None
         self._stale_issue_raised = False
@@ -655,9 +662,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             hour=parsed_time.hour,
                             minute=parsed_time.minute,
                             second=0,
-                            microsecond=0
+                            microsecond=0,
                         )
-                        if departure_time_obj < now - timedelta(minutes=5):  # Allow for slight past times
+                        if departure_time_obj < now - timedelta(
+                            minutes=5
+                        ):  # Allow for slight past times
                             departure_time_obj += timedelta(days=1)
                     except (ValueError, TypeError):
                         _LOGGER.error(
@@ -713,7 +722,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 # Build the key. Combine line+dest with trip ID for maximum reliability
                 # while preserving the original logic of matching by line and destination as well.
                 # Use a consistent tuple structure to satisfy type checkers.
-                unique_key: tuple[Any, ...] = (key_line, key_dest, key_trip_id) if key_trip_id else (key_line, key_dest)
+                unique_key: tuple[Any, ...] = (
+                    (key_line, key_dest, key_trip_id)
+                    if key_trip_id
+                    else (key_line, key_dest)
+                )
 
                 # Check if we have already seen a departure for this trip
                 if unique_key not in unique_departures:
@@ -744,7 +757,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             departures_to_process.sort(key=lambda d: d["departure_datetime"])
 
         # --- MAIN FILTERING AND PROCESSING ---
-        filtered_departures = []
+        filtered_departures: list[dict[str, Any]] = []
         current_size = 2  # Estimate for empty list '[]'
 
         # Map the configured ignored train types to the normalized values for correct comparison.
@@ -817,7 +830,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             if self.platforms and not self._platforms_filtered_server_side:
                 departure_platform = str(departure.get("platform") or "")
                 # Allow multiple platforms separated by comma in config
-                allowed_platforms = [p.strip() for p in self.platforms.split(",") if p.strip()]
+                allowed_platforms = [
+                    p.strip() for p in self.platforms.split(",") if p.strip()
+                ]
                 if allowed_platforms and departure_platform not in allowed_platforms:
                     _LOGGER.debug(
                         "Skipping departure due to platform mismatch. Allowed: %s, actual: '%s'",
@@ -831,33 +846,35 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 # Check both "route" (list of dicts) and "via" (list of strings)
                 route_raw = departure.get("route") or []
                 via_raw = departure.get("via") or []
-                
+
                 # Consolidate all station names into a lowercase set for matching
                 stations_on_route = set()
-                
+
                 # Process route list
                 for stop in route_raw:
                     if isinstance(stop, dict):
                         stations_on_route.add(stop.get("name", "").lower())
                     else:
                         stations_on_route.add(str(stop).lower())
-                
+
                 # Process via list
                 for stop in via_raw:
                     stations_on_route.add(str(stop).lower())
-                
+
                 # Also include destination in the check
                 dest = departure.get("destination", "").lower()
                 if dest:
                     stations_on_route.add(dest)
 
-                via_matches = [v.lower() in stations_on_route for v in self.via_stations]
-                
+                via_matches = [
+                    v.lower() in stations_on_route for v in self.via_stations
+                ]
+
                 if self.via_stations_logic == "AND":
                     matches = all(via_matches)
                 else:
                     matches = any(via_matches)
-                
+
                 if not matches:
                     _LOGGER.debug(
                         "Skipping departure due to via station mismatch (%s). Required: %s, route: %s",
@@ -957,7 +974,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     wagon_info = self._process_wagon_order(wagon_order_data)
                     if wagon_info:
                         departure["wagon_order_html"] = wagon_info.get("text")
-                        departure["wagon_order_structured"] = wagon_info.get("structured")
+                        departure["wagon_order_structured"] = wagon_info.get(
+                            "structured"
+                        )
                 departure["wagon_order"] = wagon_order_data
 
             # Extract sectors from platform string (e.g. "5 D-G")
@@ -1161,7 +1180,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 ]
                 for key in keys_to_remove:
                     departure.pop(key)
-
 
             if not self.keep_route:
                 for key in ["route", "via", "prev_route", "next_route"]:

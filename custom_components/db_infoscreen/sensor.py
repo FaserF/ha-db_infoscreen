@@ -335,7 +335,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                     "platform": platform,
                     "time": time,
                     "delay": delay if delay else "",
-                    "delay_str": delay_str
+                    "delay_str": delay_str,
                 }
 
                 template = self.config_entry.options.get(

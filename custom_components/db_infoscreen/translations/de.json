@@ -271,6 +271,9 @@
       },
       "elevator": {
         "name": "Barrierefreiheit"
+      },
+      "connectivity": {
+        "name": "Verbindungsstatus"
       }
     },
     "calendar": {

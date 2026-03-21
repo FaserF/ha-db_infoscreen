@@ -63,11 +63,11 @@ async def test_custom_text_view_template(hass, mock_config_entry):
             "delay": "1",
         }
     ]
-    
+
     mock_config_entry.options = {
         "text_view_template": "{line};{destination};{platform};{time}"
     }
-    
+
     coordinator.config_entry = mock_config_entry
     coordinator.last_update = now
     coordinator.api_url = "dbf.finalrewind.org"

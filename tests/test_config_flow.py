@@ -79,26 +79,23 @@ async def test_form_create_entry(hass):
 async def test_form_create_entry_advanced(hass):
     """Test that validating advanced user input works, including excluded_directions."""
     from custom_components.db_infoscreen.const import CONF_EXCLUDED_DIRECTIONS
-    
+
     flow = ConfigFlow()
     flow.hass = hass
     flow.selected_station = "Stuttgart Hbf"
-    
+
     flow.async_show_form = MagicMock(
         return_value={"type": FlowResultType.FORM, "step_id": "advanced"}
     )
-    
+
     # 2. Details Step with advanced=True
     result_details = await flow.async_step_details(
-        {
-            CONF_DATA_SOURCE: "IRIS-TTS",
-            "advanced": True
-        }
+        {CONF_DATA_SOURCE: "IRIS-TTS", "advanced": True}
     )
-    
+
     assert result_details["type"] == FlowResultType.FORM
     assert result_details["step_id"] == "advanced"
-    
+
     # 3. Advanced Step passing excluded_directions
     with patch(
         "custom_components.db_infoscreen.config_flow.ConfigFlow._async_create_db_entry",
@@ -108,13 +105,13 @@ async def test_form_create_entry_advanced(hass):
             "type": FlowResultType.CREATE_ENTRY,
             "title": "Stuttgart Hbf",
         }
-        
+
         result_advanced = await flow.async_step_advanced(
             {
                 CONF_EXCLUDED_DIRECTIONS: "Berlin",
             }
         )
-        
+
     assert result_advanced["type"] == FlowResultType.CREATE_ENTRY
     mock_create.assert_called_once()
     args, kwargs = mock_create.call_args

@@ -136,7 +136,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if user_input is not None:
             self.selected_station = user_input.get(CONF_STATION)
             # Check if user selected manual entry
-            if self.selected_station and self.selected_station.endswith(" (Manual Entry)"):
+            if self.selected_station and self.selected_station.endswith(
+                " (Manual Entry)"
+            ):
                 self.is_manual_entry = True
                 return await self.async_step_manual_config()
             return await self.async_step_details()
@@ -229,9 +231,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
             # Validate station before saving
             validation_result = await self._validate_station(
-                entry_data.get(CONF_STATION),
-                entry_data.get(CONF_DATA_SOURCE, "IRIS-TTS"),
-                entry_data.get(CONF_CUSTOM_API_URL, ""),
+                str(entry_data.get(CONF_STATION, "")),
+                str(entry_data.get(CONF_DATA_SOURCE, "IRIS-TTS")),
+                str(entry_data.get(CONF_CUSTOM_API_URL, "")),
             )
             if not validation_result["valid"]:
                 errors["base"] = "station_invalid"
@@ -621,7 +623,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         ignored_types = self._get_config_value(CONF_IGNORED_TRAINTYPES, "")
         if isinstance(ignored_types, list):
             ignored_types = ", ".join(t for t in ignored_types if t)
-            
+
         return self.async_show_form(
             step_id="filter_options",
             data_schema=vol.Schema(
@@ -682,7 +684,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ): cv.boolean,
                     vol.Optional(
                         CONF_TEXT_VIEW_TEMPLATE,
-                        default=self._get_config_value(CONF_TEXT_VIEW_TEMPLATE, DEFAULT_TEXT_VIEW_TEMPLATE),
+                        default=self._get_config_value(
+                            CONF_TEXT_VIEW_TEMPLATE, DEFAULT_TEXT_VIEW_TEMPLATE
+                        ),
                     ): cv.string,
                     vol.Optional(
                         CONF_ADMODE,

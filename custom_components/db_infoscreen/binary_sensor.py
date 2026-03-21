@@ -237,6 +237,7 @@ class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
     _attr_has_entity_name = True
     _attr_entity_registry_enabled_default = False  # Disabled by default as requested
+    _attr_name: str | None = None
 
     def __init__(
         self,

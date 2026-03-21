@@ -12,8 +12,6 @@ from custom_components.db_infoscreen.const import (
 from tests.common import patch_session
 
 
-
-
 @pytest.mark.asyncio
 async def test_via_single_station_server_side(hass):
     """Test that a single via station uses the API parameter."""
