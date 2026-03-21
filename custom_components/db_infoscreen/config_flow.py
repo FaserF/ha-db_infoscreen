@@ -354,6 +354,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         user_input[CONF_VIA_STATIONS] = via
         direction = user_input.get(CONF_DIRECTION, "")
         user_input[CONF_DIRECTION] = direction
+        excluded_directions = user_input.get(CONF_EXCLUDED_DIRECTIONS, "")
+        user_input[CONF_EXCLUDED_DIRECTIONS] = excluded_directions
         platforms = user_input.get(CONF_PLATFORMS, "")
         user_input[CONF_PLATFORMS] = platforms
         data_source = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
@@ -452,6 +454,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     ["OR", "AND"]
                 ),
                 vol.Optional(CONF_DIRECTION, default=""): cv.string,
+                vol.Optional(CONF_EXCLUDED_DIRECTIONS, default=""): cv.string,
                 vol.Optional(CONF_FAVORITE_TRAINS, default=""): cv.string,
             }
         )
