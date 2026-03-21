@@ -136,6 +136,7 @@
         "data": {
           "detailed": "Detaillierte Informationen",
           "enable_text_view": "Aktiviere vereinfachte Textansicht (für ePaper)",
+          "text_view_template": "Vorlage für vereinfachte Textansicht",
           "admode": "Bevorzugte Zeitdarstellung",
           "hidelowdelay": "Verzögerungen unterdrücken",
           "show_occupancy": "Auslastungsinformationen anzeigen"

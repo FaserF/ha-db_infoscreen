@@ -136,6 +136,7 @@
         "data": {
           "detailed": "Detailed Information",
           "enable_text_view": "Enable Simplified Text View",
+          "text_view_template": "Template for Simplified Text View",
           "admode": "Display Mode",
           "hidelowdelay": "Hide Low Delay",
           "show_occupancy": "Show Occupancy Information"

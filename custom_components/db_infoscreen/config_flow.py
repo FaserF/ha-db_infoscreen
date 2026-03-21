@@ -33,6 +33,8 @@ from .const import (
     CONF_KEEP_ENDSTATION,
     CONF_DEDUPLICATE_DEPARTURES,
     CONF_ENABLE_TEXT_VIEW,
+    CONF_TEXT_VIEW_TEMPLATE,
+    DEFAULT_TEXT_VIEW_TEMPLATE,
     CONF_EXCLUDE_CANCELLED,
     CONF_SHOW_OCCUPANCY,
     CONF_FAVORITE_TRAINS,
@@ -676,6 +678,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_ENABLE_TEXT_VIEW,
                         default=self._get_config_value(CONF_ENABLE_TEXT_VIEW, False),
                     ): cv.boolean,
+                    vol.Optional(
+                        CONF_TEXT_VIEW_TEMPLATE,
+                        default=self._get_config_value(CONF_TEXT_VIEW_TEMPLATE, DEFAULT_TEXT_VIEW_TEMPLATE),
+                    ): cv.string,
                     vol.Optional(
                         CONF_ADMODE,
                         default=self._get_config_value(

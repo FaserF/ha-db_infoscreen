@@ -120,6 +120,7 @@ All other settings are available via the **Configure** button on the integration
 | `excluded_directions` | - | Exclude departures with specific direction (substring match). |
 | `ignored_train_types` | `[]` | List of train types to ignore. |
 | `enable_text_view` | `False` | Enable simplified text view for ePaper displays. |
+| `text_view_template` | (Default) | Template for the simplified text view (e.g., `{line};{destination};{platform};{time}`). |
 
 > [!WARNING]
 > **Limitations & Performance**

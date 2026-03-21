@@ -3,7 +3,14 @@
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from typing import Any
-from .const import DOMAIN, CONF_ENABLE_TEXT_VIEW, CONF_STATION, CONF_WALK_TIME
+from .const import (
+    DOMAIN,
+    CONF_ENABLE_TEXT_VIEW,
+    CONF_STATION,
+    CONF_WALK_TIME,
+    CONF_TEXT_VIEW_TEMPLATE,
+    DEFAULT_TEXT_VIEW_TEMPLATE,
+)
 from .entity import DBInfoScreenBaseEntity
 import logging
 from homeassistant.util import dt as dt_util
@@ -318,7 +325,29 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                     except (ValueError, TypeError):
                         pass
 
-                text = f"{line} -> {destination} (Pl {platform}): {time}{delay_str}"
+                class SafeDict(dict):
+                    def __missing__(self, key):
+                        return "{" + str(key) + "}"
+
+                format_dict = {
+                    "line": line,
+                    "destination": destination,
+                    "platform": platform,
+                    "time": time,
+                    "delay": delay if delay else "",
+                    "delay_str": delay_str
+                }
+
+                template = self.config_entry.options.get(
+                    CONF_TEXT_VIEW_TEMPLATE, DEFAULT_TEXT_VIEW_TEMPLATE
+                )
+
+                try:
+                    text = template.format_map(SafeDict(format_dict))
+                except Exception as e:
+                    _LOGGER.warning("Failed to format next_departures_text: %s", e)
+                    text = f"{line} -> {destination} (Pl {platform}): {time}{delay_str}"
+
                 next_departures_text.append(text)
             attributes["next_departures_text"] = next_departures_text
 

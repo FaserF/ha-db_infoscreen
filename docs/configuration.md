@@ -67,6 +67,10 @@ Once a sensor is created, click **Configure** on the integration card to access 
     -   `Departure`: Default. Focuses on when the train leaves.
     -   `Arrival`: Useful if you are using the integration to track when someone is arriving at your station.
 -   **Enable Text View**: A powerful feature for ePaper displays. It compiles the most important info into a single formatted string.
+    -   **Text View Template**: Customize the exact layout of the Text View string. By default, it's `{line} -> {destination} (Pl {platform}): {time}{delay_str}`.
+        -   *Example (CSV for ESP32)*: `{line};{destination};{platform};{time}{delay_str}`
+        -   *Munich Example Output*: `S 3;Mamendorf;2;10:45 +2`
+        -   *Available variables*: `{line}`, `{destination}`, `{platform}`, `{time}`, `{delay}`, `{delay_str}`.
 -   **Hide Low Delay**: Removes delay noise for delays less than 5 minutes.
 -   **Show Occupancy**: Enables fetching of train occupancy data (load factor 1-4) if provided by the API.
 

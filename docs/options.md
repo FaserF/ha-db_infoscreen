@@ -44,6 +44,9 @@ Control how the data is presented in Home Assistant.
 
 *   **Detailed Information**: Enables extra attributes for each departure (e.g., full route, wagon order).
 *   **Enable Simplified Text View**: Provides a pre-formatted string for simple markdown cards.
+    *   **Template for Simplified Text View**: Customize the format of the text view output.
+        *   *Munich Example*: `{line} nach {destination} (@{platform}): {time}` -> `S 8 nach Herrsching (@1): 12:05`
+        *   *Variables*: `{line}`, `{destination}`, `{platform}`, `{time}`, `{delay}`, `{delay_str}`.
 *   **Display Mode (admode)**:
     *   `preferred departure`: Shows the planned time, but switches to actual time if delayed.
     *   `departure`: Always shows the departure time.
