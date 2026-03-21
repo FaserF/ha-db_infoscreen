@@ -11,6 +11,13 @@ from homeassistant.components.repairs import RepairsFlow
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectOptionDict,
+    SelectSelectorMode,
+)
+
 from .const import DOMAIN, CONF_DATA_SOURCE, DATA_SOURCE_OPTIONS
 
 _LOGGER = logging.getLogger(__name__)
@@ -193,11 +200,15 @@ class StaleDataRepairFlow(RepairsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Required("action", default="retry"): vol.In(
-                        {
-                            "retry": "retry",
-                            "report": "report",
-                        }
+                    vol.Required("action", default="retry"): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                SelectOptionDict(value="retry", label="retry"),
+                                SelectOptionDict(value="report", label="report"),
+                            ],
+                            mode=SelectSelectorMode.DROPDOWN,
+                            translation_key="repair_action",
+                        )
                     )
                 }
             ),
@@ -230,11 +241,17 @@ class APIErrorRepairFlow(RepairsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Required("action", default="retry"): vol.In(
-                        {
-                            "retry": "retry",
-                            "change_source": "change_source",
-                        }
+                    vol.Required("action", default="retry"): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                SelectOptionDict(value="retry", label="retry"),
+                                SelectOptionDict(
+                                    value="change_source", label="change_source"
+                                ),
+                            ],
+                            mode=SelectSelectorMode.DROPDOWN,
+                            translation_key="repair_action",
+                        )
                     )
                 }
             ),
@@ -303,12 +320,18 @@ class StationUnsupportedRepairFlow(RepairsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Required("action", default="retry"): vol.In(
-                        {
-                            "retry": "retry",
-                            "change_source": "change_source",
-                            "remove": "remove",
-                        }
+                    vol.Required("action", default="retry"): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[
+                                SelectOptionDict(value="retry", label="retry"),
+                                SelectOptionDict(
+                                    value="change_source", label="change_source"
+                                ),
+                                SelectOptionDict(value="remove", label="remove"),
+                            ],
+                            mode=SelectSelectorMode.DROPDOWN,
+                            translation_key="repair_action",
+                        )
                     )
                 }
             ),

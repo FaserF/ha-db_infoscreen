@@ -167,12 +167,6 @@
             "description": "The departure data for **{station}** has not been updated for **{hours} hours**.\n\nThis could be caused by:\n- Temporary API issues\n- The station may no longer be supported by the backend\n- Network connectivity problems\n\nWhat would you like to do?",
             "data": {
               "action": "Action"
-            },
-            "options": {
-              "action": {
-                "retry": "Retry fetching data now",
-                "report": "Report issue on GitHub"
-              }
             }
           }
         }
@@ -187,12 +181,6 @@
             "description": "Multiple errors occurred while fetching data for **{station}**:\n\n`{error}`\n\nThis might be a temporary issue. You can try again or change the data source.",
             "data": {
               "action": "Action"
-            },
-            "options": {
-              "action": {
-                "retry": "Retry fetching data now",
-                "change_source": "Change data source"
-              }
             }
           },
           "change_source": {
@@ -214,13 +202,6 @@
             "description": "The station **{station}** (using **{data_source}**) has failed to return data multiple times.\n\nThis station may no longer be supported by the backend. You can:\n- Try again to check if it's a temporary issue\n- Change to a different data source\n- Remove this station from your configuration\n\n[Report an issue on GitHub]({docs_url})",
             "data": {
               "action": "Action"
-            },
-            "options": {
-              "action": {
-                "retry": "Retry fetching data now",
-                "change_source": "Change data source",
-                "remove": "Remove this station"
-              }
             }
           },
           "change_source": {
@@ -317,6 +298,16 @@
           "name": "Notify on Cancellation",
           "description": "Whether to notify if the train is cancelled."
         }
+      }
+    }
+  },
+  "selector": {
+    "repair_action": {
+      "options": {
+        "retry": "Retry fetching data now",
+        "report": "Report issue on GitHub",
+        "change_source": "Change data source",
+        "remove": "Remove this station"
       }
     }
   }

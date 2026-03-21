@@ -4,7 +4,8 @@ import re
 import json
 import os
 import pytest
-from custom_components.db_infoscreen import DOMAIN
+
+DOMAIN = "db_infoscreen"
 
 
 @pytest.fixture
@@ -263,37 +264,26 @@ async def test_all_translation_keys_referenced():
         os.path.dirname(__file__),
         "..",
         "custom_components",
-        "db_infoscreen",
+        DOMAIN,
         "repairs.py",
     )
     with open(repairs_path, "r", encoding="utf-8") as f:
-        repairs_content = f.read()
+        # SelectOptionDict(value="retry", label="retry")
+        action_matches = re.findall(
+            r'SelectOptionDict\(value="([^"]+)",',
+            f.read(),
+        )
 
-    # Find all "action" keys in repairs.py
-    action_matches = re.findall(
-        r'"action", default="[^"]+"\): vol\.In\(\s+\{([^}]+)\}',
-        repairs_content,
-        re.DOTALL,
+    # All translated options from the selector block in strings.json
+    translated_options = (
+        strings.get("selector", {}).get("repair_action", {}).get("options", {})
     )
 
-    # Flatten all action options from the issues block in strings.json
-    all_translated_actions = set()
-    issues = strings.get("issues", {})
-    for issue_id in issues:
-        steps = issues[issue_id].get("fix_flow", {}).get("step", {})
-        for step_id in steps:
-            # In 2026, options for a field are in step -> options -> <field_name>
-            options = steps[step_id].get("options", {}).get("action", {})
-            if isinstance(options, dict):
-                all_translated_actions.update(options.keys())
-
-    for match in action_matches:
-        keys = re.findall(r'"([^"]+)":', match)
-        for key in keys:
-            if key in ["retry", "report", "change_source", "remove", "try_again"]:
-                assert (
-                    key in all_translated_actions
-                ), f"Action key '{key}' from repairs.py missing in any 'action' options within strings.json issues"
+    for action_key in set(action_matches):
+        if action_key in ["retry", "report", "change_source", "remove", "try_again"]:
+            assert (
+                action_key in translated_options
+            ), f"Action key '{action_key}' from repairs.py missing in 'selector.repair_action.options' within strings.json"
 
     # 2. Check train type keys used in const.py
     const_path = os.path.join(
@@ -330,22 +320,30 @@ async def test_translation_schema_compliance(strings_path, en_path, de_path):
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        # Rule 1: 'data' blocks in any flow step must contain ONLY strings (no nested dicts)
-        # This caught the 'action': { 'name': ..., 'state': ... } error
-        def check_data_blocks(obj, trace=""):
-            if isinstance(obj, dict):
-                if trace.endswith(".data"):
-                    for key, value in obj.items():
-                        assert isinstance(
-                            value, str
-                        ), f"Schema Violation in {os.path.basename(path)}: '{trace}.{key}' must be a string, but got {type(value).__name__} (Dicts in 'data' blocks are forbidden)"
+        def check_schema(obj, trace=""):
+            if not isinstance(obj, dict):
+                return
+
+            # Rule 1: 'data' blocks in any flow step must contain ONLY strings (no nested dicts)
+            if trace.endswith(".data"):
                 for key, value in obj.items():
-                    check_data_blocks(value, f"{trace}.{key}" if trace else key)
+                    assert isinstance(
+                        value, str
+                    ), f"Schema Violation in {os.path.basename(path)}: '{trace}.{key}' must be a string, but got {type(value).__name__} (Dicts in 'data' blocks are forbidden)"
 
-        check_data_blocks(data)
+            # Rule 2: 'options' blocks are NOT ALLOWED in flow steps (caught by hassfest)
+            # They must be in the top-level 'selector' block instead
+            if trace.endswith(".step.init") or trace.endswith(".step.user"):
+                assert (
+                    "options" not in obj
+                ), f"Schema Violation in {os.path.basename(path)}: '{trace}.options' is forbidden. Flow step options must be moved to the root 'selector' block."
 
-        # Rule 2: Custom state attribute values must not be nested under state_attributes
-        # This caught the 'train_types': { 'bus': ... } error
+            for key, value in obj.items():
+                check_schema(value, f"{trace}.{key}" if trace else key)
+
+        check_schema(data)
+
+        # Rule 3: Custom state attribute values must not be nested under state_attributes
         entity_sensor = data.get("entity", {}).get("sensor", {})
         for sensor_id in entity_sensor:
             state_attrs = entity_sensor[sensor_id].get("state_attributes", {})
