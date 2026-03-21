@@ -214,26 +214,36 @@ async def test_extra_translation_sections(strings_path, en_path, de_path):
     with open(de_path, "r", encoding="utf-8") as f:
         de = json.load(f)
 
-    # Check train_types keys (now in entity.sensor.departures.state_attributes)
-    train_types = (
+    # Check train_types keys (now in entity.sensor.departures.state)
+    train_types_keys = [
+        "s_bahn",
+        "regional_db",
+        "regional",
+        "long_distance",
+        "bus",
+        "unknown",
+    ]
+    state_strings = (
         strings.get("entity", {})
         .get("sensor", {})
         .get("departures", {})
-        .get("state_attributes", {})
-        .get("train_types", {})
+        .get("state", {})
     )
-    if train_types:
-        for type_key in train_types:
+    if state_strings:
+        for type_key in train_types_keys:
+            assert (
+                type_key in state_strings
+            ), f"Missing strings.json translation for train_type {type_key} in state block"
             assert type_key in en.get("entity", {}).get("sensor", {}).get(
                 "departures", {}
-            ).get("state_attributes", {}).get(
-                "train_types", {}
-            ), f"Missing EN translation for train_type {type_key}"
+            ).get(
+                "state", {}
+            ), f"Missing EN translation for train_type {type_key} in state block"
             assert type_key in de.get("entity", {}).get("sensor", {}).get(
                 "departures", {}
-            ).get("state_attributes", {}).get(
-                "train_types", {}
-            ), f"Missing DE translation for train_type {type_key}"
+            ).get(
+                "state", {}
+            ), f"Missing DE translation for train_type {type_key} in state block"
 
 
 async def test_all_translation_keys_referenced():
@@ -266,19 +276,16 @@ async def test_all_translation_keys_referenced():
         re.DOTALL,
     )
 
-    # Flatten all action states from the issues block in strings.json
+    # Flatten all action options from the issues block in strings.json
     all_translated_actions = set()
     issues = strings.get("issues", {})
     for issue_id in issues:
-        steps = issues[issue_id].get("fix_flow", {}).get("step", {}) | issues[
-            issue_id
-        ].get("fix_flow", {}).get("step", {})
-        # Note: steps is a dict, we just need to iterate over it
+        steps = issues[issue_id].get("fix_flow", {}).get("step", {})
         for step_id in steps:
-            action_data = steps[step_id].get("data", {}).get("action", {})
-            if isinstance(action_data, dict):
-                states = action_data.get("state", {})
-                all_translated_actions.update(states.keys())
+            # In 2026, options for a field are in step -> options -> <field_name>
+            options = steps[step_id].get("options", {}).get("action", {})
+            if isinstance(options, dict):
+                all_translated_actions.update(options.keys())
 
     for match in action_matches:
         keys = re.findall(r'"([^"]+)":', match)
@@ -286,7 +293,7 @@ async def test_all_translation_keys_referenced():
             if key in ["retry", "report", "change_source", "remove", "try_again"]:
                 assert (
                     key in all_translated_actions
-                ), f"Action key '{key}' from repairs.py missing in any 'action' state within strings.json issues"
+                ), f"Action key '{key}' from repairs.py missing in any 'action' options within strings.json issues"
 
     # 2. Check train type keys used in const.py
     const_path = os.path.join(
@@ -308,11 +315,42 @@ async def test_all_translation_keys_referenced():
             strings.get("entity", {})
             .get("sensor", {})
             .get("departures", {})
-            .get("state_attributes", {})
-            .get("train_types", {})
+            .get("state", {})
             .keys()
         )
         for key in keys:
             assert (
                 key in valid_types
-            ), f"Train type key '{key}' from const.py missing in strings.json['entity']['sensor']['departures']['state_attributes']['train_types']"
+            ), f"Train type key '{key}' from const.py missing in strings.json['entity']['sensor']['departures']['state']"
+
+
+async def test_translation_schema_compliance(strings_path, en_path, de_path):
+    """Strictly validate schema compliance against March 2026 hassfest rules."""
+    for path in [strings_path, en_path, de_path]:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # Rule 1: 'data' blocks in any flow step must contain ONLY strings (no nested dicts)
+        # This caught the 'action': { 'name': ..., 'state': ... } error
+        def check_data_blocks(obj, trace=""):
+            if isinstance(obj, dict):
+                if trace.endswith(".data"):
+                    for key, value in obj.items():
+                        assert isinstance(
+                            value, str
+                        ), f"Schema Violation in {os.path.basename(path)}: '{trace}.{key}' must be a string, but got {type(value).__name__} (Dicts in 'data' blocks are forbidden)"
+                for key, value in obj.items():
+                    check_data_blocks(value, f"{trace}.{key}" if trace else key)
+
+        check_data_blocks(data)
+
+        # Rule 2: Custom state attribute values must not be nested under state_attributes
+        # This caught the 'train_types': { 'bus': ... } error
+        entity_sensor = data.get("entity", {}).get("sensor", {})
+        for sensor_id in entity_sensor:
+            state_attrs = entity_sensor[sensor_id].get("state_attributes", {})
+            for attr_id in state_attrs:
+                val = state_attrs[attr_id]
+                assert not isinstance(
+                    val, dict
+                ), f"Schema Violation in {os.path.basename(path)}: 'entity.sensor.{sensor_id}.state_attributes.{attr_id}' is a dictionary. Custom attribute values must be moved to the 'state' block."
