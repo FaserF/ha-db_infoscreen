@@ -12,14 +12,6 @@ from custom_components.db_infoscreen.const import (
 from tests.common import patch_session
 
 
-@pytest.fixture(autouse=True)
-def patch_coordinator():
-    """Patch DataUpdateCoordinator to prevent background tasks and simplify tests."""
-    with patch(
-        "custom_components.db_infoscreen.DataUpdateCoordinator.async_config_entry_first_refresh",
-        new_callable=AsyncMock,
-    ):
-        yield
 
 
 @pytest.mark.asyncio

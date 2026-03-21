@@ -366,3 +366,11 @@ def mock_setup_entry():
         "custom_components.db_infoscreen.async_setup_entry", return_value=True
     ) as mock:
         yield mock
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    """Clear the RESPONSE_CACHE before each test."""
+    from custom_components.db_infoscreen import RESPONSE_CACHE
+
+    RESPONSE_CACHE.clear()

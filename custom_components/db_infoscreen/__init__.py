@@ -181,6 +181,37 @@ async def async_setup_entry(
             "refresh_departures",
             async_refresh_departures,
         )
+    if not hass.services.has_service(DOMAIN, "set_offset"):
+
+        async def async_set_offset(service_call):
+            """Handle the set_offset service call to dynamically adjust time offset."""
+            target_station = service_call.data.get("station")
+            new_offset = service_call.data.get("offset", "00:00")
+            
+            for coord in hass.data[DOMAIN].values():
+                if isinstance(coord, DBInfoScreenCoordinator):
+                    if target_station and str(coord.station).lower() != str(target_station).lower():
+                        continue
+                    
+                    new_seconds = coord.convert_offset_to_seconds(new_offset)
+                    coord.offset = new_seconds
+                    _LOGGER.info(
+                        "Updating offset for station %s to %s (%d seconds)",
+                        coord.station, new_offset, new_seconds
+                    )
+                    await coord.async_refresh()
+
+        hass.services.async_register(
+            DOMAIN,
+            "set_offset",
+            async_set_offset,
+            schema=vol.Schema(
+                {
+                    vol.Optional("station"): cv.string,
+                    vol.Required("offset"): cv.string,
+                }
+            ),
+        )
 
     return True
 
@@ -258,7 +289,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.via_stations = config.get(CONF_VIA_STATIONS, [])
         self.direction = config.get(CONF_DIRECTION, "")
         self.excluded_directions = config.get(CONF_EXCLUDED_DIRECTIONS, "")
-        self.ignored_train_types = config.get(CONF_IGNORED_TRAINTYPES, [])
+        
+        ignored_raw = config.get(CONF_IGNORED_TRAINTYPES, "")
+        if isinstance(ignored_raw, list):
+            self.ignored_train_types = ignored_raw
+        else:
+            self.ignored_train_types = [t.strip() for t in str(ignored_raw).split(",") if t.strip()]
+            
         self.drop_late_trains = config.get(CONF_DROP_LATE_TRAINS, False)
         self.keep_route = config.get(CONF_KEEP_ROUTE, False)
         self.keep_endstation = config.get(CONF_KEEP_ENDSTATION, False)
@@ -285,45 +322,47 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
         data_source_map = DATA_SOURCE_MAP
 
-        # Collect parameters
-        params = {}
-        if self.platforms:
-            params["platforms"] = self.platforms
+        # Assemble Fetch URL (Generic for caching)
+        fetch_params = {}
         if admode == "arrival":
-            params["admode"] = "arr"
+            fetch_params["admode"] = "arr"
         elif admode == "departure":
-            params["admode"] = "dep"
+            fetch_params["admode"] = "dep"
 
         # Check if the data source is in the HAFAS list
         if self.data_source == "hafas=1":
-            params["hafas"] = "1"
+            fetch_params["hafas"] = "1"
         elif self.data_source in data_source_map:
             key, value = data_source_map[self.data_source].split("=")
-            params[key] = value
+            fetch_params[key] = value
 
-        if self.hide_low_delay:
-            params["hidelowdelay"] = "1"
         if self.detailed:
-            params["detailed"] = "1"
-            params["wagonorder"] = "1"
+            fetch_params["detailed"] = "1"
+            fetch_params["wagonorder"] = "1"
         if self.past_60_minutes:
-            params["past"] = "1"
+            fetch_params["past"] = "1"
+
+        fetch_query = urlencode(fetch_params, quote_via=quote)
+        self.fetch_url = f"{url}?{fetch_query}" if fetch_query else url
+
+        # Assemble User API URL (Specific for metadata/web links)
+        user_params = fetch_params.copy()
+        if self.platforms:
+            user_params["platforms"] = self.platforms
+        if self.hide_low_delay:
+            user_params["hidelowdelay"] = "1"
+        if len(self.via_stations) == 1:
+            user_params["via"] = self.via_stations[0].strip()
+
+        user_query = urlencode(user_params, quote_via=quote)
+        self.api_url = f"{url}?{user_query}" if user_query else url
 
         # Determine filtering strategy and logic
         self.via_stations_logic = str(config.get(CONF_VIA_STATIONS_LOGIC, "OR")).upper()
 
-        # Use API filtering for efficiency if exactly one via station is specified
-        if len(self.via_stations) == 1:
-            params["via"] = self.via_stations[0].strip()
-            self._via_filtered_server_side = True
-        else:
-            self._via_filtered_server_side = False
-
-        # Assemble URL
-        query_string = urlencode(params, quote_via=quote)
-        url = f"{url}?{query_string}" if query_string else url
-
-        self.api_url = url
+        # Track if any filtering was already done by the server for backward compatibility
+        self._via_filtered_server_side = "via" in user_params
+        self._platforms_filtered_server_side = "platforms" in user_params
 
         super().__init__(
             hass,
@@ -366,10 +405,18 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             _LOGGER.error("Invalid offset format: %s", offset)
             return 0
 
-    def _process_wagon_order(self, wagon_order_data: list) -> str | None:
+    def _process_wagon_order(self, wagon_order_data: list) -> dict | None:
         """
-        Process the wagon order list and return a human-readable HTML summary.
-        Example output: "1. Klasse: A-B | Bordbistro: C"
+        Process the wagon order list and return a structured dictionary.
+        Returns:
+            {
+                "text": "1. Klasse: A-B | Bordbistro: C",
+                "structured": {
+                    "first_class": ["A", "B"],
+                    "second_class": ["C", "D"],
+                    "bistro": ["E"]
+                }
+            }
         """
         if not wagon_order_data:
             return None
@@ -407,7 +454,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             return sorted_sectors[0]
 
         parts = []
-
         s1 = format_sectors(sectors_first_class)
         if s1:
             parts.append(f"<b>1. Klasse:</b> {s1}")
@@ -423,7 +469,14 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         if not parts:
             return None
 
-        return " | ".join(parts)
+        return {
+            "text": " | ".join(parts),
+            "structured": {
+                "first_class": sorted(list(sectors_first_class)),
+                "second_class": sorted(list(sectors_second_class)),
+                "bistro": sorted(list(sectors_bistro)),
+            },
+        }
 
     async def _async_update_data(self):
         """
@@ -436,16 +489,16 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         """
         now = dt_util.now()
 
-        # Check cache
-        if self.api_url in RESPONSE_CACHE:
-            timestamp, cached_data = RESPONSE_CACHE[self.api_url]
+        # Check cache via generic fetch_url
+        if self.fetch_url in RESPONSE_CACHE:
+            timestamp, cached_data = RESPONSE_CACHE[self.fetch_url]
             if now - timestamp < CACHE_TTL:
-                _LOGGER.debug("Using cached response for %s", self.api_url)
+                _LOGGER.debug("Using cached response for %s", self.fetch_url)
                 data = copy.deepcopy(cached_data)
                 # Skip to processing
             else:
-                _LOGGER.debug("Cache expired for %s", self.api_url)
-                del RESPONSE_CACHE[self.api_url]
+                _LOGGER.debug("Cache expired for %s", self.fetch_url)
+                del RESPONSE_CACHE[self.fetch_url]
                 data = None
         else:
             data = None
@@ -458,11 +511,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             for attempt in range(max_retries + 1):
                 try:
                     async with async_timeout.timeout(20):
-                        async with session.get(self.api_url) as response:
+                        async with session.get(self.fetch_url) as response:
                             if response.status == 429:
                                 _LOGGER.warning(
                                     "Rate limit hit for %s (429 Too Many Requests). Skipping retries for this cycle.",
-                                    self.api_url,
+                                    self.fetch_url,
                                 )
                                 return self._last_valid_value or []
 
@@ -473,20 +526,20 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             ):
                                 data = await data
 
-                            RESPONSE_CACHE[self.api_url] = (now, copy.deepcopy(data))
+                            RESPONSE_CACHE[self.fetch_url] = (now, copy.deepcopy(data))
                             break  # Success, exit retry loop
                 except aiohttp.ClientResponseError as err:
                     if err.status == 429:
                         _LOGGER.warning(
                             "Rate limit hit for %s (429 Too Many Requests). skipping retries.",
-                            self.api_url,
+                            self.fetch_url,
                         )
                         return self._last_valid_value or []
                     if attempt < max_retries:
                         _LOGGER.warning(
                             "Attempt %d failed fetching data from %s: %s. Retrying in %d seconds...",
                             attempt + 1,
-                            self.api_url,
+                            self.fetch_url,
                             err,
                             retry_delay,
                         )
@@ -495,7 +548,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     else:
                         _LOGGER.error(
                             "Failed to fetch data from %s after %d retries: %s",
-                            self.api_url,
+                            self.fetch_url,
                             max_retries,
                             err,
                         )
@@ -510,7 +563,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         _LOGGER.warning(
                             "Attempt %d failed fetching data from %s: %s. Retrying in %d seconds...",
                             attempt + 1,
-                            self.api_url,
+                            self.fetch_url,
                             err,
                             retry_delay,
                         )
@@ -519,7 +572,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     else:
                         _LOGGER.error(
                             "Failed to fetch data from %s after %d retries: %s",
-                            self.api_url,
+                            self.fetch_url,
                             max_retries,
                             err,
                         )
@@ -550,7 +603,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self._stale_issue_raised = False
         # --- PRE-PROCESSING: Parse time for all departures ---
         departures_with_time = []
-        for departure in raw_departures:
+        # Use a deep copy to avoid modifying the cached/mock objects in-place
+        for departure in copy.deepcopy(raw_departures):
             if not departure:
                 continue
 
@@ -597,16 +651,14 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 else:
                     # Fallback for HH:MM format (assume today)
                     try:
-                        temp_dt = datetime.strptime(departure_time_str, "%H:%M")
-                        departure_time_obj = now.replace(
-                            hour=temp_dt.hour,
-                            minute=temp_dt.minute,
+                        parsed_time = datetime.strptime(departure_time_str, "%H:%M")
+                        departure_time_obj = dt_util.now().replace(
+                            hour=parsed_time.hour,
+                            minute=parsed_time.minute,
                             second=0,
-                            microsecond=0,
+                            microsecond=0
                         )
-                        if departure_time_obj < now - timedelta(
-                            minutes=5
-                        ):  # Allow for slight past times
+                        if departure_time_obj < now - timedelta(minutes=5):  # Allow for slight past times
                             departure_time_obj += timedelta(days=1)
                     except (ValueError, TypeError):
                         _LOGGER.error(
@@ -645,20 +697,24 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 # Use a robust key for identifying a trip
                 key_line = departure.get("line") or departure.get("train")
                 key_dest = departure.get("destination")
-                # The 'key' field seems to be a reliable trip identifier in some sources (like KVV)
-                key_trip_id = departure.get("key") or departure.get("trainNumber")
+                # The 'journeyID', 'id', 'key', or 'trainNumber' fields are reliable trip identifiers across various APIs
+                key_trip_id = (
+                    departure.get("journeyID")
+                    or departure.get("journeyId")
+                    or departure.get("id")
+                    or departure.get("key")
+                    or departure.get("trainNumber")
+                )
 
                 # If we don't have enough info to build a key, treat it as unique.
                 if not key_line or not key_dest:
                     unique_departures[id(departure)] = departure
                     continue
 
-                # Build the key. Use trip ID if available, otherwise just line+dest
-                unique_key = (
-                    (key_line, key_dest, key_trip_id)
-                    if key_trip_id
-                    else (key_line, key_dest)
-                )
+                # Build the key. Combine line+dest with trip ID for maximum reliability
+                # while preserving the original logic of matching by line and destination as well.
+                # A tuple including the trip ID if available ensures we group same-trip segments.
+                unique_key = (key_line, key_dest, key_trip_id) if key_trip_id else (key_line, key_dest)
 
                 # Check if we have already seen a departure for this trip
                 if unique_key not in unique_departures:
@@ -762,6 +818,60 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     )
                     continue
 
+            # Platform filter (LOCAL)
+            if self.platforms and not self._platforms_filtered_server_side:
+                departure_platform = str(departure.get("platform") or "")
+                # Allow multiple platforms separated by comma in config
+                allowed_platforms = [p.strip() for p in self.platforms.split(",") if p.strip()]
+                if allowed_platforms and departure_platform not in allowed_platforms:
+                    _LOGGER.debug(
+                        "Skipping departure due to platform mismatch. Allowed: %s, actual: '%s'",
+                        allowed_platforms,
+                        departure_platform,
+                    )
+                    continue
+
+            # Via Stations filter (LOCAL)
+            if self.via_stations and not self._via_filtered_server_side:
+                # Check both "route" (list of dicts) and "via" (list of strings)
+                route_raw = departure.get("route") or []
+                via_raw = departure.get("via") or []
+                
+                # Consolidate all station names into a lowercase set for matching
+                stations_on_route = set()
+                
+                # Process route list
+                for stop in route_raw:
+                    if isinstance(stop, dict):
+                        stations_on_route.add(stop.get("name", "").lower())
+                    else:
+                        stations_on_route.add(str(stop).lower())
+                
+                # Process via list
+                for stop in via_raw:
+                    stations_on_route.add(str(stop).lower())
+                
+                # Also include destination in the check
+                dest = departure.get("destination", "").lower()
+                if dest:
+                    stations_on_route.add(dest)
+
+                via_matches = [v.lower() in stations_on_route for v in self.via_stations]
+                
+                if self.via_stations_logic == "AND":
+                    matches = all(via_matches)
+                else:
+                    matches = any(via_matches)
+                
+                if not matches:
+                    _LOGGER.debug(
+                        "Skipping departure due to via station mismatch (%s). Required: %s, route: %s",
+                        self.via_stations_logic,
+                        self.via_stations,
+                        list(stations_on_route),
+                    )
+                    continue
+
             # Get train classes from the departure data.
             train_classes = (
                 departure.get("trainClasses")
@@ -849,9 +959,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             if wagon_order_data:
                 # If it's a list, it's the detailed structure
                 if isinstance(wagon_order_data, list):
-                    wagon_html = self._process_wagon_order(wagon_order_data)
-                    if wagon_html:
-                        departure["wagon_order_html"] = wagon_html
+                    wagon_info = self._process_wagon_order(wagon_order_data)
+                    if wagon_info:
+                        departure["wagon_order_html"] = wagon_info.get("text")
+                        departure["wagon_order_structured"] = wagon_info.get("structured")
                 departure["wagon_order"] = wagon_order_data
 
             # Extract sectors from platform string (e.g. "5 D-G")
@@ -1056,51 +1167,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 for key in keys_to_remove:
                     departure.pop(key)
 
-            # --- VIA STATION FILTERING ---
-            # When a single via station was already sent to the API as a query
-            # parameter, skip client-side filtering to avoid discarding valid results.
-            if self.via_stations and not self._via_filtered_server_side:
-                # Get all possible station names for this trip
-                trip_stations = set()
-
-                # 1. From 'via' list (if present)
-                api_via = departure.get("via", [])
-                if isinstance(api_via, list):
-                    trip_stations.update([s.lower() for s in api_via])
-
-                # 2. From 'route_details' (if present)
-                route_details = departure.get("route_details", [])
-                if isinstance(route_details, list):
-                    for stop in route_details:
-                        if isinstance(stop, dict) and "name" in stop:
-                            trip_stations.add(stop["name"].lower())
-
-                # 3. Check matches
-                matches = []
-                for v_station in self.via_stations:
-                    v_lower = v_station.strip().lower()
-                    # Check if the configured via station is a substring of the trip station name
-                    match_found = any(v_lower in ts for ts in trip_stations)
-                    matches.append(match_found)
-
-                if self.via_stations_logic == "AND":
-                    if not all(matches):
-                        _LOGGER.debug(
-                            "Skipping departure: not all via stations (%s) matched for trip to %s. trip_stations: %s",
-                            self.via_stations,
-                            departure.get("destination"),
-                            trip_stations,
-                        )
-                        continue
-                else:  # OR logic (default)
-                    if not any(matches):
-                        _LOGGER.debug(
-                            "Skipping departure: none of the via stations (%s) matched for trip to %s. trip_stations: %s",
-                            self.via_stations,
-                            departure.get("destination"),
-                            trip_stations,
-                        )
-                        continue
 
             if not self.keep_route:
                 for key in ["route", "via", "prev_route", "next_route"]:

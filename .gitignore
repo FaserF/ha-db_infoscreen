@@ -21,3 +21,4 @@ temp_autocomplete.js
 /.github/scripts/__pycache__
 *errors.txt
 *mypy*.txt
+init_diff.txt

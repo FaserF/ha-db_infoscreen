@@ -54,3 +54,18 @@ track_connection:
          text:
 refresh_departures:
   description: Triggers a manual refresh of train departures for all configured stations.
+set_offset:
+  description: Dynamically overrides the default time offset for departures temporarily.
+  fields:
+    offset:
+      description: The new time offset in format HH:MM (e.g. 00:05).
+      example: 00:05
+      required: true
+      selector:
+        text:
+    station:
+      description: The station name to apply the offset to. If left blank, it applies to all stations.
+      example: München Hbf
+      required: false
+      selector:
+        text:

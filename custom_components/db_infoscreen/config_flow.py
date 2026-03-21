@@ -27,7 +27,6 @@ from .const import (
     CONF_DIRECTION,
     CONF_EXCLUDED_DIRECTIONS,
     CONF_IGNORED_TRAINTYPES,
-    IGNORED_TRAINTYPES_OPTIONS,
     CONF_DROP_LATE_TRAINS,
     CONF_KEEP_ROUTE,
     CONF_KEEP_ENDSTATION,
@@ -39,6 +38,7 @@ from .const import (
     CONF_SHOW_OCCUPANCY,
     CONF_FAVORITE_TRAINS,
     CONF_VIA_STATIONS_LOGIC,
+    IGNORED_TRAINTYPES_OPTIONS,
     CONF_WALK_TIME,
     normalize_data_source,
 )
@@ -617,15 +617,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             via_stations_list = []
         via_stations_str = ", ".join(via_stations_list)
 
-        # Get ignored train types
-        ignored_types = self._get_config_value(CONF_IGNORED_TRAINTYPES, [])
-        if ignored_types is None:
-            ignored_types = []
-
-        default_ignored = [
-            "Unbekannter Zugtyp" if t == "" else t for t in ignored_types
-        ]
-
+        # Get ignored train types (might be a list from old config)
+        ignored_types = self._get_config_value(CONF_IGNORED_TRAINTYPES, "")
+        if isinstance(ignored_types, list):
+            ignored_types = ", ".join(t for t in ignored_types if t)
+            
         return self.async_show_form(
             step_id="filter_options",
             data_schema=vol.Schema(
@@ -652,7 +648,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ): cv.string,
                     vol.Optional(
                         CONF_IGNORED_TRAINTYPES,
-                        default=default_ignored,
+                        default=ignored_types,
                     ): cv.multi_select(IGNORED_TRAINTYPES_OPTIONS),
                     vol.Optional(
                         CONF_EXCLUDE_CANCELLED,
