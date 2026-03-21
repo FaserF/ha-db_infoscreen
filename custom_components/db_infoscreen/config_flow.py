@@ -519,7 +519,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                         "valid": False,
                         "error": f"API returned status {response.status}. Please try again later.",
                     }
+        except Exception as e:
+            _LOGGER.error("Validation request failed: %s", e)
+            return {"valid": False, "error": f"Could not connect to API: {str(e)}"}
 
+        return {"valid": False, "error": "Unknown verification error"}
 
     @staticmethod
     def async_get_options_flow(config_entry):
