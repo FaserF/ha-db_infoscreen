@@ -62,9 +62,8 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-# Global cache for API responses to consolidate requests for the same station/parameters
 # Key: URL, Value: (Timestamp, Data)
-RESPONSE_CACHE: dict[str, tuple[datetime, dict]] = {}
+RESPONSE_CACHE: dict[str, Any] = {}
 CACHE_TTL = timedelta(seconds=55)
 
 
@@ -267,19 +266,19 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.next_departures = int(
             config.get(CONF_NEXT_DEPARTURES, DEFAULT_NEXT_DEPARTURES)
         )
-        self.favorite_trains = []
+        self.favorite_trains: list[str] = []
         fav_raw = config.get(CONF_FAVORITE_TRAINS, "")
         if isinstance(fav_raw, str) and fav_raw.strip():
             self.favorite_trains = [
                 s.strip() for s in re.split(r",|\|", fav_raw) if s.strip()
             ]
 
-        self.watched_trips: dict[str, Any] = {}
-        self.tracked_connections: dict[str, Any] = {}
+        self.watched_trips: dict[str, dict[str, Any]] = {}
+        self.tracked_connections: dict[str, dict[str, Any]] = {}
         self.departure_history: dict[str, Any] = {}
-        self.hide_low_delay = config.get(CONF_HIDE_LOW_DELAY, False)
-        self.detailed = config.get(CONF_DETAILED, False)
-        self.past_60_minutes = config.get(CONF_PAST_60_MINUTES, False)
+        self.hide_low_delay: bool = bool(config.get(CONF_HIDE_LOW_DELAY, False))
+        self.detailed: bool = bool(config.get(CONF_DETAILED, False))
+        self.past_60_minutes: bool = bool(config.get(CONF_PAST_60_MINUTES, False))
         self.data_source = normalize_data_source(
             config.get(CONF_DATA_SOURCE, "IRIS-TTS")
         )
@@ -498,7 +497,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                 # Skip to processing
             else:
                 _LOGGER.debug("Cache expired for %s", self.fetch_url)
-                del RESPONSE_CACHE[self.fetch_url]
+                RESPONSE_CACHE.pop(self.fetch_url, None)
                 data = None
         else:
             data = None
@@ -689,7 +688,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         # --- DEDUPLICATION STEP ---
         if self.deduplicate_departures:
             _LOGGER.debug("Deduplication is enabled. Processing departures.")
-            unique_departures = {}
+            unique_departures: dict[Any, Any] = {}
 
             departures_to_process.sort(key=lambda d: d["departure_datetime"])
 
@@ -713,8 +712,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
                 # Build the key. Combine line+dest with trip ID for maximum reliability
                 # while preserving the original logic of matching by line and destination as well.
-                # A tuple including the trip ID if available ensures we group same-trip segments.
-                unique_key = (key_line, key_dest, key_trip_id) if key_trip_id else (key_line, key_dest)
+                # Use a consistent tuple structure to satisfy type checkers.
+                unique_key: tuple[Any, ...] = (key_line, key_dest, key_trip_id) if key_trip_id else (key_line, key_dest)
 
                 # Check if we have already seen a departure for this trip
                 if unique_key not in unique_departures:
@@ -727,7 +726,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                         - existing_departure["departure_datetime"]
                     ).total_seconds()
 
-                    # If the new one is within 2 minutes, it's a duplicate. We keep the earlier one.
+                    # If the new one is within 2 minutes, it's a duplicate.
                     if abs(time_diff) <= 120:
                         _LOGGER.debug(
                             "Found and filtering out duplicate departure. "
@@ -735,14 +734,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                             existing_departure,
                             departure,
                         )
-                        # Since the list is sorted, the existing one is always earlier.
-                        # We do nothing and let the later one be discarded.
                     else:
-                        # Time difference is too large. This is a different trip that happens to share
-                        # the same line and destination. Add it with a more specific key to keep it.
-                        unique_departures[
-                            (unique_key, departure["departure_datetime"])
-                        ] = departure
+                        # Time difference is too large. This is a different trip.
+                        # Using a unique ID based key for these rare cases.
+                        unique_departures[f"{unique_key}_{id(departure)}"] = departure
 
             departures_to_process = list(unique_departures.values())
             # Re-sort because dictionary values don't guarantee order if we added time-suffixed keys
