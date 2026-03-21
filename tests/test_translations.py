@@ -258,16 +258,6 @@ async def test_all_translation_keys_referenced():
     )
     with open(repairs_path, "r", encoding="utf-8") as f:
         repairs_content = f.read()
-
-    # Simple regex to find keys in vol.In({ ... })
-    action_matches = re.findall(
-        r'"action", default="[^"]+"\): vol\.In\(\s+\{([^}]+)\}',
-        repairs_content,
-        re.DOTALL,
-    )
-
-    # We moved/removed these to comply with HA translation schema
-    # For now, we skip this specific check in tests or point to the new location if applicable
     pass
 
     # 2. Check train type keys used in const.py
