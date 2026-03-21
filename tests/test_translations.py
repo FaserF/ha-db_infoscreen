@@ -270,7 +270,9 @@ async def test_all_translation_keys_referenced():
     all_translated_actions = set()
     issues = strings.get("issues", {})
     for issue_id in issues:
-        steps = issues[issue_id].get("fix_flow", {}).get("step", {}) | issues[issue_id].get("fix_flow", {}).get("step", {})
+        steps = issues[issue_id].get("fix_flow", {}).get("step", {}) | issues[
+            issue_id
+        ].get("fix_flow", {}).get("step", {})
         # Note: steps is a dict, we just need to iterate over it
         for step_id in steps:
             action_data = steps[step_id].get("data", {}).get("action", {})
