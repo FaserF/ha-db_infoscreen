@@ -258,7 +258,33 @@ async def test_all_translation_keys_referenced():
     )
     with open(repairs_path, "r", encoding="utf-8") as f:
         repairs_content = f.read()
-    pass
+
+    # Find all "action" keys in repairs.py
+    action_matches = re.findall(
+        r'"action", default="[^"]+"\): vol\.In\(\s+\{([^}]+)\}',
+        repairs_content,
+        re.DOTALL,
+    )
+
+    # Flatten all action states from the issues block in strings.json
+    all_translated_actions = set()
+    issues = strings.get("issues", {})
+    for issue_id in issues:
+        steps = issues[issue_id].get("fix_flow", {}).get("step", {}) | issues[issue_id].get("fix_flow", {}).get("step", {})
+        # Note: steps is a dict, we just need to iterate over it
+        for step_id in steps:
+            action_data = steps[step_id].get("data", {}).get("action", {})
+            if isinstance(action_data, dict):
+                states = action_data.get("state", {})
+                all_translated_actions.update(states.keys())
+
+    for match in action_matches:
+        keys = re.findall(r'"([^"]+)":', match)
+        for key in keys:
+            if key in ["retry", "report", "change_source", "remove", "try_again"]:
+                assert (
+                    key in all_translated_actions
+                ), f"Action key '{key}' from repairs.py missing in any 'action' state within strings.json issues"
 
     # 2. Check train type keys used in const.py
     const_path = os.path.join(
