@@ -8,6 +8,7 @@ from custom_components.db_infoscreen.const import (
     CONF_STATION,
     CONF_VIA_STATIONS,
     CONF_VIA_STATIONS_LOGIC,
+    CONF_PLATFORMS,
 )
 from tests.common import patch_session
 
@@ -177,3 +178,63 @@ async def test_via_multiple_stations_and_local_no_match(hass):
         # Neither train passes through BOTH stations
         data = list(data)
         assert len(data) == 0
+
+
+@pytest.mark.asyncio
+async def test_via_stations_different_fetch_urls(hass):
+    """Verify that different via stations result in unique fetch URLs for caching."""
+    entry1 = MagicMock()
+    entry1.data = {CONF_STATION: "Mainz Hbf", CONF_VIA_STATIONS: ["Frankfurt Hbf"]}
+    entry1.options = {}
+    entry1.entry_id = "e1"
+
+    entry2 = MagicMock()
+    entry2.data = {CONF_STATION: "Mainz Hbf", CONF_VIA_STATIONS: ["Wiesbaden Hbf"]}
+    entry2.options = {}
+    entry2.entry_id = "e2"
+
+    c1 = DBInfoScreenCoordinator(hass, entry1)
+    c2 = DBInfoScreenCoordinator(hass, entry2)
+
+    assert c1.fetch_url != c2.fetch_url
+    assert "via=Frankfurt%20Hbf" in c1.fetch_url
+    assert "via=Wiesbaden%20Hbf" in c2.fetch_url
+
+
+@pytest.mark.asyncio
+async def test_platforms_different_fetch_urls(hass):
+    """Verify that different platforms result in unique fetch URLs for caching."""
+    entry1 = MagicMock()
+    entry1.data = {CONF_STATION: "Mainz Hbf", CONF_PLATFORMS: "1"}
+    entry1.options = {}
+    entry1.entry_id = "e1"
+
+    entry2 = MagicMock()
+    entry2.data = {CONF_STATION: "Mainz Hbf", CONF_PLATFORMS: "2"}
+    entry2.options = {}
+    entry2.entry_id = "e2"
+
+    c1 = DBInfoScreenCoordinator(hass, entry1)
+    c2 = DBInfoScreenCoordinator(hass, entry2)
+
+    assert c1.fetch_url != c2.fetch_url
+    assert "platforms=1" in c1.fetch_url
+    assert "platforms=2" in c2.fetch_url
+
+
+@pytest.mark.asyncio
+async def test_via_logic_and_with_single_station_skips_server_side(hass):
+    """Verify that using AND logic with one station still allows server-side optimization."""
+    entry = MagicMock()
+    entry.data = {
+        CONF_STATION: "Mainz Hbf",
+        CONF_VIA_STATIONS: ["Frankfurt Hbf"],
+        CONF_VIA_STATIONS_LOGIC: "AND",
+    }
+    entry.options = {}
+    entry.entry_id = "e1"
+
+    coordinator = DBInfoScreenCoordinator(hass, entry)
+    # Even with AND, if there's only 1 station, the server can filter it and we can skip local filter.
+    assert coordinator._via_filtered_server_side is True
+    assert "via=Frankfurt%20Hbf" in coordinator.fetch_url

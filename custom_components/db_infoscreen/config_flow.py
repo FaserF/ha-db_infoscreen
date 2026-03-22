@@ -619,10 +619,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             via_stations_list = []
         via_stations_str = ", ".join(via_stations_list)
 
-        # Get ignored train types (might be a list from old config)
-        ignored_types = self._get_config_value(CONF_IGNORED_TRAINTYPES, "")
-        if isinstance(ignored_types, list):
-            ignored_types = ", ".join(t for t in ignored_types if t)
+        # Get ignored train types (must be a list for multi_select)
+        ignored_types = self._get_config_value(CONF_IGNORED_TRAINTYPES, [])
+        if isinstance(ignored_types, str):
+            ignored_types = [t.strip() for t in ignored_types.split(",") if t.strip()]
 
         return self.async_show_form(
             step_id="filter_options",

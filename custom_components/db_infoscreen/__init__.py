@@ -349,17 +349,18 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         if self.past_60_minutes:
             fetch_params["past"] = "1"
 
+        if self.platforms:
+            fetch_params["platforms"] = self.platforms
+        if len(self.via_stations) == 1:
+            fetch_params["via"] = self.via_stations[0].strip()
+
         fetch_query = urlencode(fetch_params, quote_via=quote)
         self.fetch_url = f"{url}?{fetch_query}" if fetch_query else url
 
         # Assemble User API URL (Specific for metadata/web links)
         user_params = fetch_params.copy()
-        if self.platforms:
-            user_params["platforms"] = self.platforms
         if self.hide_low_delay:
             user_params["hidelowdelay"] = "1"
-        if len(self.via_stations) == 1:
-            user_params["via"] = self.via_stations[0].strip()
 
         user_query = urlencode(user_params, quote_via=quote)
         self.api_url = f"{url}?{user_query}" if user_query else url
@@ -368,8 +369,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.via_stations_logic = str(config.get(CONF_VIA_STATIONS_LOGIC, "OR")).upper()
 
         # Track if any filtering was already done by the server for backward compatibility
-        self._via_filtered_server_side = "via" in user_params
-        self._platforms_filtered_server_side = "platforms" in user_params
+        self._via_filtered_server_side = "via" in fetch_params
+        self._platforms_filtered_server_side = "platforms" in fetch_params
 
         super().__init__(
             hass,
