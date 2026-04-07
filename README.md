@@ -33,6 +33,15 @@ The `db-infoscreen` sensor provides detailed **departure times** and train infor
   <img src="docs/images/sensor.png" alt="Station Sensor" width="600px">
 </div>
 
+## 🏠 Home Assistant App (Add-on)
+
+This integration is best used with the **DBF (DB-Infoscreen) App**. While the integration can fetch data from public APIs, running your own local instance via the add-on provides more reliability and a dedicated Web UI.
+
+- **[DBF Add-on Repository](https://github.com/FaserF/hassio-addons/tree/master/dbf)**
+- **Features**: Dedicated departure board UI, automated wagon order updates, and self-hosted API.
+
+---
+
 ## ✨ Features
 
 | Feature | Description |
