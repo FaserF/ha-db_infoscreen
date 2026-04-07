@@ -315,9 +315,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.keep_route = config.get(CONF_KEEP_ROUTE, False)
         self.keep_endstation = config.get(CONF_KEEP_ENDSTATION, False)
         self.deduplicate_departures = config.get(CONF_DEDUPLICATE_DEPARTURES, False)
-        self.deduplicate_key = config.get(
-            CONF_DEDUPLICATE_KEY, DEFAULT_DEDUPLICATE_KEY
-        )
+        self.deduplicate_key = config.get(CONF_DEDUPLICATE_KEY, DEFAULT_DEDUPLICATE_KEY)
         self.exclude_cancelled = config.get(CONF_EXCLUDE_CANCELLED, False)
         self.show_occupancy = config.get(CONF_SHOW_OCCUPANCY, False)
         self.platforms = config.get(CONF_PLATFORMS, "")

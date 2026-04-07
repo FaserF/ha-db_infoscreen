@@ -14,13 +14,16 @@ from custom_components.db_infoscreen.const import (
 )
 from tests.common import patch_session
 
+
 @pytest.fixture(autouse=True)
 def clear_cache():
     """Clear the global RESPONSE_CACHE between tests."""
     from custom_components.db_infoscreen import RESPONSE_CACHE
+
     RESPONSE_CACHE.clear()
     yield
     RESPONSE_CACHE.clear()
+
 
 @pytest.fixture
 def mock_config_entry():
@@ -36,6 +39,7 @@ def mock_config_entry():
     entry.entry_id = "mock_entry_id"
     return entry
 
+
 @pytest.mark.asyncio
 async def test_deduplication_default_key(hass, mock_config_entry):
     """Test deduplication with default key (DB IRIS style)."""
@@ -49,33 +53,38 @@ async def test_deduplication_default_key(hass, mock_config_entry):
                 "journeyID": "12345",
             },
             {
-                "scheduledDeparture": (now + timedelta(seconds=30)).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (now + timedelta(seconds=30)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "Berlin",
                 "line": "ICE 1",
-                "journeyID": "12345", # Same ID, short time diff
+                "journeyID": "12345",  # Same ID, short time diff
             },
             {
-                "scheduledDeparture": (now + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (now + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "Berlin",
                 "line": "ICE 1",
-                "journeyID": "12345", # Same ID, but > 120s diff
-            }
+                "journeyID": "12345",  # Same ID, but > 120s diff
+            },
         ]
     }
 
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
     with patch_session(mock_data):
         data = await coordinator._async_update_data()
-        # Should have 2 departures: 
+        # Should have 2 departures:
         # 1. The first one (or second) from the 30s pair
         # 2. The third one (10 min later)
         assert len(data) == 2
+
 
 @pytest.mark.asyncio
 async def test_deduplication_custom_key_kvv(hass, mock_config_entry):
     """Test deduplication with custom key for KVV (as requested in #116)."""
     mock_config_entry.options[CONF_DEDUPLICATE_KEY] = "{line}"
-    
+
     now = dt_util.now()
     # KVV style data where journeyID is missing/null but line is same
     mock_data = {
@@ -91,7 +100,7 @@ async def test_deduplication_custom_key_kvv(hass, mock_config_entry):
                 "destination": "Rheinstetten",
                 "line": "S2",
                 "platform": "1",
-            }
+            },
         ]
     }
 
@@ -101,11 +110,12 @@ async def test_deduplication_custom_key_kvv(hass, mock_config_entry):
         # With {line} as key, they should be deduplicated
         assert len(data) == 1
 
+
 @pytest.mark.asyncio
 async def test_deduplication_fallback(hass, mock_config_entry):
     """Test deduplication fallback when key resolving yields empty string."""
     mock_config_entry.options[CONF_DEDUPLICATE_KEY] = "{non_existent_field}"
-    
+
     now = dt_util.now()
     mock_data = {
         "departures": [
@@ -115,10 +125,12 @@ async def test_deduplication_fallback(hass, mock_config_entry):
                 "line": "ICE 1",
             },
             {
-                "scheduledDeparture": (now + timedelta(seconds=10)).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (now + timedelta(seconds=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "Berlin",
                 "line": "ICE 1",
-            }
+            },
         ]
     }
 

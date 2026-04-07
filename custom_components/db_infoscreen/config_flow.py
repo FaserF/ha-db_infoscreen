@@ -101,7 +101,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             # Ensure URL has protocol
             if url and not url.startswith(("http://", "https://")):
                 url = f"https://{url}"
-            
+
             # Remove trailing slash
             if url.endswith("/"):
                 url = url[:-1]
@@ -589,6 +589,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
     async def _validate_server_url(self, url: str) -> bool:
         """Verify that the server is reachable and looks like a DBF instance."""
         from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
         try:
             session = async_get_clientsession(self.hass)
             # Try to get the station list mapping to check if it's a DBF instance

@@ -57,7 +57,9 @@ async def async_get_stations(hass, base_url: str):
                     _LOGGER.debug("Parsed and cached %d stations", len(stations))
                     return stations
                 else:
-                    _LOGGER.error("Could not find station array in response from %s", base_url)
+                    _LOGGER.error(
+                        "Could not find station array in response from %s", base_url
+                    )
                     if data_key in hass.data:
                         return hass.data[data_key]
                     return []
