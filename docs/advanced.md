@@ -50,6 +50,7 @@ The `departures` list contains rich data objects. Here are the keys available fo
 | Key | Description | Example |
 | :--- | :--- | :--- |
 | `trip_id` | **Unique ID** for this specific train run. Constant even if times change. | `"123456789"` |
+| `deduplication_key` | Internal key generated from the configured template used to identify unique journeys. | `"S2"` or `"12345"` |
 | `train` | Train type and number. | `"ICE 279"` |
 | `destination` | Final destination. | `"Basel SBB"` |
 | `platform` | Current platform. | `"6"` |

@@ -31,6 +31,8 @@ from .const import (
     CONF_KEEP_ROUTE,
     CONF_KEEP_ENDSTATION,
     CONF_DEDUPLICATE_DEPARTURES,
+    CONF_DEDUPLICATE_KEY,
+    DEFAULT_DEDUPLICATE_KEY,
     CONF_ENABLE_TEXT_VIEW,
     CONF_TEXT_VIEW_TEMPLATE,
     DEFAULT_TEXT_VIEW_TEMPLATE,
@@ -441,6 +443,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 vol.Optional(CONF_HIDE_LOW_DELAY, default=False): cv.boolean,
                 vol.Optional(CONF_DROP_LATE_TRAINS, default=False): cv.boolean,
                 vol.Optional(CONF_DEDUPLICATE_DEPARTURES, default=False): cv.boolean,
+                vol.Optional(
+                    CONF_DEDUPLICATE_KEY, default=DEFAULT_DEDUPLICATE_KEY
+                ): cv.string,
                 vol.Optional(CONF_DETAILED, default=False): cv.boolean,
                 vol.Optional(CONF_PAST_60_MINUTES, default=False): cv.boolean,
                 vol.Optional(CONF_KEEP_ROUTE, default=False): cv.boolean,
@@ -726,6 +731,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                             CONF_DEDUPLICATE_DEPARTURES, False
                         ),
                     ): cv.boolean,
+                    vol.Optional(
+                        CONF_DEDUPLICATE_KEY,
+                        default=self._get_config_value(
+                            CONF_DEDUPLICATE_KEY, DEFAULT_DEDUPLICATE_KEY
+                        ),
+                    ): cv.string,
                     vol.Optional(
                         CONF_KEEP_ROUTE,
                         default=self._get_config_value(CONF_KEEP_ROUTE, False),

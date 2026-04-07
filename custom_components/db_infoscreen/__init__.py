@@ -51,6 +51,8 @@ from .const import (
     CONF_KEEP_ROUTE,
     CONF_KEEP_ENDSTATION,
     CONF_DEDUPLICATE_DEPARTURES,
+    CONF_DEDUPLICATE_KEY,
+    DEFAULT_DEDUPLICATE_KEY,
     CONF_VIA_STATIONS_LOGIC,
     TRAIN_TYPE_MAPPING,
     CONF_EXCLUDE_CANCELLED,
@@ -306,6 +308,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self.keep_route = config.get(CONF_KEEP_ROUTE, False)
         self.keep_endstation = config.get(CONF_KEEP_ENDSTATION, False)
         self.deduplicate_departures = config.get(CONF_DEDUPLICATE_DEPARTURES, False)
+        self.deduplicate_key = config.get(
+            CONF_DEDUPLICATE_KEY, DEFAULT_DEDUPLICATE_KEY
+        )
         self.exclude_cancelled = config.get(CONF_EXCLUDE_CANCELLED, False)
         self.show_occupancy = config.get(CONF_SHOW_OCCUPANCY, False)
         self.platforms = config.get(CONF_PLATFORMS, "")
@@ -703,31 +708,32 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             departures_to_process.sort(key=lambda d: d["departure_datetime"])
 
             for departure in departures_to_process:
-                # Use a robust key for identifying a trip
+                # Resolve the unique trip identifier using the configured key template
+                # Example: {journeyID}{id} -> resolve each {hash} against departure data
+                key_trip_id = ""
+                raw_key_parts = re.findall(r"\{([^}]+)\}", self.deduplicate_key)
+                if raw_key_parts:
+                    for part in raw_key_parts:
+                        val = departure.get(part)
+                        if val is not None:
+                            key_trip_id += str(val)
+                else:
+                    # Fallback if no placeholders found (legacy behavior or static string)
+                    key_trip_id = self.deduplicate_key
+
                 key_line = departure.get("line") or departure.get("train")
                 key_dest = departure.get("destination")
-                # The 'journeyID', 'id', 'key', or 'trainNumber' fields are reliable trip identifiers across various APIs
-                key_trip_id = (
-                    departure.get("journeyID")
-                    or departure.get("journeyId")
-                    or departure.get("id")
-                    or departure.get("key")
-                    or departure.get("trainNumber")
-                )
 
-                # If we don't have enough info to build a key, treat it as unique.
-                if not key_line or not key_dest:
+                # If we don't even have line/dest/trip_id, treat as unique
+                if not key_line and not key_dest and not key_trip_id:
                     unique_departures[id(departure)] = departure
                     continue
 
-                # Build the key. Combine line+dest with trip ID for maximum reliability
-                # while preserving the original logic of matching by line and destination as well.
-                # Use a consistent tuple structure to satisfy type checkers.
-                unique_key: tuple[Any, ...] = (
-                    (key_line, key_dest, key_trip_id)
-                    if key_trip_id
-                    else (key_line, key_dest)
-                )
+                # Build the unique key using trip_id if available, otherwise fallback to line+dest
+                if key_trip_id:
+                    unique_key: Any = key_trip_id
+                else:
+                    unique_key = (key_line, key_dest)
 
                 # Check if we have already seen a departure for this trip
                 if unique_key not in unique_departures:
@@ -744,7 +750,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
                     if abs(time_diff) <= 120:
                         _LOGGER.debug(
                             "Found and filtering out duplicate departure. "
-                            "Keeping (earlier): %s, Removing (later): %s",
+                            "Key: %s, Keeping (earlier): %s, Removing (later): %s",
+                            unique_key,
                             existing_departure,
                             departure,
                         )

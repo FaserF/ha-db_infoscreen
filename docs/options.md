@@ -59,6 +59,9 @@ Technical settings and edge cases.
 
 *   **Custom API URL**: If you self-host the backend, enter your URL here.
 *   **Deduplicate Departures**: Removes "ghost" or duplicate entries often found in regional data.
+*   **Deduplication Key**: Define which fields are used to identify a unique trip.
+    *   *Default*: `{journeyID}{journeyId}{id}{key}{trainNumber}`.
+    *   *KVV Example*: Use `{line}` if you experience duplicates where different platforms show the same train as different entries.
 *   **Keep Route Details**: Persists the full station list even if the API update is partial.
 *   **Keep if Endstation**: Prevents the sensor from clearing data when reaching the final stop.
 *   **Drop Late Trains**: Hide trains that have already "departed" logically but are still in the system due to delay.

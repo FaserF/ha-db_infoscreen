@@ -77,6 +77,8 @@ Once a sensor is created, click **Configure** on the integration card to access 
 ### :material-flask: Advanced Options
 -   **Custom API URL**: Essential if you are hosting your own [db-fakedisplay](https://github.com/derf/db-fakedisplay) instance.
 -   **Deduplication**: Filters out redundant entries. Some data sources report the same train twice under different IDs; this keeps your UI clean.
+-   **Deduplication Key**: Specify the identifying fields for a trip.
+    -   *Example (KVV)*: `{line}`. This ensures that the same line appearing on platform 1 and platform 3 is treated as one trip.
 -   **Keep Route**: Normally, only the destination is stored. Enable this to keep the **entire list of intermediate stops**.
 -   **Past 60 Minutes**: Include trains that have already left in the last hour. Great for "What did I miss?" views.
 
