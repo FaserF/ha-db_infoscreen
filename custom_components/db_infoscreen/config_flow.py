@@ -42,6 +42,13 @@ from .const import (
     CONF_VIA_STATIONS_LOGIC,
     IGNORED_TRAINTYPES_OPTIONS,
     CONF_WALK_TIME,
+    CONF_SERVER_TYPE,
+    CONF_SERVER_URL,
+    SERVER_TYPE_CUSTOM,
+    SERVER_TYPE_OFFICIAL,
+    SERVER_TYPE_FASERF,
+    SERVER_URL_OFFICIAL,
+    SERVER_URL_FASERF,
     normalize_data_source,
 )
 from .utils import async_get_stations, find_station_matches
@@ -54,11 +61,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
     Handle the initial configuration and setup wizard for DB Infoscreen.
 
     This class manages the multi-step process:
-    1. Station search (user step)
-    2. Station selection/resolve (choose step)
-    3. Basic configuration (details step)
-    4. Advanced configuration (advanced step)
-    5. Manual entry/Data source selection (manual_config step)
+    1. Server selection (user step) - NEW
+    2. Station search (station_search step)
+    3. Station selection/resolve (choose step)
+    4. Basic configuration (details step)
+    5. Advanced configuration (advanced step)
+    6. Manual entry/Data source selection (manual_config step)
     """
 
     VERSION = 1
@@ -71,20 +79,67 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         self.no_match = False
         self.is_manual_entry = False
         self.basic_options = {}
+        self.server_url = ""
 
     async def async_step_user(self, user_input=None):
         """
-        Handle the initial step: Search for a station.
+        Handle the first step: Server Selection.
+        """
+        errors = {}
 
-        Asks the user for a station name and attempts to find matches
-        in the IRIS-TTS database.
+        if user_input is not None:
+            server_type = user_input.get(CONF_SERVER_TYPE)
+            url = ""
+
+            if server_type == SERVER_TYPE_OFFICIAL:
+                url = SERVER_URL_OFFICIAL
+            elif server_type == SERVER_TYPE_FASERF:
+                url = SERVER_URL_FASERF
+            else:
+                url = user_input.get(CONF_SERVER_URL, "")
+
+            # Ensure URL has protocol
+            if url and not url.startswith(("http://", "https://")):
+                url = f"https://{url}"
+            
+            # Remove trailing slash
+            if url.endswith("/"):
+                url = url[:-1]
+
+            if not url:
+                errors[CONF_SERVER_URL] = "invalid_url"
+            else:
+                # Availability check
+                valid = await self._validate_server_url(url)
+                if not valid:
+                    errors["base"] = "cannot_connect"
+                else:
+                    self.server_url = url
+                    return await self.async_step_station_search()
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_SERVER_TYPE, default=SERVER_TYPE_CUSTOM): vol.In(
+                        [SERVER_TYPE_CUSTOM, SERVER_TYPE_OFFICIAL, SERVER_TYPE_FASERF]
+                    ),
+                    vol.Optional(CONF_SERVER_URL): cv.string,
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_station_search(self, user_input=None):
+        """
+        Handle the station search step (formerly step 'user').
         """
         errors = {}
 
         if len(self.hass.config_entries.async_entries(DOMAIN)) >= MAX_SENSORS:
             errors["base"] = "max_sensors_reached"
             return self.async_show_form(
-                step_id="user",
+                step_id="station_search",
                 data_schema=vol.Schema({}),
                 errors=errors,
             )
@@ -92,18 +147,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if user_input is not None:
             station_query = user_input.get(CONF_STATION)
             if station_query:
-                # Reset transient state to avoid stale data affecting subsequent flows
+                # Reset transient state
                 self.no_match = False
                 self.found_stations = []
                 self.selected_station = None
 
-                stations = await async_get_stations(self.hass)
+                stations = await async_get_stations(self.hass, self.server_url)
                 if not stations:
                     errors["base"] = "cannot_connect"
                 else:
                     matches = find_station_matches(stations, station_query)
                     if not matches:
-                        # No matches found, but allow manual entry via choose step
                         self.found_stations = [f"{station_query} (Manual Entry)"]
                         self.no_match = True
                         return await self.async_step_choose(user_input=None)
@@ -111,20 +165,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                         len(matches) == 1
                         and matches[0].lower() == station_query.lower()
                     ):
-                        # Exact unique match, proceed to details
                         self.selected_station = f"{matches[0]} (IRIS-TTS)"
                         return await self.async_step_details()
                     else:
-                        # Multiple or fuzzy matches, let user choose
                         self.found_stations = [f"{m} (IRIS-TTS)" for m in matches]
-                        # Append manual entry option if not already in list
                         manual_option = f"{station_query} (Manual Entry)"
                         if manual_option not in self.found_stations:
                             self.found_stations.append(manual_option)
                         return await self.async_step_choose()
 
         return self.async_show_form(
-            step_id="user",
+            step_id="station_search",
             data_schema=vol.Schema({vol.Required(CONF_STATION): cv.string}),
             errors=errors,
         )
@@ -324,6 +375,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         and creates the config entry with a unique ID based on the station
         and its filters.
         """
+        # Add server URL to data
+        user_input[CONF_SERVER_URL] = self.server_url
+
         # Validate station data can be retrieved
         station_raw = user_input.get(CONF_STATION, "")
         data_source = normalize_data_source(
@@ -487,7 +541,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         station_cleaned = " ".join(station_str.split())
         encoded_station = quote(station_cleaned, safe=",-")
 
-        base_url = custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
+        base_url = custom_api_url if custom_api_url else self.server_url
         url = f"{base_url}/{encoded_station}.json"
 
         params = {}
@@ -531,6 +585,21 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             return {"valid": False, "error": f"Could not connect to API: {str(e)}"}
 
         return {"valid": False, "error": "Unknown verification error"}
+
+    async def _validate_server_url(self, url: str) -> bool:
+        """Verify that the server is reachable and looks like a DBF instance."""
+        from homeassistant.helpers.aiohttp_client import async_get_clientsession
+        try:
+            session = async_get_clientsession(self.hass)
+            # Try to get the station list mapping to check if it's a DBF instance
+            # or just a random URL
+            async with session.get(url, timeout=10) as response:
+                # Any 200/301/404 is usually fine as long as the server is there
+                # But let's check for 200 specifically on the root or a known path
+                return response.status < 500
+        except Exception as e:
+            _LOGGER.error("Server validation failed for %s: %s", url, e)
+            return False
 
     @staticmethod
     def async_get_options_flow(config_entry):

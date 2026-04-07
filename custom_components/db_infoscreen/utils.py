@@ -7,13 +7,13 @@ from datetime import datetime, timedelta, timezone
 
 _LOGGER = logging.getLogger(__name__)
 
-STATION_URL = "https://dbf.finalrewind.org/dyn/v110/autocomplete.js"
+STATION_AUTOCOMPLETE_PATH = "/dyn/v110/autocomplete.js"
 CACHE_KEY_DATA = "db_infoscreen_stations"
 CACHE_KEY_UPDATE = "db_infoscreen_stations_last_update"
 CACHE_DURATION = timedelta(hours=24)
 
 
-async def async_get_stations(hass):
+async def async_get_stations(hass, base_url: str):
     """
     Download and parse the station list from DBF.
     Check hass.data for cached list first.
@@ -22,23 +22,28 @@ async def async_get_stations(hass):
     from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
     now = datetime.now(timezone.utc)
+    station_url = f"{base_url}{STATION_AUTOCOMPLETE_PATH}"
 
-    if CACHE_KEY_DATA in hass.data and CACHE_KEY_UPDATE in hass.data:
-        last_update = hass.data[CACHE_KEY_UPDATE]
+    # Use a per-server cache key to avoid mixing stations from different providers
+    server_slug = re.sub(r"[^a-zA-Z0-9]", "_", base_url)
+    data_key = f"{CACHE_KEY_DATA}_{server_slug}"
+    update_key = f"{CACHE_KEY_UPDATE}_{server_slug}"
+
+    if data_key in hass.data and update_key in hass.data:
+        last_update = hass.data[update_key]
         if now - last_update < CACHE_DURATION:
-            _LOGGER.debug("Using cached station list (age: %s)", now - last_update)
-            return hass.data[CACHE_KEY_DATA]
-        else:
             _LOGGER.debug(
-                "Cached station list expired (age: %s), refreshing...",
+                "Using cached station list for %s (age: %s)",
+                base_url,
                 now - last_update,
             )
+            return hass.data[data_key]
 
-    _LOGGER.debug("Downloading station list from %s", STATION_URL)
+    _LOGGER.debug("Downloading station list from %s", station_url)
     try:
         session = async_get_clientsession(hass)
         async with async_timeout.timeout(10):
-            async with session.get(STATION_URL) as response:
+            async with session.get(station_url) as response:
                 response.raise_for_status()
                 content = await response.text()
 
@@ -47,23 +52,19 @@ async def async_get_stations(hass):
                 if match:
                     json_str = f"[{match.group(1)}]"
                     stations = json.loads(json_str)
-                    hass.data[CACHE_KEY_DATA] = stations
-                    hass.data[CACHE_KEY_UPDATE] = now
+                    hass.data[data_key] = stations
+                    hass.data[update_key] = now
                     _LOGGER.debug("Parsed and cached %d stations", len(stations))
                     return stations
                 else:
-                    _LOGGER.error("Could not find station array in response")
-                    # Return cached data if available even if expired, to be safe
-                    if CACHE_KEY_DATA in hass.data:
-                        _LOGGER.warning("Using expired cache due to parsing error.")
-                        return hass.data[CACHE_KEY_DATA]
+                    _LOGGER.error("Could not find station array in response from %s", base_url)
+                    if data_key in hass.data:
+                        return hass.data[data_key]
                     return []
     except Exception as e:
-        _LOGGER.error("Error downloading station list: %s", e)
-        # Fallback to expired cache if available
-        if CACHE_KEY_DATA in hass.data:
-            _LOGGER.warning("Using expired cache due to download error.")
-            return hass.data[CACHE_KEY_DATA]
+        _LOGGER.error("Error downloading station list from %s: %s", base_url, e)
+        if data_key in hass.data:
+            return hass.data[data_key]
         return []
 
 

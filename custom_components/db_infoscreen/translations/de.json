@@ -3,6 +3,14 @@
     "flow_title": "Abfahrtstafel einrichten",
     "step": {
       "user": {
+        "title": "Server auswählen",
+        "description": "Aufgrund von Ratenbeschränkungen auf dem offiziellen Server wählen Sie bitte aus, welche API-Instanz verwendet werden soll. Die Verwendung einer selbstgehosteten Instanz wird für das beste Erlebnis empfohlen.",
+        "data": {
+          "server_type": "Server-Typ",
+          "server_url": "Eigene Server-URL (z.B. https://dbf.example.com)"
+        }
+      },
+      "station_search": {
         "title": "Station suchen",
         "description": "Bitte gib den Namen deiner Station ein (z.B. 'Berlin Hbf').\n\nFalls deine Station nicht in der IRIS-Liste gefunden wird, kannst du sie im nächsten Schritt auch manuell einrichten.",
         "data": {
@@ -308,6 +316,13 @@
         "report": "Problem auf GitHub melden",
         "change_source": "Datenquelle ändern",
         "remove": "Diese Station entfernen"
+      }
+    },
+    "server_type": {
+      "options": {
+        "custom": "Eigener Server (selbst eingetragen, Standard)",
+        "official": "Offizieller öffentlicher Server (Ratenbeschränkungen - NICHT empfohlen) - dbf.finalrewind.org",
+        "faserf": "FaserF öffentlicher Server (bitte eigenen bevorzugen) - dbf.fabiseitz.de"
       }
     }
   }

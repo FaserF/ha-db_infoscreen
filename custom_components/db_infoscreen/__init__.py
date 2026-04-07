@@ -58,6 +58,13 @@ from .const import (
     CONF_EXCLUDE_CANCELLED,
     CONF_SHOW_OCCUPANCY,
     CONF_FAVORITE_TRAINS,
+    CONF_SERVER_TYPE,
+    CONF_SERVER_URL,
+    SERVER_TYPE_CUSTOM,
+    SERVER_TYPE_OFFICIAL,
+    SERVER_TYPE_FASERF,
+    SERVER_URL_OFFICIAL,
+    SERVER_URL_FASERF,
     normalize_data_source,
     DATA_SOURCE_MAP,
 )
@@ -327,8 +334,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         encoded_station = quote(station_cleaned, safe=",-")
         custom_api_url = config.get(CONF_CUSTOM_API_URL, "")
         self._last_valid_value: list[dict[str, Any]] = []
+        # Use the server URL from the config entry, fall back to official if missing
         self._base_url = (
-            custom_api_url if custom_api_url else "https://dbf.finalrewind.org"
+            custom_api_url
+            if custom_api_url
+            else config.get(CONF_SERVER_URL, SERVER_URL_OFFICIAL)
         )
         url = f"{self._base_url}/{encoded_station}.json"
 

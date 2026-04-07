@@ -1,4 +1,11 @@
 DOMAIN = "db_infoscreen"
+CONF_SERVER_TYPE = "server_type"
+CONF_SERVER_URL = "server_url"
+SERVER_TYPE_CUSTOM = "custom"
+SERVER_TYPE_OFFICIAL = "official"
+SERVER_TYPE_FASERF = "faserf"
+SERVER_URL_OFFICIAL = "https://dbf.finalrewind.org"
+SERVER_URL_FASERF = "https://dbf.fabiseitz.de"
 
 CONF_STATION = "station"
 CONF_NEXT_DEPARTURES = "next_departures"

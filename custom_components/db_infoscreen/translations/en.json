@@ -3,6 +3,14 @@
     "flow_title": "Setup Station Departure Sensor",
     "step": {
       "user": {
+        "title": "Select Server",
+        "description": "Due to rate limiting on the official server, please choose which API instance to use. Using a self-hosted instance is recommended for the best experience.",
+        "data": {
+          "server_type": "Server Type",
+          "server_url": "Custom Server URL (e.g. https://dbf.example.com)"
+        }
+      },
+      "station_search": {
         "title": "Find your Station",
         "description": "Please enter the name of your station (e.g. 'Berlin Hbf').\n\nIf your station is not found in the official IRIS list, don't worry! You can use the 'Manual Entry' option in the next step to add it anyway.",
         "data": {
@@ -308,6 +316,13 @@
         "report": "Report issue on GitHub",
         "change_source": "Change data source",
         "remove": "Remove this station"
+      }
+    },
+    "server_type": {
+      "options": {
+        "custom": "Custom Server (self-entered, default)",
+        "official": "Official Public Server (Rate limitations - NOT recommended) - dbf.finalrewind.org",
+        "faserf": "FaserF Public Server (Please prefer your own) - dbf.fabiseitz.de"
       }
     }
   }

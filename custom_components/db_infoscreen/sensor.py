@@ -255,7 +255,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         """
         Return additional state attributes for the sensor including next departures and metadata.
         """
-        full_api_url = getattr(self.coordinator, "api_url", "dbf.finalrewind.org")
+        full_api_url = getattr(self.coordinator, "_base_url", "dbf.finalrewind.org")
         attribution = f"Data provided by API {full_api_url}"
 
         # Create a deep copy or new list of dicts to avoid mutating the coordinator data
