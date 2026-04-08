@@ -55,6 +55,26 @@ from .utils import async_get_stations, find_station_matches
 _LOGGER = logging.getLogger(__name__)
 
 
+def _generate_entry_title(data: dict) -> str:
+    """Generate a title for the config entry based on current settings."""
+    station = data.get(CONF_STATION, "Unknown Station")
+    via = data.get(CONF_VIA_STATIONS, [])
+    direction = data.get(CONF_DIRECTION, "")
+    platforms = data.get(CONF_PLATFORMS, "")
+
+    title_parts = [station]
+    if platforms:
+        title_parts.append(f"platform {platforms}")
+    if via:
+        via_str = ", ".join(via) if isinstance(via, list) else str(via)
+        if via_str:
+            title_parts.append(f"via {via_str}")
+    if direction:
+        title_parts.append(f"direction {direction}")
+
+    return " ".join(title_parts)
+
+
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
     """
     Handle the initial configuration and setup wizard for DB Infoscreen.
@@ -79,6 +99,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         self.is_manual_entry = False
         self.basic_options = {}
         self.server_url = ""
+        self.server_type = SERVER_TYPE_CUSTOM
 
     async def async_step_user(self, user_input=None):
         """
@@ -114,6 +135,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     errors["base"] = "cannot_connect"
                 else:
                     self.server_url = url
+                    self.server_type = server_type
                     return await self.async_step_station_search()
 
         return self.async_show_form(
@@ -404,6 +426,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             station = station[: -len(" (Manual Entry)")].strip()
 
         user_input[CONF_STATION] = station
+        user_input[CONF_SERVER_URL] = self.server_url
+        user_input[CONF_SERVER_TYPE] = self.server_type
         via = user_input.get(CONF_VIA_STATIONS, [])
         user_input[CONF_VIA_STATIONS] = via
         direction = user_input.get(CONF_DIRECTION, "")
@@ -452,17 +476,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         await self.async_set_unique_id(unique_id_candidate)
         _LOGGER.debug("Creating new sensor with unique_id: %s", unique_id_candidate)
 
-        title_parts = [station]
-        if platforms:
-            title_parts.append(f"platform {platforms}")
-        if via:
-            title_parts.append(f"via {' '.join(via)}")
-        if direction:
-            title_parts.append(f"direction {direction}")
+        # Generate title using helper
+        full_title = _generate_entry_title(user_input)
         if same_station_entries:
-            title_parts.append(f"({data_source})")
-
-        full_title = " ".join(title_parts)
+            full_title += f" ({data_source})"
 
         return self.async_create_entry(
             title=full_title,
@@ -583,19 +600,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
     async def _validate_server_url(self, url: str) -> bool:
         """Verify that the server is reachable and looks like a DBF instance."""
-        from homeassistant.helpers.aiohttp_client import async_get_clientsession
+        from .utils import async_verify_server
 
-        try:
-            session = async_get_clientsession(self.hass)
-            # Try to get the station list mapping to check if it's a DBF instance
-            # or just a random URL
-            async with session.get(url, timeout=10) as response:
-                # Any 200/301/404 is usually fine as long as the server is there
-                # But let's check for 200 specifically on the root or a known path
-                return response.status < 500
-        except Exception as e:
-            _LOGGER.error("Server validation failed for %s: %s", url, e)
-            return False
+        return await async_verify_server(self.hass, url)
 
     @staticmethod
     def async_get_options_flow(config_entry):
@@ -616,9 +623,39 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self._config_entry = config_entry
         self._options = dict(config_entry.options)
 
+    async def _async_save_options(self, user_input=None):
+        """Update options and the entry title before saving."""
+        if user_input:
+            self._options.update(user_input)
+
+        # Recalculate title based on merged data and options
+        merged_config = {**self._config_entry.data, **self._options}
+        new_title = _generate_entry_title(merged_config)
+
+        # Preserve the data source suffix if it was already there
+        if f"({merged_config.get(CONF_DATA_SOURCE)})" in self._config_entry.title:
+            new_title += f" ({merged_config.get(CONF_DATA_SOURCE)})"
+
+        if new_title != self._config_entry.title:
+            self.hass.config_entries.async_update_entry(
+                self._config_entry, title=new_title
+            )
+
+        return self.async_create_entry(title="", data=self._options)
+
     def _get_config_value(self, key, default=None):
         """Get value from our updated options or fall back to config data."""
-        return self._options.get(key, self._config_entry.data.get(key, default))
+        val = self._options.get(key, self._config_entry.data.get(key, default))
+
+        # Infer server type if missing or default (for backward compatibility)
+        if key == CONF_SERVER_TYPE and (not val or val == SERVER_TYPE_CUSTOM):
+            url = self._get_config_value(CONF_SERVER_URL, "")
+            if url == SERVER_URL_OFFICIAL:
+                return SERVER_TYPE_OFFICIAL
+            if url == SERVER_URL_FASERF:
+                return SERVER_TYPE_FASERF
+
+        return val
 
     async def async_step_init(self, user_input=None):
         """
@@ -641,8 +678,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_general_options(self, user_input=None):
         """Handle general options."""
         if user_input is not None:
-            self._options.update(user_input)
-            return self.async_create_entry(title="", data=self._options)
+            return await self._async_save_options(user_input)
 
         return self.async_show_form(
             step_id="general_options",
@@ -697,20 +733,16 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             if not url:
                 errors[CONF_SERVER_URL] = "invalid_url"
             else:
-                # Update options
-                user_input[CONF_SERVER_URL] = url
-                self._options.update(user_input)
-                return self.async_show_menu(
-                    step_id="init",
-                    menu_options=[
-                        "general_options",
-                        "server_options",
-                        "filter_options",
-                        "display_options",
-                        "advanced_options",
-                        "finish",
-                    ],
-                )
+                # Availability / Validity check
+                from .utils import async_verify_server
+
+                valid = await async_verify_server(self.hass, url)
+                if not valid:
+                    errors["base"] = "cannot_connect"
+                else:
+                    # Update options
+                    user_input[CONF_SERVER_URL] = url
+                    return await self._async_save_options(user_input)
 
         return self.async_show_form(
             step_id="server_options",
@@ -742,8 +774,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 user_input[CONF_VIA_STATIONS] = [
                     s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
                 ]
-            self._options.update(user_input)
-            return self.async_create_entry(title="", data=self._options)
+            return await self._async_save_options(user_input)
 
         # Get via_stations list and join for display
         via_stations_list = self._get_config_value(CONF_VIA_STATIONS, [])
@@ -799,8 +830,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_display_options(self, user_input=None):
         """Handle display options."""
         if user_input is not None:
-            self._options.update(user_input)
-            return self.async_create_entry(title="", data=self._options)
+            return await self._async_save_options(user_input)
 
         return self.async_show_form(
             step_id="display_options",
@@ -841,8 +871,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_advanced_options(self, user_input=None):
         """Handle advanced options."""
         if user_input is not None:
-            self._options.update(user_input)
-            return self.async_create_entry(title="", data=self._options)
+            return await self._async_save_options(user_input)
 
         return self.async_show_form(
             step_id="advanced_options",
@@ -886,4 +915,4 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_finish(self, user_input=None):
         """Finish and save the options."""
-        return self.async_create_entry(title="", data=self._options)
+        return await self._async_save_options()

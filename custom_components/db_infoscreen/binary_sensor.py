@@ -39,14 +39,9 @@ async def async_setup_entry(
 
     # Add Elevator Sensors
     # If platforms are filtered, create sensors for those platforms.
-    # Otherwise, we could create a general one or try to infer from typical usage.
-    # For now, if 'platforms' config exists, we create one for each.
-    # If not, we create a general "Station Accessibility" sensor.
     # Priority: Options > Data
-    platforms_raw = config_entry.options.get("platforms")
-    if platforms_raw is None:
-        platforms_raw = config_entry.data.get("platforms", "")
-    platforms_str = platforms_raw
+    conf = {**config_entry.data, **config_entry.options}
+    platforms_str = conf.get("platforms", "")
 
     unique_platforms = set()
     if platforms_str:

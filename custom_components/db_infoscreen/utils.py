@@ -13,6 +13,27 @@ CACHE_KEY_UPDATE = "db_infoscreen_stations_last_update"
 CACHE_DURATION = timedelta(hours=24)
 
 
+async def async_verify_server(hass, base_url: str) -> bool:
+    """Verify that a server is reachable and specifically a DBF instance."""
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+    station_url = f"{base_url}{STATION_AUTOCOMPLETE_PATH}"
+    _LOGGER.debug("Verifying server at %s", station_url)
+
+    try:
+        session = async_get_clientsession(hass)
+        async with async_timeout.timeout(5):
+            async with session.get(station_url) as response:
+                # We expect 200 and some content containing 'stations='
+                if response.status == 200:
+                    content = await response.text()
+                    return "stations=[" in content
+                return False
+    except Exception as e:
+        _LOGGER.warning("Server verification failed for %s: %s", base_url, e)
+        return False
+
+
 async def async_get_stations(hass, base_url: str):
     """
     Download and parse the station list from DBF.

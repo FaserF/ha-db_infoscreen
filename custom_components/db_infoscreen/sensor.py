@@ -628,11 +628,15 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     Set up a DBInfoSensor entity for the given config entry.
     """
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    station = config_entry.data.get("station")
-    via_stations = config_entry.data.get("via_stations", [])
-    direction = config_entry.data.get("direction", "")
-    platforms = config_entry.data.get("platforms", "")
-    enable_text_view = config_entry.options.get(CONF_ENABLE_TEXT_VIEW, False)
+
+    # Prioritize options over data
+    conf = {**config_entry.data, **config_entry.options}
+
+    station = conf.get("station")
+    via_stations = conf.get("via_stations", [])
+    direction = conf.get("direction", "")
+    platforms = conf.get("platforms", "")
+    enable_text_view = conf.get(CONF_ENABLE_TEXT_VIEW, False)
 
     _LOGGER.debug("Setting up DBInfoScreen sensors for station: %s", station)
 

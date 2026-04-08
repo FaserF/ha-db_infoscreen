@@ -15,8 +15,10 @@ class DBInfoScreenBaseEntity(CoordinatorEntity):
         """Initialize the entity."""
         super().__init__(coordinator)
         self.config_entry = config_entry
-        # Some entities use 'station' directly from data, others might need it from local attr
-        self.station = config_entry.data.get("station", "Unknown")
+        # Options take priority over initial data
+        self.station = config_entry.options.get(
+            "station", config_entry.data.get("station", "Unknown")
+        )
 
     @property
     def device_info(self):
