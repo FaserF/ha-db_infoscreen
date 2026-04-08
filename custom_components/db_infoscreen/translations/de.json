@@ -45,7 +45,6 @@
           "past_60_minutes": "Abfahrten der letzten 60 Min einschließen",
           "keep_route": "Vollständigen Fahrplan behalten",
           "keep_endstation": "Abfahrt auch an Endstation anzeigen",
-          "custom_api_url": "Eigene API-URL (nur Experten)",
           "data_source": "Datenquelle (Backend)",
           "offset": "Zeit-Versatz (HH:MM)",
           "admode": "Anzeige-Modus (Ankunft vs Abfahrt)",
@@ -69,8 +68,7 @@
           "update_interval": "Aktualisierungsintervall (Minuten)",
           "platforms": "Nach Gleisen filtern",
           "via_stations": "Nach 'Über'-Stationen filtern",
-          "via_stations_logic": "Filter-Logik",
-          "custom_api_url": "Eigene API-URL (nur Experten)"
+          "via_stations_logic": "Filter-Logik"
         }
       }
     },
@@ -100,8 +98,7 @@
           "next_departures": "Anzahl Abfahrten",
           "via_stations": "Über-Stationen",
           "direction": "Richtung",
-          "platforms": "Gleise",
-          "custom_api_url": "Eigene API-URL"
+          "platforms": "Gleise"
         }
       },
       "init": {
@@ -110,6 +107,7 @@
           "general_options": "Allgemeine Einstellungen",
           "filter_options": "Filter-Einstellungen",
           "display_options": "Anzeige-Einstellungen",
+          "server_options": "Server-Einstellungen",
           "advanced_options": "Erweiterte Einstellungen",
           "finish": "Beenden und Speichern"
         }
@@ -122,6 +120,14 @@
           "update_interval": "Aktualisierungsintervall (Minuten)",
           "offset": "Versatz (HH:MM)",
           "walk_time": "Gehzeit (Minuten)"
+        }
+      },
+      "server_options": {
+        "title": "Server-Einstellungen",
+        "description": "Konfiguriere den API-Server für diese Station.",
+        "data": {
+          "server_type": "Server-Typ",
+          "server_url": "Server-URL"
         }
       },
       "filter_options": {
@@ -154,7 +160,6 @@
         "title": "Erweiterte Einstellungen",
         "description": "API- und Datenverarbeitung.",
         "data": {
-          "custom_api_url": "Spezielle API-URL",
           "deduplicate_departures": "Dubletten filtern",
           "keep_route": "Fahrplan behalten",
           "keep_endstation": "An Endstation anzeigen",

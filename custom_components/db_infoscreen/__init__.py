@@ -37,7 +37,6 @@ from .const import (
     CONF_HIDE_LOW_DELAY,
     CONF_DETAILED,
     CONF_PAST_60_MINUTES,
-    CONF_CUSTOM_API_URL,
     CONF_DATA_SOURCE,
     CONF_OFFSET,
     CONF_PLATFORMS,
@@ -229,6 +228,46 @@ async def async_setup_entry(
     return True
 
 
+async def async_migrate_entry(hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
+    """Migrate old entry from version 1 to 2."""
+    _LOGGER.info("Migrating from version %s", config_entry.version)
+
+    if config_entry.version == 1:
+        new_data = {**config_entry.data}
+        new_options = {**config_entry.options}
+
+        def migrate_dict(d: dict[str, Any]) -> None:
+            if CONF_SERVER_URL not in d:
+                # Use custom_api_url if it exists, otherwise use official
+                url = d.get("custom_api_url")
+                if not url:
+                    url = SERVER_URL_OFFICIAL
+                
+                # Check if it looks like faserf or official
+                if url == SERVER_URL_OFFICIAL:
+                    d[CONF_SERVER_TYPE] = SERVER_TYPE_OFFICIAL
+                elif url == SERVER_URL_FASERF:
+                    d[CONF_SERVER_TYPE] = SERVER_TYPE_FASERF
+                else:
+                    d[CONF_SERVER_TYPE] = SERVER_TYPE_CUSTOM
+                
+                d[CONF_SERVER_URL] = url
+
+            # Clean up old key
+            if "custom_api_url" in d:
+                del d["custom_api_url"]
+
+        migrate_dict(new_data)
+        migrate_dict(new_options)
+
+        hass.config_entries.async_update_entry(
+            config_entry, data=new_data, options=new_options, version=2
+        )
+
+    _LOGGER.info("Migration to version %s successful", config_entry.version)
+    return True
+
+
 async def async_unload_entry(
     hass: HomeAssistant, config_entry: config_entries.ConfigEntry
 ):
@@ -330,14 +369,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
         station_cleaned = " ".join(str(self.station).split())
         encoded_station = quote(station_cleaned, safe=",-")
-        custom_api_url = config.get(CONF_CUSTOM_API_URL, "")
         self._last_valid_value: list[dict[str, Any]] = []
         # Use the server URL from the config entry, fall back to official if missing
-        self._base_url = (
-            custom_api_url
-            if custom_api_url
-            else config.get(CONF_SERVER_URL, SERVER_URL_OFFICIAL)
-        )
+        self._base_url = config.get(CONF_SERVER_URL, SERVER_URL_OFFICIAL)
         url = f"{self._base_url}/{encoded_station}.json"
 
         data_source_map = DATA_SOURCE_MAP

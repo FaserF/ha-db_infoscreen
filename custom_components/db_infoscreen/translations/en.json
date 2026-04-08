@@ -45,7 +45,6 @@
           "past_60_minutes": "Include departures from the last 60 minutes",
           "keep_route": "Keep full route details (intermediate stops)",
           "keep_endstation": "Keep departure even if this is the end station",
-          "custom_api_url": "Custom API URL (Expert only)",
           "data_source": "Data Source (Backend)",
           "offset": "Time Offset (HH:MM)",
           "admode": "Display Mode (Arrival vs Departure)",
@@ -69,8 +68,7 @@
           "update_interval": "Update Interval (minutes)",
           "platforms": "Filter by Platforms",
           "via_stations": "Filter by Via Stations",
-          "via_stations_logic": "Via Station Search Logic",
-          "custom_api_url": "Custom API URL (Expert only)"
+          "via_stations_logic": "Via Station Search Logic"
         }
       }
     },
@@ -100,8 +98,7 @@
           "next_departures": "Number of Upcoming Departures",
           "via_stations": "Via Stations (comma separated)",
           "direction": "Direction",
-          "platforms": "Platforms (comma separated)",
-          "custom_api_url": "Custom API URL"
+          "platforms": "Platforms (comma separated)"
         }
       },
       "init": {
@@ -110,6 +107,7 @@
           "general_options": "General Settings",
           "filter_options": "Filter Settings",
           "display_options": "Display Settings",
+          "server_options": "Server Settings",
           "advanced_options": "Advanced Settings",
           "finish": "Finish and Save"
         }
@@ -122,6 +120,14 @@
           "update_interval": "Update Interval (minutes)",
           "offset": "Offset (HH:MM)",
           "walk_time": "Walk Time to Station (minutes)"
+        }
+      },
+      "server_options": {
+        "title": "Server Settings",
+        "description": "Configure the API server to use for this station.",
+        "data": {
+          "server_type": "Server Type",
+          "server_url": "Server URL"
         }
       },
       "filter_options": {
@@ -154,7 +160,6 @@
         "title": "Advanced Settings",
         "description": "Advanced configuration for API and data handling.",
         "data": {
-          "custom_api_url": "Custom API URL",
           "deduplicate_departures": "Deduplicate Departures",
           "keep_route": "Keep Route Details",
           "keep_endstation": "Keep Endstation",

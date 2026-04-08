@@ -17,7 +17,6 @@ from .const import (
     CONF_HIDE_LOW_DELAY,
     CONF_DETAILED,
     CONF_PAST_60_MINUTES,
-    CONF_CUSTOM_API_URL,
     CONF_DATA_SOURCE,
     CONF_OFFSET,
     CONF_PLATFORMS,
@@ -69,7 +68,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
     6. Manual entry/Data source selection (manual_config step)
     """
 
-    VERSION = 1
+    VERSION = 2
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
     def __init__(self):
@@ -286,7 +285,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             validation_result = await self._validate_station(
                 str(entry_data.get(CONF_STATION, "")),
                 str(entry_data.get(CONF_DATA_SOURCE, "IRIS-TTS")),
-                str(entry_data.get(CONF_CUSTOM_API_URL, "")),
             )
             if not validation_result["valid"]:
                 errors["base"] = "station_invalid"
@@ -327,7 +325,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 vol.Optional(CONF_VIA_STATIONS_LOGIC, default="OR"): vol.In(
                     ["OR", "AND"]
                 ),
-                vol.Optional(CONF_CUSTOM_API_URL, default=""): cv.string,
             }
         )
 
@@ -383,10 +380,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         data_source = normalize_data_source(
             user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
         )
-        custom_api_url = user_input.get(CONF_CUSTOM_API_URL, "")
 
         validation_result = await self._validate_station(
-            station_raw, data_source, custom_api_url
+            station_raw, data_source
         )
         if not validation_result["valid"]:
             _LOGGER.error("Station validation failed: %s", validation_result["error"])
@@ -504,7 +500,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 vol.Optional(CONF_PAST_60_MINUTES, default=False): cv.boolean,
                 vol.Optional(CONF_KEEP_ROUTE, default=False): cv.boolean,
                 vol.Optional(CONF_KEEP_ENDSTATION, default=False): cv.boolean,
-                vol.Optional(CONF_CUSTOM_API_URL, default=""): cv.string,
                 vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(
                     DATA_SOURCE_OPTIONS
                 ),
@@ -521,7 +516,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         )
 
     async def _validate_station(
-        self, station: str, data_source: str, custom_api_url: str = ""
+        self, station: str, data_source: str
     ) -> dict:
         """
         Validate that the station can be reached with the given data source.
@@ -541,7 +536,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         station_cleaned = " ".join(station_str.split())
         encoded_station = quote(station_cleaned, safe=",-")
 
-        base_url = custom_api_url if custom_api_url else self.server_url
+        base_url = self.server_url
         url = f"{base_url}/{encoded_station}.json"
 
         params = {}
@@ -635,6 +630,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             menu_options=[
                 "general_options",
+                "server_options",
                 "filter_options",
                 "display_options",
                 "advanced_options",
@@ -674,6 +670,67 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ): cv.positive_int,
                 }
             ),
+        )
+
+    async def async_step_server_options(self, user_input=None):
+        """Handle server configuration options."""
+        errors = {}
+        if user_input is not None:
+            server_type = user_input.get(CONF_SERVER_TYPE)
+            url = ""
+
+            if server_type == SERVER_TYPE_OFFICIAL:
+                url = SERVER_URL_OFFICIAL
+            elif server_type == SERVER_TYPE_FASERF:
+                url = SERVER_URL_FASERF
+            else:
+                url = user_input.get(CONF_SERVER_URL, "")
+
+            # Ensure URL has protocol
+            if url and not url.startswith(("http://", "https://")):
+                url = f"https://{url}"
+
+            # Remove trailing slash
+            if url.endswith("/"):
+                url = url[:-1]
+
+            if not url:
+                errors[CONF_SERVER_URL] = "invalid_url"
+            else:
+                # Update options
+                user_input[CONF_SERVER_URL] = url
+                self._options.update(user_input)
+                return self.async_show_menu(
+                    step_id="init",
+                    menu_options=[
+                        "general_options",
+                        "server_options",
+                        "filter_options",
+                        "display_options",
+                        "advanced_options",
+                        "finish",
+                    ],
+                )
+
+        return self.async_show_form(
+            step_id="server_options",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_SERVER_TYPE,
+                        default=self._get_config_value(
+                            CONF_SERVER_TYPE, SERVER_TYPE_CUSTOM
+                        ),
+                    ): vol.In(
+                        [SERVER_TYPE_CUSTOM, SERVER_TYPE_OFFICIAL, SERVER_TYPE_FASERF]
+                    ),
+                    vol.Optional(
+                        CONF_SERVER_URL,
+                        default=self._get_config_value(CONF_SERVER_URL, ""),
+                    ): cv.string,
+                }
+            ),
+            errors=errors,
         )
 
     async def async_step_filter_options(self, user_input=None):
@@ -791,10 +848,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             step_id="advanced_options",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(
-                        CONF_CUSTOM_API_URL,
-                        default=self._get_config_value(CONF_CUSTOM_API_URL, ""),
-                    ): cv.string,
                     vol.Optional(
                         CONF_DEDUPLICATE_DEPARTURES,
                         default=self._get_config_value(

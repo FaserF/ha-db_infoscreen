@@ -18,7 +18,6 @@ MAX_SENSORS = 30
 CONF_HIDE_LOW_DELAY = "hidelowdelay"
 CONF_DETAILED = "detailed"
 CONF_PAST_60_MINUTES = "past_60_minutes"
-CONF_CUSTOM_API_URL = "custom_api_url"
 CONF_DATA_SOURCE = "data_source"
 CONF_OFFSET = "offset"
 DEFAULT_OFFSET = "00:00"
