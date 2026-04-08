@@ -312,6 +312,42 @@
           "description": "Über Zugausfälle informieren."
         }
       }
+    },
+    "track_connection": {
+      "name": "Anschluss überwachen",
+      "description": "Überwacht einen Anschlusszug an einem Umstiegsbahnhof.",
+      "fields": {
+        "my_train_id": {
+          "name": "Aktueller Zug",
+          "description": "Die ID oder Nummer deines aktuellen Zuges (z.B. 'ICE 123')."
+        },
+        "change_station": {
+          "name": "Umstiegsbahnhof",
+          "description": "Der Bahnhof, an dem du umsteigst."
+        },
+        "next_train_id": {
+          "name": "Anschlusszug",
+          "description": "Die ID oder Nummer des Zugs, den du erreichen möchtest (z.B. 'ICE 456')."
+        }
+      }
+    },
+    "refresh_departures": {
+      "name": "Abfahrten aktualisieren",
+      "description": "Löst eine manuelle Aktualisierung der Abfahrten für alle konfigurierten Stationen aus."
+    },
+    "set_offset": {
+      "name": "Zeitversatz setzen",
+      "description": "Überschreibt vorübergehend den Standard-Zeitversatz für Abfahrten.",
+      "fields": {
+        "offset": {
+          "name": "Versatz",
+          "description": "Der neue Zeitversatz im Format HH:MM (z.B. 00:05)."
+        },
+        "station": {
+          "name": "Station",
+          "description": "Die Station, für die der Versatz gelten soll. Leer lassen für alle Stationen."
+        }
+      }
     }
   },
   "selector": {

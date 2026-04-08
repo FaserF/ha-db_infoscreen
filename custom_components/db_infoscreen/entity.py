@@ -28,8 +28,10 @@ class DBInfoScreenBaseEntity(CoordinatorEntity):
             "name": f"DB Infoscreen {self.config_entry.title}",
             "manufacturer": "DBF (derf)",
             "model": "Departure Board",
+            "sw_version": getattr(self.coordinator, "server_version", None),
             "configuration_url": getattr(self.coordinator, "web_url", None),
         }
+
 
     @property
     def available(self) -> bool:

@@ -228,7 +228,9 @@ async def async_setup_entry(
     return True
 
 
-async def async_migrate_entry(hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
+async def async_migrate_entry(
+    hass: HomeAssistant, config_entry: config_entries.ConfigEntry
+):
     """Migrate old entry from version 1 to 2."""
     _LOGGER.info("Migrating from version %s", config_entry.version)
 
@@ -242,7 +244,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: config_entries.
                 url = d.get("custom_api_url")
                 if not url:
                     url = SERVER_URL_OFFICIAL
-                
+
                 # Check if it looks like faserf or official
                 if url == SERVER_URL_OFFICIAL:
                     d[CONF_SERVER_TYPE] = SERVER_TYPE_OFFICIAL
@@ -250,7 +252,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: config_entries.
                     d[CONF_SERVER_TYPE] = SERVER_TYPE_FASERF
                 else:
                     d[CONF_SERVER_TYPE] = SERVER_TYPE_CUSTOM
-                
+
                 d[CONF_SERVER_URL] = url
 
             # Clean up old key
@@ -429,6 +431,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
         self._consecutive_errors = 0
         self._last_successful_update: datetime | None = None
         self._stale_issue_raised = False
+        self.server_version: str | None = None
         _LOGGER.debug(
             "Coordinator initialized for station %s with update interval %d minutes",
             self.station,
@@ -442,6 +445,29 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             # Remove .json from the URL to get the web page
             return self.api_url.replace(".json", "")
         return None
+
+    async def async_fetch_server_version(self):
+        """Fetch server version from the API."""
+        session = async_get_clientsession(self.hass)
+        try:
+            # Try the suggested workaround endpoint
+            about_url = f"{self._base_url}/_about.json"
+            async with async_timeout.timeout(10):
+                async with session.get(about_url, allow_redirects=True) as response:
+                    if response.status < 500:
+                        data = await response.json()
+                        if isinstance(data, dict):
+                            # Search for version strings in the response
+                            v = data.get("version")
+                            av = data.get("api_version")
+                            if v and v != "???":
+                                self.server_version = str(v)
+                            elif av:
+                                self.server_version = f"API v{av}"
+        except Exception as e:
+            _LOGGER.debug(
+                "Could not fetch server version from %s: %s", self._base_url, e
+            )
 
     def convert_offset_to_seconds(self, offset: str) -> int:
         """
@@ -542,6 +568,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             list[dict]: Processed departure objects limited to the configured `next_departures` count. If no valid departures can be produced, returns the last cached valid list or an empty list.
         """
         now = dt_util.now()
+
+        # Fetch server version if we don't have it yet
+        if self.server_version is None:
+            await self.async_fetch_server_version()
 
         # Check cache via generic fetch_url
         if self.fetch_url in RESPONSE_CACHE:

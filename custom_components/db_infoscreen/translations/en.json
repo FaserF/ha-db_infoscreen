@@ -312,6 +312,42 @@
           "description": "Whether to notify if the train is cancelled."
         }
       }
+    },
+    "track_connection": {
+      "name": "Track Connection",
+      "description": "Monitors a connecting train at a transfer station.",
+      "fields": {
+        "my_train_id": {
+          "name": "Current Train ID",
+          "description": "The ID or Number of your current train (e.g. 'ICE 123')."
+        },
+        "change_station": {
+          "name": "Change Station",
+          "description": "The station where you change trains."
+        },
+        "next_train_id": {
+          "name": "Next Train ID",
+          "description": "The ID or Number of the train you want to catch (e.g. 'ICE 456')."
+        }
+      }
+    },
+    "refresh_departures": {
+      "name": "Refresh Departures",
+      "description": "Triggers a manual refresh of train departures for all configured stations."
+    },
+    "set_offset": {
+      "name": "Set Offset",
+      "description": "Dynamically overrides the default time offset for departures temporarily.",
+      "fields": {
+        "offset": {
+          "name": "Offset",
+          "description": "The new time offset in format HH:MM (e.g. 00:05)."
+        },
+        "station": {
+          "name": "Station",
+          "description": "The station name to apply the offset to. If left blank, it applies to all stations."
+        }
+      }
     }
   },
   "selector": {

@@ -403,9 +403,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
         )
 
-        validation_result = await self._validate_station(
-            station_raw, data_source
-        )
+        validation_result = await self._validate_station(station_raw, data_source)
         if not validation_result["valid"]:
             _LOGGER.error("Station validation failed: %s", validation_result["error"])
             # Return to appropriate step with error
@@ -532,9 +530,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             }
         )
 
-    async def _validate_station(
-        self, station: str, data_source: str
-    ) -> dict:
+    async def _validate_station(self, station: str, data_source: str) -> dict:
         """
         Validate that the station can be reached with the given data source.
         Returns {"valid": True} or {"valid": False, "error": "description"}
