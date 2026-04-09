@@ -259,8 +259,22 @@ if not PYTEST_HA_AVAILABLE:
         ha_def.FlowResultType.MENU = "menu"
         ha_def.FlowResultType.ABORT = "abort"
 
-    # 2. Mock async_timeout
-    if "async_timeout" not in sys.modules:
+
+    # 3. Mock pytest_homeassistant_custom_component if missing
+    if "pytest_homeassistant_custom_component" not in sys.modules:
+        phcc = types.ModuleType("pytest_homeassistant_custom_component")
+        phcc.__path__ = []
+        sys.modules["pytest_homeassistant_custom_component"] = phcc
+
+        phcc_common = types.ModuleType("pytest_homeassistant_custom_component.common")
+        phcc_common.MockConfigEntry = MagicMock  # type: ignore[attr-defined]
+        sys.modules["pytest_homeassistant_custom_component.common"] = phcc_common
+
+# 2. Mock async_timeout if missing
+if "async_timeout" not in sys.modules:
+    try:
+        importlib.import_module("async_timeout")
+    except ImportError:
         async_timeout_mod = types.ModuleType("async_timeout")
 
         async def async_enter(*args, **kwargs):
@@ -274,16 +288,6 @@ if not PYTEST_HA_AVAILABLE:
         timeout_ctx.__aexit__ = async_exit
         async_timeout_mod.timeout = MagicMock(return_value=timeout_ctx)  # type: ignore[attr-defined]
         sys.modules["async_timeout"] = async_timeout_mod
-
-    # 3. Mock pytest_homeassistant_custom_component if missing
-    if "pytest_homeassistant_custom_component" not in sys.modules:
-        phcc = types.ModuleType("pytest_homeassistant_custom_component")
-        phcc.__path__ = []
-        sys.modules["pytest_homeassistant_custom_component"] = phcc
-
-        phcc_common = types.ModuleType("pytest_homeassistant_custom_component.common")
-        phcc_common.MockConfigEntry = MagicMock  # type: ignore[attr-defined]
-        sys.modules["pytest_homeassistant_custom_component.common"] = phcc_common
 
 # 3. Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
