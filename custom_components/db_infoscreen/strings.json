@@ -7,7 +7,7 @@
         "description": "Due to rate limiting on the official server, please choose which API instance to use. Using a self-hosted instance is recommended for the best experience.",
         "data": {
           "server_type": "Server Type",
-          "server_url": "Custom Server URL"
+          "server_url": "Custom Server URL (e.g. http://127.0.0.1:8092)"
         }
       },
       "station_search": {

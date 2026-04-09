@@ -18,10 +18,11 @@ import logging
 import json
 import re
 import voluptuous as vol
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlparse
 
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.network import get_url
 
 from . import repairs
 
@@ -442,7 +443,22 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         """Return the human-readable DBF website URL (without .json)."""
         if hasattr(self, "api_url") and self.api_url:
             # Remove .json from the URL to get the web page
-            return self.api_url.replace(".json", "")
+            url = self.api_url.replace(".json", "")
+            # If the URL points to localhost/127.0.0.1, try to resolve to HA local IP
+            # so that it works when accessed from outside (e.g. mobile app)
+            if "127.0.0.1" in url or "localhost" in url:
+                try:
+                    # Try to get internal URL (e.g. http://192.168.1.10:8123)
+                    internal_url = get_url(self.hass, allow_internal=True, allow_external=False)
+                    if internal_url:
+                        local_ip = urlparse(internal_url).hostname
+                        if local_ip:
+                            url = url.replace("127.0.0.1", local_ip).replace(
+                                "localhost", local_ip
+                            )
+                except Exception as e:
+                    _LOGGER.debug("Could not resolve local IP for web_url: %s", e)
+            return url
         return None
 
     async def async_fetch_server_version(self):
