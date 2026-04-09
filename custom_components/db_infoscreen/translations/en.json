@@ -7,7 +7,7 @@
         "description": "Due to rate limiting on the official server, please choose which API instance to use. Using a self-hosted instance is recommended for the best experience.",
         "data": {
           "server_type": "Server Type",
-          "server_url": "Custom Server URL (e.g. https://dbf.example.com)"
+          "server_url": "Custom Server URL"
         }
       },
       "station_search": {

@@ -7,7 +7,7 @@
         "description": "Aufgrund von Ratenbeschränkungen auf dem offiziellen Server wählen Sie bitte aus, welche API-Instanz verwendet werden soll. Die Verwendung einer selbstgehosteten Instanz wird für das beste Erlebnis empfohlen.",
         "data": {
           "server_type": "Server-Typ",
-          "server_url": "Eigene Server-URL (z.B. https://dbf.example.com)"
+          "server_url": "Eigene Server-URL"
         }
       },
       "station_search": {
