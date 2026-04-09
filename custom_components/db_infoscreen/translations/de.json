@@ -76,7 +76,8 @@
       "max_sensors_reached": "Maximale Anzahl an Sensoren erreicht (30).",
       "unknown": "Ein unbekannter Fehler ist aufgetreten.",
       "no_stations_found": "Keine passenden Stationen gefunden.",
-      "cannot_connect": "Verbindung zum Server fehlgeschlagen.",
+      "cannot_connect": "Verbindung zum Server fehlgeschlagen oder der Server ist keine gültige DB Infoscreen Instanz. Bitte prüfe die URL und deine Verbindung.",
+      "invalid_url": "Bitte gib eine gültige URL ein (inkl. http:// oder https://)",
       "station_not_found_warning": "⚠️ Station nicht in IRIS gefunden. Bitte Schreibweise prüfen.",
       "station_invalid": "❌ Daten konnten nicht abgerufen werden: {error_detail}",
       "station_validation_failed": "Stations-Validierung fehlgeschlagen."

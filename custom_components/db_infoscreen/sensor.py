@@ -2,7 +2,7 @@
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
-from typing import Any
+from typing import Any, cast
 from .const import (
     DOMAIN,
     CONF_ENABLE_TEXT_VIEW,
@@ -163,8 +163,9 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         Also applies filtering for platforms, direction, and via stations.
         """
         now = dt_util.now().timestamp()
-        raw_departures = self.coordinator.data or []
-
+        raw_departures: list[dict[str, Any]] = cast(
+            list[dict[str, Any]], self.coordinator.data or []
+        )
         # 1. Time filtering (keep future and very recent past trains)
         filtered = [
             dep
@@ -418,16 +419,22 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
 
     def _get_watchdog_data(self) -> dict[str, Any] | None:
         """Calculate watchdog data from the first departure."""
-        if not self.coordinator.data:
+        departures: list[dict[str, Any]] = cast(
+            list[dict[str, Any]], self.coordinator.data or []
+        )
+        if not departures:
             return None
 
         # Look at the first (next) departure
-        next_train = self.coordinator.data[0]
+        next_train: dict[str, Any] = departures[0]
         route = next_train.get("route", [])
 
         if not route:
             return None
 
+        if self.coordinator.config_entry is None:
+            return None
+        
         my_station_name = self.coordinator.config_entry.data.get(CONF_STATION)
         # Clean up station name (sometimes has IDs or commas)
         # Strategy:

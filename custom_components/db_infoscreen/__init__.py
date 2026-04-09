@@ -11,7 +11,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 from datetime import timedelta, datetime
-import aiohttp
 import copy
 import async_timeout
 import asyncio
@@ -293,7 +292,7 @@ async def update_listener(
     await hass.config_entries.async_reload(config_entry.entry_id)
 
 
-class DBInfoScreenCoordinator(DataUpdateCoordinator):
+class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
     """
     Data update coordinator for DB Infoscreen.
 
@@ -588,30 +587,30 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
             data = None
 
         if data is None:
+            import aiohttp
             session = async_get_clientsession(self.hass)
             max_retries = 2
             retry_delay = 1
 
             for attempt in range(max_retries + 1):
                 try:
-                    async with async_timeout.timeout(20):
-                        async with session.get(self.fetch_url) as response:
-                            if response.status == 429:
-                                _LOGGER.warning(
-                                    "Rate limit hit for %s (429 Too Many Requests). Skipping retries for this cycle.",
-                                    self.fetch_url,
-                                )
-                                return self._last_valid_value or []
+                    async with session.get(self.fetch_url, timeout=aiohttp.ClientTimeout(total=20)) as response:
+                        if response.status == 429:
+                            _LOGGER.warning(
+                                "Rate limit hit for %s (429 Too Many Requests). Skipping retries for this cycle.",
+                                self.fetch_url,
+                            )
+                            return self._last_valid_value or []
 
-                            data = await response.json()
-                            if asyncio.iscoroutine(data) or (
-                                hasattr(data, "__await__")
-                                and not isinstance(data, (dict, list))
-                            ):
-                                data = await data
+                        data = await response.json()
+                        if asyncio.iscoroutine(data) or (
+                            hasattr(data, "__await__")
+                            and not isinstance(data, (dict, list))
+                        ):
+                            data = await data
 
-                            RESPONSE_CACHE[self.fetch_url] = (now, copy.deepcopy(data))
-                            break  # Success, exit retry loop
+                        RESPONSE_CACHE[self.fetch_url] = (now, copy.deepcopy(data))
+                        break  # Success, exit retry loop
                 except aiohttp.ClientResponseError as err:
                     if err.status == 429:
                         _LOGGER.warning(
@@ -1540,13 +1539,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
         try:
             if data is None:
+                import aiohttp
                 session = async_get_clientsession(self.hass)
-                async with async_timeout.timeout(10):
-                    async with session.get(url) as response:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
                         # Handle both sync and async raise_for_status for better test compatibility
-                        res_status = response.raise_for_status()
-                        if asyncio.iscoroutine(res_status):
-                            await res_status
+                        response.raise_for_status()
 
                         data = await response.json()
                         # Fallback for some mock environments where json() returns a coroutine
@@ -1627,7 +1624,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator):
 
         self._consecutive_errors += 1
         now = dt_util.now()
+        if self.config_entry is None:
+            return
         entry_id = self.config_entry.entry_id
+        
 
         # Check for stale data (24+ hours without successful update)
         if self._last_successful_update:

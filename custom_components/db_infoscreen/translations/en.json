@@ -76,7 +76,8 @@
       "max_sensors_reached": "Maximum number of sensors reached (30).",
       "unknown": "An unknown error occurred.",
       "no_stations_found": "No matching stations found. You can try a different search term or use Manual Entry.",
-      "cannot_connect": "Could not connect to the server. Please check your internet connection.",
+      "cannot_connect": "Could not connect to the server or the server is not a valid DB Infoscreen instance. Please check the URL and your connection.",
+      "invalid_url": "Please enter a valid URL including http:// or https://",
       "station_not_found_warning": "⚠️ Station name not found in the IRIS results. Please double-check spelling.",
       "station_invalid": "❌ Could not retrieve data for this station. {error_detail}",
       "station_validation_failed": "Station validation failed. Please check your settings and try again."

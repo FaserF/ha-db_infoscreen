@@ -12,7 +12,7 @@ SEARCH_JS_MULTI = 'stations=["Frankfurt (Main) Hbf", "Frankfurt (Oder)"];'
 SEARCH_JS_EMPTY = "stations=[];"
 
 # Mock JSON response for the coordinator (departures)
-DEPARTURES_JSON = {"departures": []}
+DEPARTURES_JSON: dict = {"departures": []}
 
 
 def create_flow(hass):
@@ -28,7 +28,7 @@ def create_flow(hass):
             "errors": kwargs.get("errors"),
         }
 
-    flow.async_show_form = MagicMock(side_effect=_show_form_side_effect)
+    flow.async_show_form = MagicMock(side_effect=_show_form_side_effect)  # type: ignore[method-assign]
 
     def _create_entry_side_effect(**kwargs):
         return {
@@ -37,17 +37,17 @@ def create_flow(hass):
             "data": kwargs.get("data"),
         }
 
-    flow.async_create_entry = MagicMock(side_effect=_create_entry_side_effect)
+    flow.async_create_entry = MagicMock(side_effect=_create_entry_side_effect)  # type: ignore[method-assign]
 
     # Mock async_step_choose to behave like a form step for selection
     # MUST be AsyncMock because it is awaited in the flow
-    flow.async_step_choose = AsyncMock(
+    flow.async_step_choose = AsyncMock(  # type: ignore[method-assign]
         side_effect=lambda **kwargs: {"type": "form", "step_id": "choose"}
     )
 
     # Mock unique ID handling
-    flow.async_set_unique_id = AsyncMock()
-    flow._abort_if_unique_id_configured = MagicMock()
+    flow.async_set_unique_id = AsyncMock()  # type: ignore[method-assign]
+    flow._abort_if_unique_id_configured = MagicMock()  # type: ignore[method-assign]
 
     return flow
 
@@ -73,13 +73,13 @@ async def test_search_single_result(hass: HomeAssistant) -> None:
 
         flow = create_flow(hass)
 
-        # 1. Start user step
-        result = await flow.async_step_user(user_input=None)
+        # 1. Start user step (Server Selection)
+        result = await flow.async_step_user(user_input={"server_type": "official"})
         assert result["type"] == "form"
-        assert result["step_id"] == "user"
+        assert result["step_id"] == "station_search"
 
         # 2. Submit search query
-        result = await flow.async_step_user(
+        result = await flow.async_step_station_search(
             user_input={CONF_STATION: "Frankfurt (Main) Hbf"}
         )
 
@@ -118,13 +118,13 @@ async def test_search_multiple_results(hass: HomeAssistant) -> None:
 
         flow = create_flow(hass)
 
-        # 1. Start user step
-        result = await flow.async_step_user(user_input=None)
+        # 1. Start user step (Server Selection)
+        result = await flow.async_step_user(user_input={"server_type": "official"})
         assert result["type"] == "form"
-        assert result["step_id"] == "user"
+        assert result["step_id"] == "station_search"
 
         # 2. Submit search query
-        result = await flow.async_step_user(user_input={CONF_STATION: "Frankfurt"})
+        result = await flow.async_step_station_search(user_input={CONF_STATION: "Frankfurt"})
 
         # Should call async_step_choose because multiple matches
         assert result["type"] == "form"
@@ -166,8 +166,11 @@ async def test_manual_entry(hass: HomeAssistant) -> None:
 
         flow = create_flow(hass)
 
+        # 0. Server selection
+        await flow.async_step_user(user_input={"server_type": "official"})
+
         # 1. Submit search query that yields no results
-        result = await flow.async_step_user(
+        result = await flow.async_step_station_search(
             user_input={CONF_STATION: "MyCustomStation"}
         )
 

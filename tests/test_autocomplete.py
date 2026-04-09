@@ -39,11 +39,11 @@ async def test_async_get_stations_download(mock_hass_autocomplete):
         },
     ):
         # Execute
-        stations = await async_get_stations(mock_hass_autocomplete)
+        stations = await async_get_stations(mock_hass_autocomplete, "https://example.com")
 
         assert "Hamburg Hbf" in stations
         assert "München Hbf" in stations
-        assert CACHE_KEY_DATA in mock_hass_autocomplete.data
+        assert f"{CACHE_KEY_DATA}_https___example_com" in mock_hass_autocomplete.data
 
 
 def test_find_station_matches():

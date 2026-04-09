@@ -3,7 +3,7 @@ import pytest
 from datetime import timedelta
 from homeassistant.util import dt as dt_util
 from custom_components.db_infoscreen.sensor import DBInfoSensor
-from custom_components.db_infoscreen.__init__ import DBInfoScreenCoordinator
+from custom_components.db_infoscreen import DBInfoScreenCoordinator
 from custom_components.db_infoscreen.const import DOMAIN
 
 
@@ -77,7 +77,7 @@ async def test_refresh_service(hass, mock_config_entry):
         coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
 
     # Mock the async_refresh method
-    coordinator.async_refresh = AsyncMock()
+    coordinator.async_refresh = AsyncMock()  # type: ignore[method-assign]
     hass.data[DOMAIN] = {"test_entry": coordinator}
 
     # We don't need to manually register the service if it's done in async_setup_entry,

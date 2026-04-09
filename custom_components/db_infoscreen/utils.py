@@ -2,6 +2,7 @@ import logging
 import json
 import re
 import difflib
+import asyncio
 import async_timeout
 from datetime import datetime, timedelta, timezone
 
@@ -20,15 +21,30 @@ async def async_verify_server(hass, base_url: str) -> bool:
     station_url = f"{base_url}{STATION_AUTOCOMPLETE_PATH}"
     _LOGGER.debug("Verifying server at %s", station_url)
 
+    # Use a realistic User-Agent to avoid being blocked by simple scrapers/rate-limiters
+    headers = {
+        "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
+    }
+
     try:
         session = async_get_clientsession(hass)
-        async with async_timeout.timeout(5):
-            async with session.get(station_url) as response:
+        # Bumping timeout to 12s for the official server which can be slow
+        async with async_timeout.timeout(12):
+            async with session.get(station_url, headers=headers) as response:
                 # We expect 200 and some content containing 'stations='
+                _LOGGER.debug("Verification response status for %s: %s", base_url, response.status)
                 if response.status == 200:
                     content = await response.text()
-                    return "stations=[" in content
+                    is_valid = "stations=[" in content
+                    if not is_valid:
+                        _LOGGER.warning("Server at %s returned 200 but content did not look like a DBF instance", base_url)
+                    return is_valid
+                
+                _LOGGER.warning("Server at %s returned status %s", base_url, response.status)
                 return False
+    except asyncio.TimeoutError:
+        _LOGGER.warning("Server verification timed out for %s (12s limit)", base_url)
+        return False
     except Exception as e:
         _LOGGER.warning("Server verification failed for %s: %s", base_url, e)
         return False

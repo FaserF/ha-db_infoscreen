@@ -3,6 +3,7 @@
 import logging
 import re
 import voluptuous as vol
+from typing import Any
 from homeassistant import config_entries
 import homeassistant.helpers.config_validation as cv
 from .const import (
@@ -93,13 +94,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
     def __init__(self):
         """Initialize the config flow."""
-        self.found_stations = []
-        self.selected_station = None
-        self.no_match = False
-        self.is_manual_entry = False
-        self.basic_options = {}
-        self.server_url = ""
-        self.server_type = SERVER_TYPE_CUSTOM
+        self.found_stations: list[str] = []
+        self.selected_station: str | None = None
+        self.no_match: bool = False
+        self.is_manual_entry: bool = False
+        self.basic_options: dict[str, Any] = {}
+        self.server_url: str = ""
+        self.server_type: str = SERVER_TYPE_CUSTOM
 
     async def async_step_user(self, user_input=None):
         """
@@ -155,7 +156,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """
         Handle the station search step (formerly step 'user').
         """
-        errors = {}
+        errors: dict[str, Any] = {}
 
         if len(self.hass.config_entries.async_entries(DOMAIN)) >= MAX_SENSORS:
             errors["base"] = "max_sensors_reached"
@@ -247,7 +248,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         Prompts for common settings like update interval and whether to
         proceed to advanced options.
         """
-        errors = {}
+        errors: dict[str, Any] = {}
 
         if user_input is not None:
             # Save basic options to temporary state
@@ -268,7 +269,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     step_id="details",
                     data_schema=self.details_schema(basic=True),
                     errors=errors,
-                    description_placeholders={"station": self.selected_station},
+                    description_placeholders={"station": str(self.selected_station)},
                 )
 
             return await self._async_create_db_entry(entry_data)
@@ -277,7 +278,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             step_id="details",
             data_schema=self.details_schema(basic=True),
             errors=errors,
-            description_placeholders={"station": self.selected_station},
+            description_placeholders={"station": str(self.selected_station)},
         )
 
     async def async_step_manual_config(self, user_input=None):
@@ -287,7 +288,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         Prompts for a data source (e.g., ÖBB, SBB) and configuration for
         stations not found in the standard IRIS list.
         """
-        errors = {}
+        errors: dict[str, Any] = {}
 
         if user_input is not None:
             # Combine with station for entry creation
@@ -300,7 +301,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     step_id="manual_config",
                     data_schema=self._manual_config_schema(),
                     errors=errors,
-                    description_placeholders={"station": self.selected_station},
+                    description_placeholders={"station": str(self.selected_station)},
                 )
 
             # Validate station before saving
@@ -315,7 +316,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     data_schema=self._manual_config_schema(),
                     errors=errors,
                     description_placeholders={
-                        "station": self.selected_station,
+                        "station": str(self.selected_station),
                         "error_detail": validation_result["error"],
                     },
                 )
@@ -326,7 +327,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             step_id="manual_config",
             data_schema=self._manual_config_schema(),
             errors=errors,
-            description_placeholders={"station": self.selected_station},
+            description_placeholders={"station": str(self.selected_station)},
         )
 
     def _manual_config_schema(self):
@@ -356,7 +357,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         Prompts for filters like train types, route keeping, and custom API URLs.
         """
-        errors = {}
+        errors: dict[str, Any] = {}
 
         if user_input is not None:
             # Combine all options
@@ -374,7 +375,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     step_id="advanced",
                     data_schema=self.details_schema(basic=False),
                     errors=errors,
-                    description_placeholders={"station": self.selected_station},
+                    description_placeholders={"station": str(self.selected_station)},
                 )
 
             return await self._async_create_db_entry(entry_data)
@@ -383,7 +384,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             step_id="advanced",
             data_schema=self.details_schema(basic=False),
             errors=errors,
-            description_placeholders={"station": self.selected_station},
+            description_placeholders={"station": str(self.selected_station)},
         )
 
     async def _async_create_db_entry(self, user_input):
@@ -563,8 +564,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             url = f"{url}?{urlencode(params)}"
 
         try:
+            import aiohttp
             session = async_get_clientsession(self.hass)
-            async with session.get(url, timeout=10) as response:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
                 if response.status == 200:
                     data = await response.json()
                     if "error" in data:

@@ -29,44 +29,44 @@ if not PYTEST_HA_AVAILABLE:
 
     if "homeassistant.components.repairs" not in sys.modules:
         ha_repairs = types.ModuleType("homeassistant.components.repairs")
-        ha_repairs.RepairsFlow = MagicMock
+        ha_repairs.RepairsFlow = MagicMock  # type: ignore[attr-defined]
         sys.modules["homeassistant.components.repairs"] = ha_repairs
 
     if "homeassistant.components.sensor" not in sys.modules:
         ha_sensor = types.ModuleType("homeassistant.components.sensor")
-        ha_sensor.SensorEntity = MagicMock
+        ha_sensor.SensorEntity = MagicMock  # type: ignore[attr-defined]
         sys.modules["homeassistant.components.sensor"] = ha_sensor
 
     if "homeassistant.components.binary_sensor" not in sys.modules:
         ha_bsensor = types.ModuleType("homeassistant.components.binary_sensor")
-        ha_bsensor.BinarySensorEntity = MagicMock
+        ha_bsensor.BinarySensorEntity = MagicMock  # type: ignore[attr-defined]
 
         class MockBinarySensorDeviceClass:
             PROBLEM = "problem"
             CONNECTIVITY = "connectivity"
 
-        ha_bsensor.BinarySensorDeviceClass = MockBinarySensorDeviceClass
+        ha_bsensor.BinarySensorDeviceClass = MockBinarySensorDeviceClass  # type: ignore[attr-defined]
         sys.modules["homeassistant.components.binary_sensor"] = ha_bsensor
 
     if "homeassistant.components.calendar" not in sys.modules:
         ha_calendar = types.ModuleType("homeassistant.components.calendar")
-        ha_calendar.CalendarEntity = MagicMock
-        ha_calendar.CalendarEvent = MagicMock
+        ha_calendar.CalendarEntity = MagicMock  # type: ignore[attr-defined]
+        ha_calendar.CalendarEvent = MagicMock  # type: ignore[attr-defined]
         sys.modules["homeassistant.components.calendar"] = ha_calendar
 
     # Mock config_entries
     if "homeassistant.config_entries" not in sys.modules:
         ha_ce = types.ModuleType("homeassistant.config_entries")
         sys.modules["homeassistant.config_entries"] = ha_ce
-        ha_ce.SOURCE_USER = "user"
-        ha_ce.CONN_CLASS_CLOUD_POLL = "cloud_poll"
+        ha_ce.SOURCE_USER = "user"  # type: ignore[attr-defined]
+        ha_ce.CONN_CLASS_CLOUD_POLL = "cloud_poll"  # type: ignore[attr-defined]
 
         class MockBase:
             def __init_subclass__(cls, **kwargs):
                 pass
 
-        ha_ce.ConfigFlow = MockBase
-        ha_ce.OptionsFlow = MockBase
+        ha_ce.ConfigFlow = MockBase  # type: ignore[attr-defined]
+        ha_ce.OptionsFlow = MockBase  # type: ignore[attr-defined]
 
         class ConfigEntry:
             def __init__(self, **kwargs):
@@ -76,7 +76,7 @@ if not PYTEST_HA_AVAILABLE:
                 self.data = kwargs.get("data", {})
                 self.entry_id = kwargs.get("entry_id", "mock_entry_id")
 
-        ha_ce.ConfigEntry = ConfigEntry
+        ha_ce.ConfigEntry = ConfigEntry  # type: ignore[attr-defined]
 
     # Mock helpers
     if "homeassistant.helpers" not in sys.modules:
@@ -90,6 +90,9 @@ if not PYTEST_HA_AVAILABLE:
         ha_uc = types.ModuleType("homeassistant.helpers.update_coordinator")
 
         class DataUpdateCoordinator:
+            def __class_getitem__(cls, _):
+                return cls
+
             def __init__(
                 self,
                 hass,
@@ -116,7 +119,7 @@ if not PYTEST_HA_AVAILABLE:
             async def async_refresh(self):
                 pass
 
-        ha_uc.DataUpdateCoordinator = DataUpdateCoordinator
+        ha_uc.DataUpdateCoordinator = DataUpdateCoordinator  # type: ignore[attr-defined]
 
         class StubCoordinatorEntity:
             """Stub for CoordinatorEntity."""
@@ -153,7 +156,7 @@ if not PYTEST_HA_AVAILABLE:
             def extra_state_attributes(self):
                 return {}
 
-        ha_uc.CoordinatorEntity = StubCoordinatorEntity
+        ha_uc.CoordinatorEntity = StubCoordinatorEntity  # type: ignore[attr-defined]
         sys.modules["homeassistant.helpers.update_coordinator"] = ha_uc
     if "homeassistant.helpers.aiohttp_client" not in sys.modules:
         sys.modules["homeassistant.helpers.aiohttp_client"] = MagicMock()
@@ -162,20 +165,20 @@ if not PYTEST_HA_AVAILABLE:
         frame_helper = types.ModuleType("homeassistant.helpers.frame")
 
         # Mock the frame helper functions
-        frame_helper.MissingIntegrationFrame = Exception
-        frame_helper.get_integration_frame = MagicMock(return_value=None)
-        frame_helper.report = MagicMock()
-        frame_helper.report_usage = MagicMock()
-        frame_helper.report_non_thread_safe_operation = MagicMock()
-        frame_helper.verify_core_config = MagicMock()
+        frame_helper.MissingIntegrationFrame = Exception  # type: ignore[attr-defined]
+        frame_helper.get_integration_frame = MagicMock(return_value=None)  # type: ignore[attr-defined]
+        frame_helper.report = MagicMock()  # type: ignore[attr-defined]
+        frame_helper.report_usage = MagicMock()  # type: ignore[attr-defined]
+        frame_helper.report_non_thread_safe_operation = MagicMock()  # type: ignore[attr-defined]
+        frame_helper.verify_core_config = MagicMock()  # type: ignore[attr-defined]
 
         sys.modules["homeassistant.helpers.frame"] = frame_helper
 
     if "homeassistant.helpers.issue_registry" not in sys.modules:
         ha_ir = types.ModuleType("homeassistant.helpers.issue_registry")
-        ha_ir.IssueSeverity = MagicMock
-        ha_ir.async_delete_issue = MagicMock()
-        ha_ir.async_create_issue = MagicMock()
+        ha_ir.IssueSeverity = MagicMock  # type: ignore[attr-defined]
+        ha_ir.async_delete_issue = MagicMock()  # type: ignore[attr-defined]
+        ha_ir.async_create_issue = MagicMock()  # type: ignore[attr-defined]
         sys.modules["homeassistant.helpers.issue_registry"] = ha_ir
 
     if "homeassistant.helpers.entity" not in sys.modules:
@@ -185,11 +188,13 @@ if not PYTEST_HA_AVAILABLE:
             CONFIG = "config"
             DIAGNOSTIC = "diagnostic"
 
-        ha_entity.EntityCategory = MockEntityCategory
+        ha_entity.EntityCategory = MockEntityCategory  # type: ignore[attr-defined]
         sys.modules["homeassistant.helpers.entity"] = ha_entity
 
     if "homeassistant.helpers.entity_platform" not in sys.modules:
         sys.modules["homeassistant.helpers.entity_platform"] = MagicMock()
+    if "homeassistant.helpers.selector" not in sys.modules:
+        sys.modules["homeassistant.helpers.selector"] = MagicMock()
 
     # Mock util
     if "homeassistant.util" not in sys.modules:
@@ -230,10 +235,10 @@ if not PYTEST_HA_AVAILABLE:
             """Return UTC datetime from timestamp."""
             return datetime.fromtimestamp(timestamp, timezone.utc)
 
-        ha_util_dt.parse_datetime = parse_datetime
-        ha_util_dt.now = now
-        ha_util_dt.as_local = as_local
-        ha_util_dt.utc_from_timestamp = utc_from_timestamp
+        ha_util_dt.parse_datetime = parse_datetime  # type: ignore[attr-defined]
+        ha_util_dt.now = now  # type: ignore[attr-defined]
+        ha_util_dt.as_local = as_local  # type: ignore[attr-defined]
+        ha_util_dt.utc_from_timestamp = utc_from_timestamp  # type: ignore[attr-defined]
         sys.modules["homeassistant.util.dt"] = ha_util_dt
 
     # Mock homeassistant.util.logging
@@ -248,7 +253,7 @@ if not PYTEST_HA_AVAILABLE:
     if "homeassistant.data_entry_flow" not in sys.modules:
         ha_def = types.ModuleType("homeassistant.data_entry_flow")
         sys.modules["homeassistant.data_entry_flow"] = ha_def
-        ha_def.FlowResultType = MagicMock()
+        ha_def.FlowResultType = MagicMock()  # type: ignore[attr-defined]
         ha_def.FlowResultType.FORM = "form"
         ha_def.FlowResultType.CREATE_ENTRY = "create_entry"
         ha_def.FlowResultType.MENU = "menu"
@@ -267,7 +272,7 @@ if not PYTEST_HA_AVAILABLE:
         timeout_ctx = MagicMock()
         timeout_ctx.__aenter__ = async_enter
         timeout_ctx.__aexit__ = async_exit
-        async_timeout_mod.timeout = MagicMock(return_value=timeout_ctx)
+        async_timeout_mod.timeout = MagicMock(return_value=timeout_ctx)  # type: ignore[attr-defined]
         sys.modules["async_timeout"] = async_timeout_mod
 
     # 3. Mock pytest_homeassistant_custom_component if missing
@@ -277,7 +282,7 @@ if not PYTEST_HA_AVAILABLE:
         sys.modules["pytest_homeassistant_custom_component"] = phcc
 
         phcc_common = types.ModuleType("pytest_homeassistant_custom_component.common")
-        phcc_common.MockConfigEntry = MagicMock
+        phcc_common.MockConfigEntry = MagicMock  # type: ignore[attr-defined]
         sys.modules["pytest_homeassistant_custom_component.common"] = phcc_common
 
 # 3. Add project root to path
@@ -294,7 +299,7 @@ def setup_frame_helper():
         if getattr(frame, "_REPORTED_INTEGRATIONS", None) is None:
             frame._REPORTED_INTEGRATIONS = set()
         if getattr(frame, "_INTEGRATION_FRAME", None) is None:
-            frame._INTEGRATION_FRAME = {}
+            frame._INTEGRATION_FRAME = {}  # type: ignore[attr-defined]
     except (ImportError, AttributeError):
         pass
     yield

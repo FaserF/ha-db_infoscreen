@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 import logging
+from typing import Any, cast
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.config_entries import ConfigEntry
@@ -77,7 +78,9 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
     def _get_events_from_departures(self) -> list[CalendarEvent]:
         """Convert departure data to calendar events."""
         events = []
-        departures = self.coordinator.data or []
+        departures: list[dict[str, Any]] = cast(
+            list[dict[str, Any]], self.coordinator.data or []
+        )
         now = dt_util.now()
 
         for departure in departures:
@@ -158,7 +161,9 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
         events.sort(key=lambda e: e.start)
         return events
 
-    def _parse_departure_time(self, departure: dict, now: datetime) -> datetime | None:
+    def _parse_departure_time(
+        self, departure: dict[str, Any], now: datetime
+    ) -> datetime | None:
         """Parse departure time from various formats."""
         departure_time_str = (
             departure.get("scheduledDeparture")

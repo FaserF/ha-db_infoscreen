@@ -18,7 +18,13 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
 )
 
-from .const import DOMAIN, CONF_DATA_SOURCE, DATA_SOURCE_OPTIONS
+from .const import (
+    DOMAIN,
+    GITHUB_ISSUES_URL,
+    CONF_STATION,
+    CONF_DATA_SOURCE,
+    DATA_SOURCE_OPTIONS,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,8 +34,7 @@ ISSUE_API_ERROR = "api_error"
 ISSUE_STATION_UNSUPPORTED = "station_unsupported"
 ISSUE_CONNECTION_ERROR = "connection_error"
 
-# GitHub issue URL for reporting
-GITHUB_ISSUES_URL = "https://faserf.github.io/ha-db_infoscreen/"
+# GitHub issue URL for reporting is imported from .const
 
 
 def create_stale_data_issue(
@@ -336,12 +341,8 @@ class StationUnsupportedRepairFlow(RepairsFlow):
                 }
             ),
             description_placeholders={
-                "station": self.hass.config_entries.async_get_entry(
-                    self._entry_id
-                ).data.get("station", "Unknown"),
-                "data_source": self.hass.config_entries.async_get_entry(
-                    self._entry_id
-                ).data.get("data_source", "Unknown"),
+                "station": entry.data.get(CONF_STATION, "Unknown") if entry else "Unknown",
+                "data_source": entry.data.get(CONF_DATA_SOURCE, "Unknown") if entry else "Unknown",
                 "docs_url": GITHUB_ISSUES_URL,
             },
         )

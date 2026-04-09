@@ -1,4 +1,5 @@
 DOMAIN = "db_infoscreen"
+GITHUB_ISSUES_URL = "https://github.com/FaserF/ha-db_infoscreen/issues"
 CONF_SERVER_TYPE = "server_type"
 CONF_SERVER_URL = "server_url"
 SERVER_TYPE_CUSTOM = "custom"

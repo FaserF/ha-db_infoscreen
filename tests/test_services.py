@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch, AsyncMock
 import pytest
-from custom_components.db_infoscreen.__init__ import DBInfoScreenCoordinator
+from custom_components.db_infoscreen import DBInfoScreenCoordinator
 
 
 @pytest.fixture

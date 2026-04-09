@@ -101,7 +101,7 @@ async def test_coordinator_update_data(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
                     "%Y-%m-%dT%H:%M"
                 ),
                 "destination": "Test Dest",
@@ -125,7 +125,7 @@ async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                "scheduledDeparture": ((dt_util.now() + timedelta(minutes=15))).strftime(
                     "%Y-%m-%dT%H:%M"
                 ),
                 "destination": "Valid Train",
@@ -166,7 +166,7 @@ async def test_coordinator_occupancy(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                "scheduledDeparture": ((dt_util.now() + timedelta(minutes=15))).strftime(
                     "%Y-%m-%dT%H:%M"
                 ),
                 "destination": "Test Dest",
@@ -198,7 +198,7 @@ async def test_coordinator_platform_change(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                "scheduledDeparture": ((dt_util.now() + timedelta(minutes=15))).strftime(
                     "%Y-%m-%dT%H:%M"
                 ),
                 "destination": "Changed Platform",
@@ -232,7 +232,7 @@ async def test_coordinator_wagon_order(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                "scheduledDeparture": ((dt_util.now() + timedelta(minutes=15))).strftime(
                     "%Y-%m-%dT%H:%M"
                 ),
                 "destination": "With Sectors",
@@ -282,7 +282,7 @@ async def test_coordinator_qos(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                "scheduledDeparture": ((dt_util.now() + timedelta(minutes=15))).strftime(
                     "%Y-%m-%dT%H:%M"
                 ),
                 "destination": "QoS Train",
@@ -323,7 +323,7 @@ async def test_coordinator_route_details(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                "scheduledDeparture": ((dt_util.now() + timedelta(minutes=15))).strftime(
                     "%Y-%m-%dT%H:%M"
                 ),
                 "destination": "Route Train",
@@ -368,7 +368,7 @@ async def test_coordinator_trip_id(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                "scheduledDeparture": ((dt_util.now() + timedelta(minutes=15))).strftime(
                     "%Y-%m-%dT%H:%M"
                 ),
                 "destination": "ID Train",
@@ -404,21 +404,21 @@ async def test_coordinator_alternative_connections(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                "scheduledDeparture": ((dt_util.now() + timedelta(minutes=15))).strftime(
                     "%Y-%m-%dT%H:%M"
                 ),
                 "destination": "München Hbf",
                 "train": "ICE 1",
             },
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=20)).strftime(
                     "%Y-%m-%dT%H:%M"
                 ),
                 "destination": "München Hbf",  # Same destination
                 "train": "ICE 2",
             },
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=20)).strftime(
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=25)).strftime(
                     "%Y-%m-%dT%H:%M"
                 ),
                 "destination": "Berlin Hbf",  # Different destination
@@ -428,11 +428,15 @@ async def test_coordinator_alternative_connections(hass, mock_config_entry):
     }
 
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    # Mock version fetch to avoid consuming side_effect counts
+    coordinator.async_fetch_server_version = AsyncMock() # type: ignore[method-assign] 
+    
     with patch_session(mock_data):
         data = await coordinator._async_update_data()
         assert len(data) == 3
 
         # ICE 1 should have ICE 2 as an alternative (same destination, later)
+        # ICE 1: 15 min, ICE 2: 20 min, ICE 3: 25 min
         assert "alternative_connections" in data[0]
         assert len(data[0]["alternative_connections"]) == 1
         assert data[0]["alternative_connections"][0]["train"] == "ICE 2"
@@ -453,7 +457,7 @@ async def test_coordinator_favorite_trains_filter(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                "scheduledDeparture": ((dt_util.now() + timedelta(minutes=15))).strftime(
                     "%Y-%m-%dT%H:%M"
                 ),
                 "destination": "Berlin",
@@ -519,6 +523,9 @@ async def test_coordinator_retry(hass, mock_config_entry):
 
     with patch_session(side_effect=side_effect) as mock_session:
         with patch("asyncio.sleep", AsyncMock()) as mock_sleep:
+            # Mock version fetch to avoid consuming side_effect counts
+            coordinator.async_fetch_server_version = AsyncMock() # type: ignore[method-assign]
+            
             data = await coordinator._async_update_data()
 
             assert len(data) == 1
@@ -541,6 +548,9 @@ async def test_coordinator_retry_max_failure(hass, mock_config_entry):
 
     with patch_session(side_effect=side_effect) as mock_session:
         with patch("asyncio.sleep", AsyncMock()) as mock_sleep:
+            # Mock version fetch
+            coordinator.async_fetch_server_version = AsyncMock() # type: ignore[method-assign]
+            
             data = await coordinator._async_update_data()
 
             # Should have tried 3 times (initial + 2 retries)

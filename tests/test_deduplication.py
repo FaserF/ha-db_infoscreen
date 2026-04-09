@@ -41,7 +41,7 @@ def mock_config_entry():
 @pytest.mark.asyncio
 async def test_deduplication_default_key(hass, mock_config_entry):
     """Test deduplication with default key (DB IRIS style)."""
-    now = dt_util.now()
+    now = dt_util.now() + timedelta(minutes=15)
     mock_data = {
         "departures": [
             {
@@ -83,7 +83,7 @@ async def test_deduplication_custom_key_kvv(hass, mock_config_entry):
     """Test deduplication with custom key for KVV (as requested in #116)."""
     mock_config_entry.options[CONF_DEDUPLICATE_KEY] = "{line}"
 
-    now = dt_util.now()
+    now = dt_util.now() + timedelta(minutes=15)
     # KVV style data where journeyID is missing/null but line is same
     mock_data = {
         "departures": [
@@ -114,7 +114,7 @@ async def test_deduplication_fallback(hass, mock_config_entry):
     """Test deduplication fallback when key resolving yields empty string."""
     mock_config_entry.options[CONF_DEDUPLICATE_KEY] = "{non_existent_field}"
 
-    now = dt_util.now()
+    now = dt_util.now() + timedelta(minutes=15)
     mock_data = {
         "departures": [
             {

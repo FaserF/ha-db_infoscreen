@@ -6,6 +6,8 @@ from custom_components.db_infoscreen.const import (
     CONF_STATION,
     CONF_DATA_SOURCE,
     CONF_NEXT_DEPARTURES,
+    CONF_SERVER_TYPE,
+    SERVER_TYPE_OFFICIAL,
 )
 
 from homeassistant.data_entry_flow import FlowResultType
@@ -37,9 +39,17 @@ async def test_form_create_entry(hass):
     flow.hass = hass
 
     # Mock show_form
-    flow.async_show_form = MagicMock(
-        return_value={"type": FlowResultType.FORM, "step_id": "details"}
+    flow.async_show_form = MagicMock(  # type: ignore[method-assign]
+        side_effect=lambda **kwargs: {"type": FlowResultType.FORM, "step_id": kwargs.get("step_id")}
     )
+
+    # 0. Server Step
+    with patch(
+        "custom_components.db_infoscreen.utils.async_verify_server", return_value=True
+    ):
+        result1 = await flow.async_step_user({CONF_SERVER_TYPE: SERVER_TYPE_OFFICIAL})
+    assert result1["type"] == FlowResultType.FORM
+    assert result1["step_id"] == "station_search"
 
     # 1. Search Step
     with patch(
@@ -49,9 +59,8 @@ async def test_form_create_entry(hass):
         "custom_components.db_infoscreen.config_flow.find_station_matches",
         return_value=["München Hbf"],
     ):
-
-        # We call the method directly on the class instance since we mocked the modules
-        result2 = await flow.async_step_user({CONF_STATION: "München Hbf"})
+        # The search query is now processed by async_step_station_search
+        result2 = await flow.async_step_station_search({CONF_STATION: "München Hbf"})
 
     assert result2["type"] == FlowResultType.FORM
     assert flow.selected_station == "München Hbf (IRIS-TTS)"
@@ -84,7 +93,7 @@ async def test_form_create_entry_advanced(hass):
     flow.hass = hass
     flow.selected_station = "Stuttgart Hbf"
 
-    flow.async_show_form = MagicMock(
+    flow.async_show_form = MagicMock(  # type: ignore[method-assign]
         return_value={"type": FlowResultType.FORM, "step_id": "advanced"}
     )
 
@@ -126,9 +135,15 @@ async def test_form_multiple_matches(hass):
     """Test the flow when multiple station matches are found."""
     flow = ConfigFlow()
     flow.hass = hass
-    flow.async_show_form = MagicMock(
-        return_value={"type": FlowResultType.FORM, "step_id": "choose"}
+    flow.async_show_form = MagicMock(  # type: ignore[method-assign]
+        side_effect=lambda **kwargs: {"type": FlowResultType.FORM, "step_id": kwargs.get("step_id")}
     )
+
+    # Server selection first
+    with patch(
+        "custom_components.db_infoscreen.utils.async_verify_server", return_value=True
+    ):
+        await flow.async_step_user({CONF_SERVER_TYPE: SERVER_TYPE_OFFICIAL})
 
     # Search for something ambiguous
     with patch(
@@ -139,7 +154,7 @@ async def test_form_multiple_matches(hass):
         return_value=["München Hbf", "München Ost"],
     ):
 
-        result2 = await flow.async_step_user({CONF_STATION: "München"})
+        result2 = await flow.async_step_station_search({CONF_STATION: "München"})
 
     assert result2["type"] == FlowResultType.FORM
     assert flow.found_stations == [
@@ -154,9 +169,15 @@ async def test_form_no_matches_manual_override(hass):
     """Test manual entry override when no matches found."""
     flow = ConfigFlow()
     flow.hass = hass
-    flow.async_show_form = MagicMock(
-        return_value={"type": FlowResultType.FORM, "step_id": "choose"}
+    flow.async_show_form = MagicMock(  # type: ignore[method-assign]
+        side_effect=lambda **kwargs: {"type": FlowResultType.FORM, "step_id": kwargs.get("step_id")}
     )
+
+    # Server selection
+    with patch(
+        "custom_components.db_infoscreen.utils.async_verify_server", return_value=True
+    ):
+        await flow.async_step_user({CONF_SERVER_TYPE: SERVER_TYPE_OFFICIAL})
 
     with patch(
         "custom_components.db_infoscreen.config_flow.async_get_stations",
@@ -166,7 +187,7 @@ async def test_form_no_matches_manual_override(hass):
         return_value=[],
     ):
 
-        result2 = await flow.async_step_user({CONF_STATION: "MyCustomStation"})
+        result2 = await flow.async_step_station_search({CONF_STATION: "MyCustomStation"})
 
     assert result2["type"] == FlowResultType.FORM
     assert flow.found_stations == ["MyCustomStation (Manual Entry)"]
@@ -183,7 +204,7 @@ async def test_options_flow(hass):
     entry.options = {CONF_NEXT_DEPARTURES: 5}
 
     flow = OptionsFlowHandler(entry)
-    flow.async_show_menu = MagicMock(
+    flow.async_show_menu = MagicMock(  # type: ignore[method-assign]
         return_value={"type": FlowResultType.MENU, "step_id": "init"}
     )
 
