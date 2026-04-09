@@ -259,7 +259,6 @@ if not PYTEST_HA_AVAILABLE:
         ha_def.FlowResultType.MENU = "menu"
         ha_def.FlowResultType.ABORT = "abort"
 
-
     # 3. Mock pytest_homeassistant_custom_component if missing
     if "pytest_homeassistant_custom_component" not in sys.modules:
         phcc = types.ModuleType("pytest_homeassistant_custom_component")
