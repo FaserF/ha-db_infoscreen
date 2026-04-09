@@ -449,7 +449,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             if "127.0.0.1" in url or "localhost" in url:
                 try:
                     # Try to get internal URL (e.g. http://192.168.1.10:8123)
-                    internal_url = get_url(self.hass, allow_internal=True, allow_external=False)
+                    internal_url = get_url(
+                        self.hass, allow_internal=True, allow_external=False
+                    )
                     if internal_url:
                         local_ip = urlparse(internal_url).hostname
                         if local_ip:
