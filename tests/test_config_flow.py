@@ -40,7 +40,10 @@ async def test_form_create_entry(hass):
 
     # Mock show_form
     flow.async_show_form = MagicMock(  # type: ignore[method-assign]
-        side_effect=lambda **kwargs: {"type": FlowResultType.FORM, "step_id": kwargs.get("step_id")}
+        side_effect=lambda **kwargs: {
+            "type": FlowResultType.FORM,
+            "step_id": kwargs.get("step_id"),
+        }
     )
 
     # 0. Server Step
@@ -136,7 +139,10 @@ async def test_form_multiple_matches(hass):
     flow = ConfigFlow()
     flow.hass = hass
     flow.async_show_form = MagicMock(  # type: ignore[method-assign]
-        side_effect=lambda **kwargs: {"type": FlowResultType.FORM, "step_id": kwargs.get("step_id")}
+        side_effect=lambda **kwargs: {
+            "type": FlowResultType.FORM,
+            "step_id": kwargs.get("step_id"),
+        }
     )
 
     # Server selection first
@@ -170,7 +176,10 @@ async def test_form_no_matches_manual_override(hass):
     flow = ConfigFlow()
     flow.hass = hass
     flow.async_show_form = MagicMock(  # type: ignore[method-assign]
-        side_effect=lambda **kwargs: {"type": FlowResultType.FORM, "step_id": kwargs.get("step_id")}
+        side_effect=lambda **kwargs: {
+            "type": FlowResultType.FORM,
+            "step_id": kwargs.get("step_id"),
+        }
     )
 
     # Server selection
@@ -187,7 +196,9 @@ async def test_form_no_matches_manual_override(hass):
         return_value=[],
     ):
 
-        result2 = await flow.async_step_station_search({CONF_STATION: "MyCustomStation"})
+        result2 = await flow.async_step_station_search(
+            {CONF_STATION: "MyCustomStation"}
+        )
 
     assert result2["type"] == FlowResultType.FORM
     assert flow.found_stations == ["MyCustomStation (Manual Entry)"]

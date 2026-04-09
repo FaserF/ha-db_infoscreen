@@ -124,7 +124,9 @@ async def test_search_multiple_results(hass: HomeAssistant) -> None:
         assert result["step_id"] == "station_search"
 
         # 2. Submit search query
-        result = await flow.async_step_station_search(user_input={CONF_STATION: "Frankfurt"})
+        result = await flow.async_step_station_search(
+            user_input={CONF_STATION: "Frankfurt"}
+        )
 
         # Should call async_step_choose because multiple matches
         assert result["type"] == "form"

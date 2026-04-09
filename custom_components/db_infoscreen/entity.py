@@ -32,7 +32,6 @@ class DBInfoScreenBaseEntity(CoordinatorEntity):
             "configuration_url": getattr(self.coordinator, "web_url", None),
         }
 
-
     @property
     def available(self) -> bool:
         """Return True if entity is available."""

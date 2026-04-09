@@ -32,15 +32,22 @@ async def async_verify_server(hass, base_url: str) -> bool:
         async with async_timeout.timeout(12):
             async with session.get(station_url, headers=headers) as response:
                 # We expect 200 and some content containing 'stations='
-                _LOGGER.debug("Verification response status for %s: %s", base_url, response.status)
+                _LOGGER.debug(
+                    "Verification response status for %s: %s", base_url, response.status
+                )
                 if response.status == 200:
                     content = await response.text()
                     is_valid = "stations=[" in content
                     if not is_valid:
-                        _LOGGER.warning("Server at %s returned 200 but content did not look like a DBF instance", base_url)
+                        _LOGGER.warning(
+                            "Server at %s returned 200 but content did not look like a DBF instance",
+                            base_url,
+                        )
                     return is_valid
-                
-                _LOGGER.warning("Server at %s returned status %s", base_url, response.status)
+
+                _LOGGER.warning(
+                    "Server at %s returned status %s", base_url, response.status
+                )
                 return False
     except asyncio.TimeoutError:
         _LOGGER.warning("Server verification timed out for %s (12s limit)", base_url)

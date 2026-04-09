@@ -588,13 +588,16 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
         if data is None:
             import aiohttp
+
             session = async_get_clientsession(self.hass)
             max_retries = 2
             retry_delay = 1
 
             for attempt in range(max_retries + 1):
                 try:
-                    async with session.get(self.fetch_url, timeout=aiohttp.ClientTimeout(total=20)) as response:
+                    async with session.get(
+                        self.fetch_url, timeout=aiohttp.ClientTimeout(total=20)
+                    ) as response:
                         if response.status == 429:
                             _LOGGER.warning(
                                 "Rate limit hit for %s (429 Too Many Requests). Skipping retries for this cycle.",
@@ -1540,21 +1543,24 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         try:
             if data is None:
                 import aiohttp
+
                 session = async_get_clientsession(self.hass)
-                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                        # Handle both sync and async raise_for_status for better test compatibility
-                        response.raise_for_status()
+                async with session.get(
+                    url, timeout=aiohttp.ClientTimeout(total=10)
+                ) as response:
+                    # Handle both sync and async raise_for_status for better test compatibility
+                    response.raise_for_status()
 
-                        data = await response.json()
-                        # Fallback for some mock environments where json() returns a coroutine
-                        if asyncio.iscoroutine(data) or (
-                            hasattr(data, "__await__")
-                            and not isinstance(data, (dict, list))
-                        ):
-                            data = await data
+                    data = await response.json()
+                    # Fallback for some mock environments where json() returns a coroutine
+                    if asyncio.iscoroutine(data) or (
+                        hasattr(data, "__await__")
+                        and not isinstance(data, (dict, list))
+                    ):
+                        data = await data
 
-                        # Store in cache - deepcopy to prevent mutation during processing
-                        RESPONSE_CACHE[url] = (dt_util.now(), copy.deepcopy(data))
+                    # Store in cache - deepcopy to prevent mutation during processing
+                    RESPONSE_CACHE[url] = (dt_util.now(), copy.deepcopy(data))
 
             if not isinstance(data, dict):
                 _LOGGER.debug(
@@ -1627,7 +1633,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         if self.config_entry is None:
             return
         entry_id = self.config_entry.entry_id
-        
 
         # Check for stale data (24+ hours without successful update)
         if self._last_successful_update:

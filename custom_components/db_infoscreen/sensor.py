@@ -434,7 +434,7 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
 
         if self.coordinator.config_entry is None:
             return None
-        
+
         my_station_name = self.coordinator.config_entry.data.get(CONF_STATION)
         # Clean up station name (sometimes has IDs or commas)
         # Strategy:

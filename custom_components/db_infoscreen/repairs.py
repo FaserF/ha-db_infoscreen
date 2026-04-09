@@ -341,8 +341,12 @@ class StationUnsupportedRepairFlow(RepairsFlow):
                 }
             ),
             description_placeholders={
-                "station": entry.data.get(CONF_STATION, "Unknown") if entry else "Unknown",
-                "data_source": entry.data.get(CONF_DATA_SOURCE, "Unknown") if entry else "Unknown",
+                "station": (
+                    entry.data.get(CONF_STATION, "Unknown") if entry else "Unknown"
+                ),
+                "data_source": (
+                    entry.data.get(CONF_DATA_SOURCE, "Unknown") if entry else "Unknown"
+                ),
                 "docs_url": GITHUB_ISSUES_URL,
             },
         )

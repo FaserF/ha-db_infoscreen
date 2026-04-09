@@ -91,7 +91,9 @@ class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
     @property
     def is_on(self) -> bool:
         """Return True if any train is delayed."""
-        departures: list[dict[str, Any]] = cast(list[dict[str, Any]], self.coordinator.data or [])
+        departures: list[dict[str, Any]] = cast(
+            list[dict[str, Any]], self.coordinator.data or []
+        )
         for departure in departures:
             delay = departure.get("delay", departure.get("delayDeparture", 0))
             try:
@@ -104,7 +106,9 @@ class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return additional attributes about delays."""
-        departures: list[dict[str, Any]] = cast(list[dict[str, Any]], self.coordinator.data or [])
+        departures: list[dict[str, Any]] = cast(
+            list[dict[str, Any]], self.coordinator.data or []
+        )
         delayed_trains = []
         max_delay = 0
 
@@ -150,7 +154,9 @@ class DBInfoScreenCancellationBinarySensor(DBInfoScreenBaseBinarySensor):
     @property
     def is_on(self) -> bool:
         """Return True if any train is cancelled."""
-        departures: list[dict[str, Any]] = cast(list[dict[str, Any]], self.coordinator.data or [])
+        departures: list[dict[str, Any]] = cast(
+            list[dict[str, Any]], self.coordinator.data or []
+        )
         for departure in departures:
             if (
                 departure.get("isCancelled", False)
@@ -163,7 +169,9 @@ class DBInfoScreenCancellationBinarySensor(DBInfoScreenBaseBinarySensor):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return additional attributes about cancellations."""
-        departures: list[dict[str, Any]] = cast(list[dict[str, Any]], self.coordinator.data or [])
+        departures: list[dict[str, Any]] = cast(
+            list[dict[str, Any]], self.coordinator.data or []
+        )
         cancelled_trains = []
 
         for departure in departures:
@@ -276,7 +284,9 @@ class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
 
     def _compute_issues(self) -> list[str]:
         """Parse departures for relevant elevator issues."""
-        departures: list[dict[str, Any]] = cast(list[dict[str, Any]], self.coordinator.data or [])
+        departures: list[dict[str, Any]] = cast(
+            list[dict[str, Any]], self.coordinator.data or []
+        )
         issues = set()
 
         # Keywords to look for
