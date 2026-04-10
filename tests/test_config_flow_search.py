@@ -205,4 +205,7 @@ async def test_manual_entry(hass: HomeAssistant) -> None:
         assert result["type"] == "create_entry"
         assert result["title"] == "MyCustomStation"
         assert result["data"][CONF_STATION] == "MyCustomStation"
-        assert result["data"][CONF_DATA_SOURCE] == "MVV – Münchener Verkehrs- und Tarifverbund"
+        assert (
+            result["data"][CONF_DATA_SOURCE]
+            == "MVV – Münchener Verkehrs- und Tarifverbund"
+        )
