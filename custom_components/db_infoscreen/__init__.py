@@ -370,7 +370,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         )
 
         station_cleaned = " ".join(str(self.station).split())
-        encoded_station = quote(station_cleaned, safe="-:")
+        encoded_station = quote(station_cleaned, safe="-:,")
         self._last_valid_value: list[dict[str, Any]] = []
         # Use the server URL from the config entry, fall back to official if missing
         self._base_url = config.get(CONF_SERVER_URL, SERVER_URL_OFFICIAL)
