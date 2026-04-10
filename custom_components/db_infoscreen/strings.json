@@ -12,31 +12,33 @@
       },
       "station_search": {
         "title": "Find your Station",
-        "description": "Please enter the name of your station (e.g. 'Berlin Hbf').\n\nIf your station is not found in the official IRIS list, don't worry! You can use the 'Manual Entry' option in the next step to add it anyway.",
+        "description": "Please enter the name of your station (e.g. 'Berlin Hbf') and select the matching provider.\n\n**Tip**: For train stations (Deutsche Bahn, RE, S-Bahn), the default provider is usually correct. Only select a different provider if you are looking for local public transport (bus, tram, subway).",
         "data": {
-          "station": "Station Name"
+          "station": "Station Name",
+          "data_source": "Data Source (Standard used for trains)"
         }
       },
       "choose": {
         "title": "Select Station",
-        "description": "We found multiple matches. Please select your station from the list below.\n\nIf your station is not listed, or you want to use a specific local transport provider (e.g. MVV, VRN), select the **Manual Entry** option.",
+        "description": "Please select the correct station from the list below.\n\n**Station not found?** If your station isn't listed, you can select 'Manual Entry' to configure it manually.",
         "data": {
-          "station": "Station"
+          "station": "Station",
+          "back": "← Back (Change Search / Data Source)"
         }
       },
       "details": {
         "title": "Configure Departure Board",
-        "description": "Setup options for **{station}**.\n\n**Data Source**: By default, we use the Deutsche Bahn (Info) system. If this is a local transport station (Bus, Tram, Subway) that DB doesn't know about, please enable **Show Advanced Options** and select the correct Data Source (e.g. MVV, BVG, VRN) in the next step.",
+        "description": "Configure options for **{station}**. If you need to fine-tune filters or advanced handling, please enable **Show Advanced Options**.",
         "data": {
           "next_departures": "Number of Upcoming Departures to show",
           "update_interval": "Update Interval (minutes)",
           "walk_time": "Walk Time to Station (minutes)",
-          "advanced": "Show Advanced Options (Change Data Source / Filter Settings)"
+          "advanced": "Show Advanced Options (Filter Settings / Special Handling)"
         }
       },
       "advanced": {
         "title": "Advanced Configuration",
-        "description": "Here you can fine-tune the sensor for **{station}**.\n\n**Crucial for Non-DB Stations**: Change the 'Data Source' to your local provider if no data appears with the default setting.",
+        "description": "Here you can fine-tune the sensor for **{station}**.",
         "data": {
           "hidelowdelay": "Hide Low Delays (under 5 mins)",
           "drop_late_trains": "Remove trains that are already gone",
@@ -61,7 +63,7 @@
       },
       "manual_config": {
         "title": "Configure Custom Station",
-        "description": "Setting up **{station}**.\n\n⚠️ **Important**: Since this station was not found in the IRIS database, you **must select the correct Data Source** below. For example, select 'MVV' for Munich local transport or 'VRN' for Rhein-Neckar.",
+        "description": "Setting up **{station}**.\n\n⚠️ **Important**: Since this station was not found automatically with the selected provider, you **must verify the Data Source** below. For example, select 'MVV' for Munich local transport or 'VRN' for Rhein-Neckar.",
         "data": {
           "data_source": "Data Source (Required)",
           "next_departures": "Number of Upcoming Departures",
@@ -73,11 +75,11 @@
       }
     },
     "error": {
-      "max_sensors_reached": "Maximum number of sensors reached (30).",
+      "max_sensors_reached": "Maximum number of departure boards reached (30).",
       "unknown": "An unknown error occurred.",
       "no_stations_found": "No matching stations found. You can try a different search term or use Manual Entry.",
       "cannot_connect": "Could not connect to the server. Please check your internet connection.",
-      "station_not_found_warning": "⚠️ Station name not found in the IRIS results. Please double-check spelling.",
+      "station_not_found_warning": "⚠️ Station not found! Please verify spelling or try a different data source.",
       "station_invalid": "❌ Could not retrieve data for this station. {error_detail}",
       "station_ambiguous": "⚠️ The station name is ambiguous. Please be more specific or check the selected Data Source.",
       "station_validation_failed": "Station validation failed. Please check your settings and try again."

@@ -101,6 +101,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         self.basic_options: dict[str, Any] = {}
         self.server_url: str = ""
         self.server_type: str = SERVER_TYPE_CUSTOM
+        self.station_query: str = ""
+        self.data_source: str = "IRIS-TTS"
 
     async def async_step_user(self, user_input=None):
         """
@@ -168,37 +170,86 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         if user_input is not None:
             station_query = user_input.get(CONF_STATION)
+            data_source = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
+
+            # Save state for possible "Go Back"
+            self.station_query = station_query
+            self.data_source = data_source
+
             if station_query:
                 # Reset transient state
                 self.no_match = False
                 self.found_stations = []
                 self.selected_station = None
 
-                stations = await async_get_stations(self.hass, self.server_url)
-                if not stations:
-                    errors["base"] = "cannot_connect"
+                stations = []
+                if data_source == "IRIS-TTS":
+                    stations = await async_get_stations(self.hass, self.server_url)
+                    if not stations:
+                        errors["base"] = "cannot_connect"
+                    else:
+                        matches = find_station_matches(stations, station_query)
+                        if not matches:
+                            self.found_stations = [f"{station_query} (Manual Entry)"]
+                            self.no_match = True
+                            return await self.async_step_choose()
+                        elif (
+                            len(matches) == 1
+                            and matches[0].lower() == station_query.lower()
+                        ):
+                            self.selected_station = f"{matches[0]} (IRIS-TTS)"
+                            return await self.async_step_details()
+                        else:
+                            self.found_stations = [f"{m} (IRIS-TTS)" for m in matches]
+                            manual_option = f"{station_query} (Manual Entry)"
+                            if manual_option not in self.found_stations:
+                                self.found_stations.append(manual_option)
+                            return await self.async_step_choose()
                 else:
-                    matches = find_station_matches(stations, station_query)
-                    if not matches:
+                    # Non-IRIS provider: Resolve candidates from server
+                    from .utils import async_get_station_candidates
+
+                    candidates = await async_get_station_candidates(
+                        self.hass, self.server_url, station_query, data_source
+                    )
+                    if not candidates:
                         self.found_stations = [f"{station_query} (Manual Entry)"]
                         self.no_match = True
-                        return await self.async_step_choose(user_input=None)
-                    elif (
-                        len(matches) == 1
-                        and matches[0].lower() == station_query.lower()
-                    ):
-                        self.selected_station = f"{matches[0]} (IRIS-TTS)"
-                        return await self.async_step_details()
-                    else:
-                        self.found_stations = [f"{m} (IRIS-TTS)" for m in matches]
-                        manual_option = f"{station_query} (Manual Entry)"
-                        if manual_option not in self.found_stations:
-                            self.found_stations.append(manual_option)
+                        # If no results and localized provider, go straight to manual entry
+                        # but set a flag so it can show a warning
+                        # self.selected_station = f"{station_query} (Manual Entry)"
+                        # return await self.async_step_manual_config()
                         return await self.async_step_choose()
+
+                    if (
+                        len(candidates) == 1
+                        and candidates[0]["name"].lower() == station_query.lower()
+                    ):
+                        self.selected_station = (
+                            f"{candidates[0]['name']} ({data_source})"
+                        )
+                        # Pre-fill data source for next steps
+                        self.basic_options[CONF_DATA_SOURCE] = data_source
+                        return await self.async_step_details()
+
+                    self.found_stations = [
+                        f"{c['name']} ({data_source})" for c in candidates
+                    ]
+                    manual_option = f"{station_query} (Manual Entry)"
+                    if manual_option not in self.found_stations:
+                        self.found_stations.append(manual_option)
+                    return await self.async_step_choose()
 
         return self.async_show_form(
             step_id="station_search",
-            data_schema=vol.Schema({vol.Required(CONF_STATION): cv.string}),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_STATION, default=self.station_query): cv.string,
+                    vol.Optional(CONF_DATA_SOURCE, default=self.data_source): vol.In(
+                        DATA_SOURCE_OPTIONS
+                    ),
+                }
+            ),
             errors=errors,
         )
 
@@ -208,14 +259,23 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         Allows the user to select from a list of matches or proceed with manual entry.
         """
-        if user_input is not None:
+        if user_input is not None and CONF_STATION in user_input:
             self.selected_station = user_input.get(CONF_STATION)
+            if self.selected_station == "back":
+                return await self.async_step_station_search()
+
             # Check if user selected manual entry
             if self.selected_station and self.selected_station.endswith(
                 " (Manual Entry)"
             ):
                 self.is_manual_entry = True
                 return await self.async_step_manual_config()
+
+            # Extract data source from selection if present, e.g. "Dörverden (IRIS-TTS)"
+            match = re.search(r"\(([^)]+)\)$", self.selected_station)
+            if match:
+                self.basic_options[CONF_DATA_SOURCE] = match.group(1)
+
             return await self.async_step_details()
 
         if self.no_match:
@@ -225,20 +285,32 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     {
                         vol.Required(
                             CONF_STATION, default=self.found_stations[0]
-                        ): vol.In(self.found_stations)
+                        ): vol.In(
+                            {
+                                "back": "← Back (Change Search / Data Source)",
+                                **{s: s for s in self.found_stations},
+                            }
+                        )
                     }
                 ),
                 description_placeholders={
-                    "warning": "⚠️ Station not found in official IRIS list! Please verify spelling."
+                    "description": "No matching stations found. If your station isn't listed, you can select 'Manual Entry' to configure it manually or go back to try a different search."
                 },
-                errors={"base": "station_not_found_warning"},
+                errors={"base": "no_stations_found"},
             )
 
         return self.async_show_form(
             step_id="choose",
             data_schema=vol.Schema(
-                {vol.Required(CONF_STATION): vol.In(self.found_stations)}
+                {
+                    vol.Required(CONF_STATION, default=self.found_stations[0]): vol.In(
+                        self.found_stations
+                    )
+                }
             ),
+            description_placeholders={
+                "description": "We found several stations matching your search. Please pick the correct one from the list.\n\n**Station not found?** If your station isn't listed, you can select 'Manual Entry' to configure it manually."
+            },
         )
 
     async def async_step_details(self, user_input=None):
@@ -413,9 +485,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             _LOGGER.error("Station validation failed: %s", validation_result["error"])
             # Instead of aborting, we return to the appropriate step with an error
             errors = {
-                "base": "station_ambiguous"
-                if validation_result.get("ambiguous")
-                else "station_invalid"
+                "base": (
+                    "station_ambiguous"
+                    if validation_result.get("ambiguous")
+                    else "station_invalid"
+                )
             }
 
             if self.is_manual_entry:
@@ -448,11 +522,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             ]
 
         station = user_input[CONF_STATION]
-        # Remove (IRIS-TTS) or (Manual Entry) suffix if present for ID and URL
-        if station.endswith(" (IRIS-TTS)"):
-            station = station[: -len(" (IRIS-TTS)")].strip()
-        elif station.endswith(" (Manual Entry)"):
-            station = station[: -len(" (Manual Entry)")].strip()
+        # Remove provider suffix if present, e.g. "Dörverden (IRIS-TTS)" or "Ferbitzer Weg (BVG)"
+        station = re.sub(r"\s+\([^)]+\)$", "", station).strip()
 
         user_input[CONF_STATION] = station
         user_input[CONF_SERVER_URL] = self.server_url
@@ -534,32 +605,38 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 }
             )
 
-        return vol.Schema(
-            {
-                vol.Optional(CONF_HIDE_LOW_DELAY, default=False): cv.boolean,
-                vol.Optional(CONF_DROP_LATE_TRAINS, default=False): cv.boolean,
-                vol.Optional(CONF_DEDUPLICATE_DEPARTURES, default=False): cv.boolean,
-                vol.Optional(
-                    CONF_DEDUPLICATE_KEY, default=DEFAULT_DEDUPLICATE_KEY
-                ): cv.string,
-                vol.Optional(CONF_DETAILED, default=False): cv.boolean,
-                vol.Optional(CONF_PAST_60_MINUTES, default=False): cv.boolean,
-                vol.Optional(CONF_KEEP_ROUTE, default=False): cv.boolean,
-                vol.Optional(CONF_KEEP_ENDSTATION, default=False): cv.boolean,
-                vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(
-                    DATA_SOURCE_OPTIONS
-                ),
-                vol.Optional(CONF_OFFSET, default=DEFAULT_OFFSET): cv.string,
-                vol.Optional(CONF_PLATFORMS, default=""): cv.string,
-                vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
-                vol.Optional(CONF_VIA_STATIONS_LOGIC, default="OR"): vol.In(
-                    ["OR", "AND"]
-                ),
-                vol.Optional(CONF_DIRECTION, default=""): cv.string,
-                vol.Optional(CONF_EXCLUDED_DIRECTIONS, default=""): cv.string,
-                vol.Optional(CONF_FAVORITE_TRAINS, default=""): cv.string,
-            }
-        )
+        return self._get_advanced_schema(is_options_flow=False)
+
+    def _get_advanced_schema(self, is_options_flow=False):
+        """Get the schema for advanced options."""
+        schema = {
+            vol.Optional(CONF_HIDE_LOW_DELAY, default=False): cv.boolean,
+            vol.Optional(CONF_DROP_LATE_TRAINS, default=False): cv.boolean,
+            vol.Optional(CONF_DEDUPLICATE_DEPARTURES, default=False): cv.boolean,
+            vol.Optional(
+                CONF_DEDUPLICATE_KEY, default=DEFAULT_DEDUPLICATE_KEY
+            ): cv.string,
+            vol.Optional(CONF_DETAILED, default=False): cv.boolean,
+            vol.Optional(CONF_PAST_60_MINUTES, default=False): cv.boolean,
+            vol.Optional(CONF_KEEP_ROUTE, default=False): cv.boolean,
+            vol.Optional(CONF_KEEP_ENDSTATION, default=False): cv.boolean,
+            vol.Optional(CONF_OFFSET, default=DEFAULT_OFFSET): cv.string,
+            vol.Optional(CONF_PLATFORMS, default=""): cv.string,
+            vol.Optional(CONF_VIA_STATIONS, default=""): cv.string,
+            vol.Optional(CONF_VIA_STATIONS_LOGIC, default="OR"): vol.In(["OR", "AND"]),
+            vol.Optional(CONF_DIRECTION, default=""): cv.string,
+            vol.Optional(CONF_EXCLUDED_DIRECTIONS, default=""): cv.string,
+            vol.Optional(CONF_FAVORITE_TRAINS, default=""): cv.string,
+        }
+
+        # Data source is only editable in Options Flow, as it's already selected
+        # in the first step of the Config Flow
+        if is_options_flow:
+            schema[vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS")] = vol.In(
+                DATA_SOURCE_OPTIONS
+            )
+
+        return vol.Schema(schema)
 
     async def _validate_station(self, station: str, data_source: str) -> dict:
         """

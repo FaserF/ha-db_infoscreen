@@ -1,4 +1,4 @@
-# Ignore folders.
+# Ignore files & folders.
 node_modules/
 .venv/
 megalinter-reports/
@@ -22,3 +22,7 @@ temp_autocomplete.js
 *errors.txt
 *mypy*.txt
 init_diff.txt
+*.log
+*pytes*.txt
+*out*.txt
+*err*.txt

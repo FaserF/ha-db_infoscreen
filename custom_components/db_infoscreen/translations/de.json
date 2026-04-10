@@ -11,27 +11,29 @@
         }
       },
       "station_search": {
-        "title": "Station suchen",
-        "description": "Bitte gib den Namen deiner Station ein (z.B. 'Berlin Hbf').\n\nFalls deine Station nicht in der IRIS-Liste gefunden wird, kannst du sie im nächsten Schritt auch manuell einrichten.",
+        "title": "Station finden",
+        "description": "Bitte gib den Namen deiner Station ein (z. B. 'Berlin Hbf') und wähle den passenden Anbieter aus.\n\n**Tipp**: Für die meisten Fernverkehrs- und Regionalzüge (Deutsche Bahn, RE, S-Bahn) ist der Standard-Anbieter ideal. Wähle einen anderen Anbieter nur dann, wenn du eine lokale Bus-, Straßenbahn- oder U-Bahn-Station suchst.",
         "data": {
-          "station": "Stationsname"
+          "station": "Stationsname",
+          "data_source": "Datenquelle (Standard für Züge empfohlen)"
         }
       },
       "choose": {
         "title": "Station auswählen",
-        "description": "Mehrere Stationen gefunden. Bitte wähle deine Station aus der Liste.\n\nFalls deine Station nicht dabei ist oder du einen lokalen Verkehrsverbund (z.B. MVV, VRN) nutzen möchtest, wähle **Manueller Eintrag**.",
+        "description": "Bitte wähle die passende Station aus der Liste aus.\n\n**Station nicht dabei?** Falls deine Station nicht aufgeführt ist, kannst du 'Manuelle Eingabe' wählen, um sie selbst zu konfigurieren.",
         "data": {
-          "station": "Station"
+          "station": "Station",
+          "back": "← Zurück (Suche / Datenquelle ändern)"
         }
       },
       "details": {
         "title": "Abfahrtstafel konfigurieren",
-        "description": "Optionen für **{station}**.\n\n**Datenquelle**: Standardmäßig nutzen wir IRIS (Deutsche Bahn). Für lokale Busse/Bahnen (z.B. BVG, MVV) aktiviere bitte die **Erwickerten Optionen** und ändere dort die Datenquelle.",
+        "description": "Konfiguriere Optionen für **{station}**. Falls du detaillierte Filter oder eine spezielle Handhabung benötigst, aktiviere bitte die **Erweiterten Optionen**.",
         "data": {
           "next_departures": "Anzahl der anzuzeigenden Abfahrten",
           "update_interval": "Aktualisierungsintervall (Minuten)",
           "walk_time": "Gehzeit zur Station (Minuten)",
-          "advanced": "Erweiterte Optionen anzeigen"
+          "advanced": "Erweiterte Optionen anzeigen (Filter / Spezielle Handhabung)"
         }
       },
       "advanced": {
@@ -61,7 +63,7 @@
       },
       "manual_config": {
         "title": "Eigene Station konfigurieren",
-        "description": "Einrichtung von **{station}**.\n\n⚠️ **Wichtig**: Da diese Station nicht in IRIS gefunden wurde, **musst du die korrekte Datenquelle wählen**. Wähle z.B. 'MVV' für München oder 'VRN'.",
+        "description": "Einrichtung von **{station}**.\n\n⚠️ **Wichtig**: Da diese Station nicht automatisch mit dem gewählten Anbieter gefunden wurde, **musst du die Datenquelle prüfen**. Wähle z.B. 'MVV' für München oder 'VRN'.",
         "data": {
           "data_source": "Datenquelle (Erforderlich)",
           "next_departures": "Anzahl Abfahrten",
@@ -78,7 +80,7 @@
       "no_stations_found": "Keine passenden Stationen gefunden.",
       "cannot_connect": "Verbindung zum Server fehlgeschlagen oder der Server ist keine gültige DB Infoscreen Instanz. Bitte prüfe die URL und deine Verbindung.",
       "invalid_url": "Bitte gib eine gültige URL ein (inkl. http:// oder https://)",
-      "station_not_found_warning": "⚠️ Station nicht in IRIS gefunden. Bitte Schreibweise prüfen.",
+      "station_not_found_warning": "⚠️ Station nicht gefunden! Bitte Schreibweise prüfen oder eine andere Datenquelle versuchen.",
       "station_invalid": "❌ Daten konnten nicht abgerufen werden: {error_detail}",
       "station_ambiguous": "⚠️ Der Stationsname ist mehrdeutig. Bitte gib den Namen genauer an oder prüfe die gewählte Datenquelle.",
       "station_validation_failed": "Stations-Validierung fehlgeschlagen."

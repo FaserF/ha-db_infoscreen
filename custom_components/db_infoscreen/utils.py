@@ -4,6 +4,7 @@ import re
 import difflib
 import asyncio
 import async_timeout
+from urllib.parse import quote
 from datetime import datetime, timedelta, timezone
 
 _LOGGER = logging.getLogger(__name__)
@@ -157,3 +158,199 @@ def find_station_matches(stations, query):
         result = [lower_map[match] for match in fuzzy]
         return result
     return []
+
+
+async def async_get_station_candidates(hass, server_url, station, source="IRIS-TTS"):
+    """Fetch station candidates from DBF backend."""
+    from .const import DATA_SOURCE_MAP
+
+    source_param = DATA_SOURCE_MAP.get(source, source)
+    if source == "IRIS-TTS":
+        source_param = ""  # Default is IRIS
+
+    encoded_station = quote(station)
+
+    # We try different lookup patterns to ensure compatibility
+    lookups = [
+        f"{server_url}/{encoded_station}.json?{source_param}{'&' if source_param else ''}mode=json",
+        f"{server_url}/?station={encoded_station}&{source_param}{'&' if source_param else ''}mode=json",
+        f"{server_url}/{encoded_station}?{source_param}",
+        f"{server_url}/?station={encoded_station}&{source_param}",
+    ]
+
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+    session = async_get_clientsession(hass)
+
+    for url in lookups:
+        # Clean up double question marks or ampersands
+        url = url.replace("??", "?").replace("?&", "?").replace("&&", "&").rstrip("?&")
+        _LOGGER.debug("Trying candidate lookup: %s", url)
+
+        try:
+            async with async_timeout.timeout(10):
+                async with session.get(url) as response:
+                    content_type = response.headers.get("Content-Type", "")
+
+                    if "text/html" in content_type or response.status in [
+                        200,
+                        300,
+                        500,
+                    ]:
+                        text = await response.text()
+
+                        # Detect landing/home/search page (often shown when station not found)
+                        if (
+                            "inoffizieller Abfahrtsmonitor" in text
+                            or "Oder hier eine Station angeben" in text
+                        ):
+                            # If it's the home page, but NOT a choice page, skip it
+                            if not any(
+                                x in text
+                                for x in [
+                                    "Wählen Sie",
+                                    "Multiple Choice",
+                                    "Mehrdeutige Eingabe",
+                                ]
+                            ):
+                                _LOGGER.debug(
+                                    "Detected landing page at %s, skipping", url
+                                )
+                                continue
+
+                        # Detect Multiple Choice page - Broadened detection for localized/older versions
+                        if (
+                            any(
+                                x in text
+                                for x in [
+                                    "Wählen Sie eine Station aus",
+                                    "Multiple Choices",
+                                    "Mehrdeutige Eingabe",
+                                    "Bitte eine Station aus der Liste auswählen",
+                                ]
+                            )
+                            or response.status == 300
+                        ):
+                            candidates = parse_dbf_multiple_choices(text)
+                            if candidates:
+                                return candidates
+
+                        # If it's a 200 OK and looks like a real board
+                        elif response.status == 200:
+                            if any(
+                                x in text
+                                for x in [
+                                    "Abfahrtstafel",
+                                    "Abfahrten",
+                                    "Display",
+                                    "container",
+                                ]
+                            ):
+                                return [{"name": station, "code": station}]
+
+                    if (
+                        "application/json" in content_type
+                        or url.endswith(".json")
+                        or "mode=json" in url
+                    ):
+                        try:
+                            data = await response.json()
+                            # Candidates in JSON
+                            if "candidates" in data and data["candidates"]:
+                                return [
+                                    {"name": c["name"], "code": c["code"]}
+                                    for c in data["candidates"]
+                                ]
+
+                            # Direct match JSON
+                            if response.status == 200:
+                                if (
+                                    "departures" in data
+                                    or "arrivals" in data
+                                    or "station" in data
+                                ):
+                                    official_name = station
+                                    if "station" in data and isinstance(
+                                        data["station"], dict
+                                    ):
+                                        official_name = data["station"].get(
+                                            "name", station
+                                        )
+                                    return [{"name": official_name, "code": station}]
+                        except Exception:
+                            # Re-check text if JSON fail just in case
+                            pass
+
+        except Exception as e:
+            _LOGGER.debug("Lookup failed for %s: %s", url, e)
+
+    return []
+
+
+def parse_dbf_multiple_choices(html_text):
+    """Parse the HTML of a 300 Multiple Choices page from DBF."""
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html_text, "html.parser")
+    candidates = []
+
+    for link in soup.find_all("a"):
+        href_raw = link.get("href", "")
+        if not isinstance(href_raw, str):
+            continue
+        href = href_raw
+        name = link.text.strip()
+
+        # Skip internal or obvious non-station links
+        if not name or any(
+            x in href for x in ["_backend", "_v110", "mode=json", "finalrewind.org"]
+        ):
+            continue
+
+        # Pattern 1: /?station=CODE
+        if "station=" in href:
+            match = re.search(r"station=([^&?]+)", href)
+            if match:
+                code = match.group(1)
+                candidates.append({"name": name, "code": code})
+                continue
+
+        # Pattern 2: /NAME?source=... (often used by EFA/HAFAS)
+        if href.startswith("/") and any(
+            param in href for param in ["hafas=", "efa=", "db="]
+        ):
+            # The part before '?' is usually the station ID/Name slug
+            code = href.split("?", 1)[0].lstrip("/")
+            if code and code not in ["_autostop", "_backend", "search"]:
+                candidates.append({"name": name, "code": code})
+                continue
+
+    # Pattern 3: <select name="input"> with <option> tags (used on user's server)
+    for select in soup.find_all("select", attrs={"name": "input"}):
+        for option in select.find_all("option"):
+            code = option.get("value")
+            name = option.text.strip()
+            if code and name:
+                candidates.append({"name": name, "code": code})
+
+    # Fallback to any <select> if name="input" wasn't found but candidates are still empty
+    if not candidates:
+        for option in soup.find_all("option"):
+            code = option.get("value")
+            name = option.text.strip()
+            if (
+                code
+                and name
+                and code not in ["app", "infoscreen", "multi", "single", "dep", "arr"]
+            ):
+                candidates.append({"name": name, "code": code})
+
+    # Deduplicate by code
+    seen = set()
+    result = []
+    for c in candidates:
+        if c["code"] not in seen:
+            result.append(c)
+            seen.add(c["code"])
+
+    return result
