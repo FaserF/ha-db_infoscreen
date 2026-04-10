@@ -1,6 +1,6 @@
 <div align="center">
   <img src="docs/images/logo.png" alt="Logo" width="200px">
-  <h1>DB Infoscreen Home Assistant Sensor 🚆</h1>
+  <h1>DB-Infoscreen for Home Assistant 🚆</h1>
   <p><strong>A comprehensive departure board integration for Home Assistant.</strong></p>
 
   [![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
@@ -25,12 +25,12 @@
 
 ---
 
-The `db-infoscreen` sensor provides detailed **departure times** and train information for a given station directly in Home Assistant. Aggregating data from multiple sources (primarily **Deutsche Bahn IRIS-TTS**), it offers a powerful and comprehensive departure board for stations across Germany and Europe.
+The `db-infoscreen` integration provides detailed **departure times** and train information for a given station directly in Home Assistant. Aggregating data from multiple sources (primarily **Deutsche Bahn IRIS-TTS**), it offers a powerful and comprehensive departure board for stations across Germany and Europe.
 
 📚 **[View the Full Documentation](https://faserf.github.io/ha-db_infoscreen/)**
 
 <div align="center">
-  <img src="docs/images/sensor.png" alt="Station Sensor" width="600px">
+  <img src="docs/images/sensor.png" alt="Departure Board" width="600px">
 </div>
 
 ## 🏠 Home Assistant App (Add-on)

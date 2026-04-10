@@ -1,13 +1,13 @@
 {
   "config": {
-    "flow_title": "Setup Station Departure Sensor",
+    "flow_title": "Add Departure Board",
     "step": {
       "user": {
         "title": "Select Server",
         "description": "Due to rate limiting on the official server, please choose which API instance to use. Using a self-hosted instance is recommended for the best experience.",
         "data": {
           "server_type": "Server Type",
-          "server_url": "Custom Server URL (e.g. http://127.0.0.1:8092)"
+          "server_url": "Server URL/IP (e.g. http://192.168.1.50:8092 or Home Assistant Add-on URL http://127.0.0.1:8092)"
         }
       },
       "station_search": {
@@ -25,8 +25,8 @@
         }
       },
       "details": {
-        "title": "Configure Sensor",
-        "description": "Setup options for **{station}**.\n\n**Data Source**: By default, we use the Deutsche Bahn (Info) system. If this is a local transport station (Bus, Tram, Subway) that DB doesn't know about, please enable **Show Advanced Options** and select the correct Data Source (e.g. MVV, VRN) in the next step.",
+        "title": "Configure Departure Board",
+        "description": "Setup options for **{station}**.\n\n**Data Source**: By default, we use the Deutsche Bahn (Info) system. If this is a local transport station (Bus, Tram, Subway) that DB doesn't know about, please enable **Show Advanced Options** and select the correct Data Source (e.g. MVV, BVG, VRN) in the next step.",
         "data": {
           "next_departures": "Number of Upcoming Departures to show",
           "update_interval": "Update Interval (minutes)",
@@ -36,7 +36,7 @@
       },
       "advanced": {
         "title": "Advanced Configuration",
-        "description": "Here you can fine-tune the sensor for **{station}**.\n\n**Crucial for Non-DB Stations**: Change the 'Data Source' to your local provider if no data appears with the default setting.",
+        "description": "Here you can fine-tune the departure board for **{station}**.\n\n**Crucial for Non-DB Stations**: Change the 'Data Source' to your local provider if no data appears with the default setting.",
         "data": {
           "hidelowdelay": "Hide Low Delays (under 5 mins)",
           "drop_late_trains": "Remove trains that are already gone",
@@ -73,13 +73,14 @@
       }
     },
     "error": {
-      "max_sensors_reached": "Maximum number of sensors reached (30).",
+      "max_sensors_reached": "Maximum number of departure boards reached (30).",
       "unknown": "An unknown error occurred.",
       "no_stations_found": "No matching stations found. You can try a different search term or use Manual Entry.",
       "cannot_connect": "Could not connect to the server or the server is not a valid DB Infoscreen instance. Please check the URL and your connection.",
       "invalid_url": "Please enter a valid URL including http:// or https://",
       "station_not_found_warning": "⚠️ Station name not found in the IRIS results. Please double-check spelling.",
       "station_invalid": "❌ Could not retrieve data for this station. {error_detail}",
+      "station_ambiguous": "⚠️ The station name is ambiguous. Please be more specific or check the selected Data Source.",
       "station_validation_failed": "Station validation failed. Please check your settings and try again."
     },
     "abort": {
@@ -88,7 +89,7 @@
     }
   },
   "options": {
-    "flow_title": "Modify Station Departure Sensor Options",
+    "flow_title": "Modify Departure Board Options",
     "step": {
       "user": {
         "title": "Add DB Infoscreen",

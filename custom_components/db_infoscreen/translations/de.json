@@ -1,13 +1,13 @@
 {
   "config": {
-    "flow_title": "Abfahrtstafel einrichten",
+    "flow_title": "Abfahrtstafel hinzufügen",
     "step": {
       "user": {
         "title": "Server auswählen",
         "description": "Aufgrund von Ratenbeschränkungen auf dem offiziellen Server wählen Sie bitte aus, welche API-Instanz verwendet werden soll. Die Verwendung einer selbstgehosteten Instanz wird für das beste Erlebnis empfohlen.",
         "data": {
           "server_type": "Server-Typ",
-          "server_url": "Eigene Server-URL (z.B. http://127.0.0.1:8092)"
+          "server_url": "Server URL/IP (z.B. http://192.168.1.50:8092 oder Home Assistant Add-on URL http://127.0.0.1:8092)"
         }
       },
       "station_search": {
@@ -25,8 +25,8 @@
         }
       },
       "details": {
-        "title": "Sensor konfigurieren",
-        "description": "Optionen für **{station}**.\n\n**Datenquelle**: Standardmäßig nutzen wir IRIS (Deutsche Bahn). Für lokale Busse/Bahnen aktiviere bitte die **Erweiterten Optionen** und ändere dort die Datenquelle.",
+        "title": "Abfahrtstafel konfigurieren",
+        "description": "Optionen für **{station}**.\n\n**Datenquelle**: Standardmäßig nutzen wir IRIS (Deutsche Bahn). Für lokale Busse/Bahnen (z.B. BVG, MVV) aktiviere bitte die **Erwickerten Optionen** und ändere dort die Datenquelle.",
         "data": {
           "next_departures": "Anzahl der anzuzeigenden Abfahrten",
           "update_interval": "Aktualisierungsintervall (Minuten)",
@@ -80,6 +80,7 @@
       "invalid_url": "Bitte gib eine gültige URL ein (inkl. http:// oder https://)",
       "station_not_found_warning": "⚠️ Station nicht in IRIS gefunden. Bitte Schreibweise prüfen.",
       "station_invalid": "❌ Daten konnten nicht abgerufen werden: {error_detail}",
+      "station_ambiguous": "⚠️ Der Stationsname ist mehrdeutig. Bitte gib den Namen genauer an oder prüfe die gewählte Datenquelle.",
       "station_validation_failed": "Stations-Validierung fehlgeschlagen."
     },
     "abort": {

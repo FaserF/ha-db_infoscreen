@@ -424,7 +424,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         super().__init__(
             hass,
             _LOGGER,
-            name=f"DB Info {self.station}",
+            name=f"DB-Infoscreen {self.station}",
             update_interval=update_timedelta,
         )
         self.config_entry = config_entry

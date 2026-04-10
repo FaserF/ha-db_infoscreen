@@ -310,7 +310,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 str(entry_data.get(CONF_DATA_SOURCE, "IRIS-TTS")),
             )
             if not validation_result["valid"]:
-                errors["base"] = "station_invalid"
+                errors["base"] = (
+                    "station_ambiguous"
+                    if validation_result.get("ambiguous")
+                    else "station_invalid"
+                )
                 return self.async_show_form(
                     step_id="manual_config",
                     data_schema=self._manual_config_schema(),
@@ -407,8 +411,34 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         validation_result = await self._validate_station(station_raw, data_source)
         if not validation_result["valid"]:
             _LOGGER.error("Station validation failed: %s", validation_result["error"])
-            # Return to appropriate step with error
-            return self.async_abort(reason="station_validation_failed")
+            # Instead of aborting, we return to the appropriate step with an error
+            errors = {
+                "base": "station_ambiguous"
+                if validation_result.get("ambiguous")
+                else "station_invalid"
+            }
+
+            if self.is_manual_entry:
+                return self.async_show_form(
+                    step_id="manual_config",
+                    data_schema=self._manual_config_schema(),
+                    errors=errors,
+                    description_placeholders={
+                        "station": str(self.selected_station),
+                        "error_detail": validation_result["error"],
+                    },
+                )
+
+            # Fallback for details/advanced steps
+            return self.async_show_form(
+                step_id="details",
+                data_schema=self.details_schema(basic=True),
+                errors=errors,
+                description_placeholders={
+                    "station": str(self.selected_station),
+                    "error_detail": validation_result["error"],
+                },
+            )
 
         # Process separated via stations into list
         via_raw = user_input.get(CONF_VIA_STATIONS, "")
@@ -583,6 +613,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                             "error": f"No departure data found for '{station}' with data source '{data_source}'. Please check the station name and data source.",
                         }
                     return {"valid": True}
+                elif response.status == 300:
+                    return {
+                        "valid": False,
+                        "ambiguous": True,
+                        "error": f"Station '{station}' is ambiguous (Status 300).",
+                    }
                 elif response.status == 404:
                     return {
                         "valid": False,
