@@ -8,7 +8,7 @@ import asyncio
 import async_timeout
 from urllib.parse import quote, unquote
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
