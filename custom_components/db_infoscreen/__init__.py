@@ -370,7 +370,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         )
 
         station_cleaned = " ".join(str(self.station).split())
-        encoded_station = quote(station_cleaned, safe=",-")
+        encoded_station = quote(station_cleaned, safe="-:")
         self._last_valid_value: list[dict[str, Any]] = []
         # Use the server URL from the config entry, fall back to official if missing
         self._base_url = config.get(CONF_SERVER_URL, SERVER_URL_OFFICIAL)
@@ -614,7 +614,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             for attempt in range(max_retries + 1):
                 try:
                     async with session.get(
-                        self.fetch_url, timeout=aiohttp.ClientTimeout(total=20)
+                        self.fetch_url, timeout=aiohttp.ClientTimeout(total=30)
                     ) as response:
                         if response.status == 429:
                             _LOGGER.warning(

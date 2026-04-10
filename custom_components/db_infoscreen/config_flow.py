@@ -6,6 +6,7 @@ import voluptuous as vol
 from typing import Any
 from homeassistant import config_entries
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import (
     DOMAIN,
     CONF_STATION,
@@ -103,6 +104,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         self.server_type: str = SERVER_TYPE_CUSTOM
         self.station_query: str = ""
         self.data_source: str = "IRIS-TTS"
+        self._station_map: dict[str, str] = {}
 
     async def async_step_user(self, user_input=None):
         """
@@ -181,6 +183,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 self.no_match = False
                 self.found_stations = []
                 self.selected_station = None
+                self._station_map = {}
 
                 stations = []
                 if data_source == "IRIS-TTS":
@@ -228,13 +231,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                         self.selected_station = (
                             f"{candidates[0]['name']} ({data_source})"
                         )
+                        self.selected_code = candidates[0]["code"]
                         # Pre-fill data source for next steps
                         self.basic_options[CONF_DATA_SOURCE] = data_source
                         return await self.async_step_details()
 
-                    self.found_stations = [
-                        f"{c['name']} ({data_source})" for c in candidates
-                    ]
+                    self.found_stations = []
+                    for c in candidates:
+                        display_name = f"{c['name']} ({data_source})"
+                        self.found_stations.append(display_name)
+                        self._station_map[display_name] = c["code"]
+
                     manual_option = f"{station_query} (Manual Entry)"
                     if manual_option not in self.found_stations:
                         self.found_stations.append(manual_option)
@@ -275,6 +282,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             match = re.search(r"\(([^)]+)\)$", self.selected_station)
             if match:
                 self.basic_options[CONF_DATA_SOURCE] = match.group(1)
+
+            # Use internal code if we have one in the map
+            if self.selected_station in self._station_map:
+                self.selected_code = self._station_map[self.selected_station]
+            else:
+                self.selected_code = None
 
             return await self.async_step_details()
 
@@ -410,7 +423,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Schema for manual entry configuration with Data Source prominent."""
         return vol.Schema(
             {
-                vol.Optional(CONF_DATA_SOURCE, default="IRIS-TTS"): vol.In(
+                vol.Optional(CONF_DATA_SOURCE, default=self.data_source): vol.In(
                     DATA_SOURCE_OPTIONS
                 ),
                 vol.Optional(
@@ -466,28 +479,37 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
     async def _async_create_db_entry(self, user_input):
         """
         Finalize the entry creation and save to Home Assistant.
-
-        Validates the final station data, removes transient UI markers,
-        and creates the config entry with a unique ID based on the station
-        and its filters.
         """
         # Add server URL to data
         user_input[CONF_SERVER_URL] = self.server_url
 
+        # Retrieve the station name/ID. In the details step, it's not in user_input,
+        # so we fall back to self.selected_station (what was chosen in Search/Choose step)
+        station_id = user_input.get(CONF_STATION) or self.selected_station or ""
+
+        # Remove any provider suffix if present, e.g. "Dörverden (IRIS-TTS)" or "Ferbitzer Weg (BVG)"
+        display_name = re.sub(r"\s+\([^)]+\)$", "", str(station_id)).strip()
+
+        # Use the internal code if it was resolved during search
+        if hasattr(self, "selected_code") and self.selected_code:
+            user_input[CONF_STATION] = self.selected_code
+        else:
+            user_input[CONF_STATION] = display_name
+
         # Validate station data can be retrieved
         station_raw = user_input.get(CONF_STATION, "")
-        data_source = normalize_data_source(
-            user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
-        )
+        # Fallback to self.data_source if not in user_input
+        ds_raw = user_input.get(CONF_DATA_SOURCE) or getattr(self, "data_source", "IRIS-TTS")
+        data_source = normalize_data_source(ds_raw)
 
         validation_result = await self._validate_station(station_raw, data_source)
         if not validation_result["valid"]:
-            _LOGGER.error("Station validation failed: %s", validation_result["error"])
+            _LOGGER.error("Station validation failed (%s): %s", data_source, validation_result["error"])
             # Instead of aborting, we return to the appropriate step with an error
             errors = {
                 "base": (
                     "station_ambiguous"
-                    if validation_result.get("ambiguous")
+                    if validation_result.get("ambiguous") or validation_result.get("error") == "ambiguous"
                     else "station_invalid"
                 )
             }
@@ -521,11 +543,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
             ]
 
-        station = user_input[CONF_STATION]
-        # Remove provider suffix if present, e.g. "Dörverden (IRIS-TTS)" or "Ferbitzer Weg (BVG)"
-        station = re.sub(r"\s+\([^)]+\)$", "", station).strip()
-
-        user_input[CONF_STATION] = station
         user_input[CONF_SERVER_URL] = self.server_url
         user_input[CONF_SERVER_TYPE] = self.server_type
         via = user_input.get(CONF_VIA_STATIONS, [])
@@ -536,9 +553,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         user_input[CONF_EXCLUDED_DIRECTIONS] = excluded_directions
         platforms = user_input.get(CONF_PLATFORMS, "")
         user_input[CONF_PLATFORMS] = platforms
-        data_source = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
+        
+        # Ensure we keep the valid data_source correctly tracked for the final entry
         user_input[CONF_DATA_SOURCE] = data_source
-        parts = [station]
+        parts = [str(user_input[CONF_STATION])]
+
 
         if via:
             parts.append(f"via={','.join(via)}")
@@ -576,8 +595,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         await self.async_set_unique_id(unique_id_candidate)
         _LOGGER.debug("Creating new sensor with unique_id: %s", unique_id_candidate)
 
-        # Generate title using helper
-        full_title = _generate_entry_title(user_input)
+        # Generate title using the human-readable display name
+        full_title = display_name
+        # Remove only the provider suffix if it's there
+        full_title = re.sub(r"\s+\((?:IRIS-TTS|Manual Entry)\)$", "", full_title).strip()
+
         if same_station_entries:
             full_title += f" ({data_source})"
 
@@ -649,33 +671,27 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         # Clean station name
         station_str: str = str(station)
-        if station_str.endswith(" (IRIS-TTS)"):
-            station_str = station_str[: -len(" (IRIS-TTS)")].strip()
-        elif station_str.endswith(" (Manual Entry)"):
-            station_str = station_str[: -len(" (Manual Entry)")].strip()
+        # Remove any trailing provider suffix like (MVV) or (IRIS-TTS)
+        station_str = re.sub(r"\s+\([^)]+\)$", "", station_str).strip()
 
         station_cleaned = " ".join(station_str.split())
-        encoded_station = quote(station_cleaned, safe=",-")
+        encoded_station = quote(station_cleaned, safe="-:")
 
         base_url = self.server_url
         url = f"{base_url}/{encoded_station}.json"
 
-        params = {}
+        params: dict[str, str] = {}
         if data_source in DATA_SOURCE_MAP:
             key, value = DATA_SOURCE_MAP[data_source].split("=")
             params[key] = value
         elif data_source == "hafas=1":
             params["hafas"] = "1"
 
-        if params:
-            url = f"{url}?{urlencode(params)}"
-
         try:
             import aiohttp
-
             session = async_get_clientsession(self.hass)
             async with session.get(
-                url, timeout=aiohttp.ClientTimeout(total=10)
+                url, params=params, timeout=aiohttp.ClientTimeout(total=30)
             ) as response:
                 if response.status == 200:
                     data = await response.json()
