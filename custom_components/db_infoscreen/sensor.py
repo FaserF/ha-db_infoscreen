@@ -183,13 +183,13 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         return filtered
 
     @property
-    def native_value(self):
+    def native_value(self) -> str | None:
         """
         Return the main state of the sensor (e.g., '10:30' or '10:30 +5').
 
         Calculates the state from the first entry in the filtered data.
         """
-        departures = self._get_filtered_departures()
+        departures: list[dict[str, Any]] = self._get_filtered_departures()
 
         # Check if there is data and if it is valid
         if departures:
@@ -252,7 +252,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                 return "no_data"
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str, Any]:
         """
         Return additional state attributes for the sensor including next departures and metadata.
         """
@@ -260,7 +260,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         attribution = f"Data provided by API {full_api_url}"
 
         # Create a deep copy or new list of dicts to avoid mutating the coordinator data
-        raw_departures = self._get_filtered_departures()
+        raw_departures: list[dict[str, Any]] = self._get_filtered_departures()
         next_departures = []
 
         for departure in raw_departures:

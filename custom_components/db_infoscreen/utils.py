@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import json
 import re
@@ -6,6 +8,10 @@ import asyncio
 import async_timeout
 from urllib.parse import quote, unquote
 from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -15,7 +21,7 @@ CACHE_KEY_UPDATE = "db_infoscreen_stations_last_update"
 CACHE_DURATION = timedelta(hours=24)
 
 
-async def async_verify_server(hass, base_url: str) -> bool:
+async def async_verify_server(hass: HomeAssistant, base_url: str) -> bool:
     """Verify that a server is reachable and specifically a DBF instance."""
     from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -58,7 +64,7 @@ async def async_verify_server(hass, base_url: str) -> bool:
         return False
 
 
-async def async_get_stations(hass, base_url: str):
+async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
     """
     Download and parse the station list from DBF.
     Check hass.data for cached list first.
@@ -160,7 +166,9 @@ def find_station_matches(stations, query):
     return []
 
 
-async def async_get_station_candidates(hass, server_url, station, source="IRIS-TTS"):
+async def async_get_station_candidates(
+    hass: HomeAssistant, server_url: str, station: str, source: str = "IRIS-TTS"
+) -> list[dict[str, str]]:
     """Fetch station candidates from DBF backend."""
     from .const import DATA_SOURCE_MAP
 
@@ -287,7 +295,7 @@ async def async_get_station_candidates(hass, server_url, station, source="IRIS-T
     return []
 
 
-def parse_dbf_multiple_choices(html_text):
+def parse_dbf_multiple_choices(html_text: str) -> list[dict[str, str]]:
     """Parse the HTML of a 300 Multiple Choices page from DBF."""
     from bs4 import BeautifulSoup
 

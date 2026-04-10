@@ -302,6 +302,7 @@ class StationUnsupportedRepairFlow(RepairsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> data_entry_flow.FlowResult:
         """Handle the initial step."""
+        entry = self.hass.config_entries.async_get_entry(self._entry_id)
         if user_input is not None:
             action = user_input.get("action")
             if action == "retry":
@@ -316,7 +317,6 @@ class StationUnsupportedRepairFlow(RepairsFlow):
                 # Remove the associated repair issue first
                 ir.async_delete_issue(self.hass, DOMAIN, self._issue_id)
                 # Remove the config entry
-                entry = self.hass.config_entries.async_get_entry(self._entry_id)
                 if entry:
                     await self.hass.config_entries.async_remove(self._entry_id)
                 return self.async_create_entry(data={})

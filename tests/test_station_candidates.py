@@ -2,6 +2,9 @@
 
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
+
+from homeassistant.core import HomeAssistant
+
 from custom_components.db_infoscreen.utils import (
     async_get_station_candidates,
     parse_dbf_multiple_choices,
@@ -9,7 +12,7 @@ from custom_components.db_infoscreen.utils import (
 
 
 @pytest.mark.asyncio
-async def test_async_get_station_candidates_json_success(hass):
+async def test_async_get_station_candidates_json_success(hass: HomeAssistant) -> None:
     """Test successful station candidate fetching via JSON API."""
     mock_session = MagicMock()
     mock_response = MagicMock()
@@ -55,7 +58,7 @@ async def test_async_get_station_candidates_json_success(hass):
 
 
 @pytest.mark.asyncio
-async def test_async_get_station_candidates_direct_match(hass):
+async def test_async_get_station_candidates_direct_match(hass: HomeAssistant) -> None:
     """Test direct station match (200 OK) via JSON API."""
     mock_session = MagicMock()
     mock_response = MagicMock()
@@ -95,29 +98,35 @@ async def test_async_get_station_candidates_direct_match(hass):
 
 
 @pytest.mark.asyncio
-async def test_async_get_station_candidates_html_fallback(hass):
+async def test_async_get_station_candidates_html_fallback(hass: HomeAssistant) -> None:
     """Test fallback to HTML parsing when JSON fails or returns 300 with HTML."""
     mock_session = MagicMock()
 
     # Configure mocks using MagicMock + async side effects (most stable)
-    def create_mock_response(status, content_type, text=None, json_data=None, json_err=None):
+    def create_mock_response(
+        status: int,
+        content_type: str,
+        text: str | None = None,
+        json_data: dict | None = None,
+        json_err: Exception | None = None,
+    ) -> MagicMock:
         resp = MagicMock()
         resp.status = status
         resp.headers = {"Content-Type": content_type}
 
-        async def text_func():
+        async def text_func() -> str:
             return text or ""
 
         resp.text = MagicMock(side_effect=text_func)
 
-        async def json_func():
+        async def json_func() -> dict:
             if json_err:
                 raise json_err
             return json_data or {}
 
         resp.json = MagicMock(side_effect=json_func)
 
-        async def enter_func():
+        async def enter_func() -> MagicMock:
             return resp
 
         resp.__aenter__ = MagicMock(side_effect=enter_func)
@@ -159,7 +168,7 @@ async def test_async_get_station_candidates_html_fallback(hass):
         assert candidates[1]["code"] == "Berlin Zoo"
 
 
-def test_parse_dbf_multiple_choices_diverse_links():
+def test_parse_dbf_multiple_choices_diverse_links() -> None:
     """Test extraction of station links from various HTML patterns including query-based and provider-specific ones."""
     html = """
     <ul>
@@ -183,7 +192,7 @@ def test_parse_dbf_multiple_choices_diverse_links():
     }
 
 
-def test_parse_dbf_multiple_choices_empty():
+def test_parse_dbf_multiple_choices_empty() -> None:
     """Test parsing with irrelevant content."""
     html = "<html><body><p>No stations here</p><a href='/_backend'>Settings</a></body></html>"
     candidates = parse_dbf_multiple_choices(html)
@@ -191,7 +200,7 @@ def test_parse_dbf_multiple_choices_empty():
 
 
 @pytest.mark.asyncio
-async def test_async_get_station_candidates_error(hass):
+async def test_async_get_station_candidates_error(hass: HomeAssistant) -> None:
     """Test graceful failure when all lookups fail."""
     mock_session = MagicMock()
     mock_session.get.side_effect = Exception("Connection error")
