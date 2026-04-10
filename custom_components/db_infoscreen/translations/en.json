@@ -58,7 +58,8 @@
           "ignored_train_types": "Ignored Train Types (e.g. 'ICE')",
           "show_occupancy": "Show Occupancy Information (if available)",
           "exclude_cancelled": "Remove Cancelled Trains",
-          "favorite_trains": "Multiple Favorite Trains (comma separated e.g. 'ICE 1, RE 2')"
+          "favorite_trains": "Multiple Favorite Trains (comma separated e.g. 'ICE 1, RE 2')",
+          "deduplicate_key": "Deduplication Key (Empty for default: {journeyID}{journeyId}{id}{key}{trainNumber})"
         }
       },
       "manual_config": {
@@ -168,7 +169,8 @@
           "keep_endstation": "Keep Endstation",
           "drop_late_trains": "Drop Late Trains",
           "past_60_minutes": "Include Past 60 Minutes",
-          "data_source": "Data Source"
+          "data_source": "Data Source",
+          "deduplicate_key": "Deduplication Key (Empty for default)"
         }
       }
     }

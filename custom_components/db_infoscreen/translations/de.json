@@ -58,7 +58,8 @@
           "ignored_train_types": "Ignorierte Zugtypen (z.B. 'ICE')",
           "show_occupancy": "Auslastung anzeigen (falls verfügbar)",
           "exclude_cancelled": "Ausgefallene Züge entfernen",
-          "favorite_trains": "Mehrere Favoriten-Züge (kommagetrennt e.g. 'ICE 1, RE 2')"
+          "favorite_trains": "Mehrere Favoriten-Züge (kommagetrennt e.g. 'ICE 1, RE 2')",
+          "deduplicate_key": "Deduplizierungs-Key (Leer für Standard: {journeyID}{journeyId}{id}{key}{trainNumber})"
         }
       },
       "manual_config": {
@@ -169,7 +170,8 @@
           "keep_endstation": "An Endstation anzeigen",
           "drop_late_trains": "Verspätete Züge ausblenden",
           "past_60_minutes": "Letzte 60 Min anzeigen",
-          "data_source": "Datenquelle"
+          "data_source": "Datenquelle",
+          "deduplicate_key": "Deduplizierungs-Key (Leer für Standard)"
         }
       }
     }

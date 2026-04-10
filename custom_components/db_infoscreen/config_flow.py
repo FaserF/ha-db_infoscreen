@@ -6,7 +6,6 @@ import voluptuous as vol
 from typing import Any
 from homeassistant import config_entries
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import (
     DOMAIN,
     CONF_STATION,
@@ -97,6 +96,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Initialize the config flow."""
         self.found_stations: list[str] = []
         self.selected_station: str | None = None
+        self.selected_code: str | None = None
         self.no_match: bool = False
         self.is_manual_entry: bool = False
         self.basic_options: dict[str, Any] = {}
@@ -499,17 +499,31 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         # Validate station data can be retrieved
         station_raw = user_input.get(CONF_STATION, "")
         # Fallback to self.data_source if not in user_input
-        ds_raw = user_input.get(CONF_DATA_SOURCE) or getattr(self, "data_source", "IRIS-TTS")
+        ds_raw = user_input.get(CONF_DATA_SOURCE) or getattr(
+            self, "data_source", "IRIS-TTS"
+        )
         data_source = normalize_data_source(ds_raw)
+
+        # Handle empty deduplication key by reverting to default
+        if (
+            CONF_DEDUPLICATE_KEY in user_input
+            and not str(user_input.get(CONF_DEDUPLICATE_KEY, "")).strip()
+        ):
+            user_input[CONF_DEDUPLICATE_KEY] = DEFAULT_DEDUPLICATE_KEY
 
         validation_result = await self._validate_station(station_raw, data_source)
         if not validation_result["valid"]:
-            _LOGGER.error("Station validation failed (%s): %s", data_source, validation_result["error"])
+            _LOGGER.error(
+                "Station validation failed (%s): %s",
+                data_source,
+                validation_result["error"],
+            )
             # Instead of aborting, we return to the appropriate step with an error
             errors = {
                 "base": (
                     "station_ambiguous"
-                    if validation_result.get("ambiguous") or validation_result.get("error") == "ambiguous"
+                    if validation_result.get("ambiguous")
+                    or validation_result.get("error") == "ambiguous"
                     else "station_invalid"
                 )
             }
@@ -553,11 +567,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         user_input[CONF_EXCLUDED_DIRECTIONS] = excluded_directions
         platforms = user_input.get(CONF_PLATFORMS, "")
         user_input[CONF_PLATFORMS] = platforms
-        
+
         # Ensure we keep the valid data_source correctly tracked for the final entry
         user_input[CONF_DATA_SOURCE] = data_source
         parts = [str(user_input[CONF_STATION])]
-
 
         if via:
             parts.append(f"via={','.join(via)}")
@@ -598,7 +611,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         # Generate title using the human-readable display name
         full_title = display_name
         # Remove only the provider suffix if it's there
-        full_title = re.sub(r"\s+\((?:IRIS-TTS|Manual Entry)\)$", "", full_title).strip()
+        full_title = re.sub(
+            r"\s+\((?:IRIS-TTS|Manual Entry)\)$", "", full_title
+        ).strip()
 
         if same_station_entries:
             full_title += f" ({data_source})"
@@ -665,7 +680,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         Validate that the station can be reached with the given data source.
         Returns {"valid": True} or {"valid": False, "error": "description"}
         """
-        from urllib.parse import quote, urlencode
+        from urllib.parse import quote
         from homeassistant.helpers.aiohttp_client import async_get_clientsession
         from .const import DATA_SOURCE_MAP
 
@@ -689,6 +704,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         try:
             import aiohttp
+
             session = async_get_clientsession(self.hass)
             async with session.get(
                 url, params=params, timeout=aiohttp.ClientTimeout(total=30)
@@ -756,6 +772,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     async def _async_save_options(self, user_input=None):
         """Update options and the entry title before saving."""
         if user_input:
+            # Handle empty deduplication key by reverting to default
+            if (
+                CONF_DEDUPLICATE_KEY in user_input
+                and not str(user_input.get(CONF_DEDUPLICATE_KEY, "")).strip()
+            ):
+                user_input[CONF_DEDUPLICATE_KEY] = DEFAULT_DEDUPLICATE_KEY
             self._options.update(user_input)
 
         # Recalculate title based on merged data and options

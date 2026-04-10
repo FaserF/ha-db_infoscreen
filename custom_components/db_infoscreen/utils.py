@@ -336,7 +336,9 @@ def parse_dbf_multiple_choices(html_text: str) -> list[dict[str, str]]:
     # Pattern 3: <select name="input"> with <option> tags (used on user's server)
     for select in soup.find_all("select", attrs={"name": "input"}):
         for option in select.find_all("option"):
-            code = unquote(option.get("value", ""))
+            # Cast to string to satisfy mypy (BeautifulSoup can return AttributeValueList or None)
+            val = option.get("value", "")
+            code = unquote(str(val))
             name = option.text.strip()
             if code and name:
                 candidates.append({"name": name, "code": code})
@@ -344,7 +346,9 @@ def parse_dbf_multiple_choices(html_text: str) -> list[dict[str, str]]:
     # Fallback to any <select> if name="input" wasn't found but candidates are still empty
     if not candidates:
         for option in soup.find_all("option"):
-            code = unquote(option.get("value", ""))
+            # Cast to string to satisfy mypy
+            val = option.get("value", "")
+            code = unquote(str(val))
             name = option.text.strip()
             if (
                 code
