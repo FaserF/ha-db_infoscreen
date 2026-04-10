@@ -14,6 +14,7 @@ async def test_async_get_station_candidates_json_success(hass):
     mock_session = MagicMock()
     mock_response = AsyncMock()
     mock_response.status = 300
+    mock_response.headers = {"Content-Type": "application/json"}
     mock_response.json.return_value = {
         "candidates": [
             {"name": "Berlin Hbf", "code": "8011160"},
@@ -42,6 +43,7 @@ async def test_async_get_station_candidates_direct_match(hass):
     mock_session = MagicMock()
     mock_response = AsyncMock()
     mock_response.status = 200
+    mock_response.headers = {"Content-Type": "application/json"}
 
     mock_session.get.return_value.__aenter__.return_value = mock_response
 
@@ -65,11 +67,13 @@ async def test_async_get_station_candidates_html_fallback(hass):
     # First response (JSON) fails with 300 but no JSON body
     mock_json_response = AsyncMock()
     mock_json_response.status = 300
+    mock_json_response.headers = {"Content-Type": "application/json"}
     mock_json_response.json.side_effect = Exception("Not JSON")
 
     # Second response (HTML)
     mock_html_response = AsyncMock()
     mock_html_response.status = 300
+    mock_html_response.headers = {"Content-Type": "text/html"}
     mock_html_response.text.return_value = """
     <html>
         <body>

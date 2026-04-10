@@ -1,3 +1,4 @@
 pytest
 pytest-homeassistant-custom-component
 pytest-asyncio
+beautifulsoup4
