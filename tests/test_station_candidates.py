@@ -12,17 +12,34 @@ from custom_components.db_infoscreen.utils import (
 async def test_async_get_station_candidates_json_success(hass):
     """Test successful station candidate fetching via JSON API."""
     mock_session = MagicMock()
-    mock_response = AsyncMock()
+    mock_response = MagicMock()
     mock_response.status = 300
     mock_response.headers = {"Content-Type": "application/json"}
-    mock_response.json.return_value = {
-        "candidates": [
-            {"name": "Berlin Hbf", "code": "8011160"},
-            {"name": "Berlin Zoologischer Garten", "code": "8010406"},
-        ]
-    }
 
-    mock_session.get.return_value.__aenter__.return_value = mock_response
+    # Mock json() as an async function
+    async def json_side_effect():
+        return {
+            "candidates": [
+                {"name": "Berlin Hbf", "code": "8011160"},
+                {"name": "Berlin Zoologischer Garten", "code": "8010406"},
+            ]
+        }
+
+    mock_response.json = MagicMock(side_effect=json_side_effect)
+
+    # Mock text() as an async function to avoid returning MagicMocks
+    async def text_side_effect():
+        return ""
+
+    mock_response.text = MagicMock(side_effect=text_side_effect)
+
+    async def enter_side_effect():
+        return mock_response
+
+    mock_response.__aenter__ = MagicMock(side_effect=enter_side_effect)
+    mock_response.__aexit__ = AsyncMock(return_value=None)
+
+    mock_session.get.return_value = mock_response
 
     with patch(
         "homeassistant.helpers.aiohttp_client.async_get_clientsession",
@@ -41,11 +58,29 @@ async def test_async_get_station_candidates_json_success(hass):
 async def test_async_get_station_candidates_direct_match(hass):
     """Test direct station match (200 OK) via JSON API."""
     mock_session = MagicMock()
-    mock_response = AsyncMock()
+    mock_response = MagicMock()
     mock_response.status = 200
     mock_response.headers = {"Content-Type": "application/json"}
 
-    mock_session.get.return_value.__aenter__.return_value = mock_response
+    # Mock json() for direct match
+    async def json_side_effect():
+        return {"departures": [], "station": {"name": "Berlin Hbf"}}
+
+    mock_response.json = MagicMock(side_effect=json_side_effect)
+
+    # Mock text()
+    async def text_side_effect():
+        return "Abfahrtstafel"
+
+    mock_response.text = MagicMock(side_effect=text_side_effect)
+
+    async def enter_side_effect():
+        return mock_response
+
+    mock_response.__aenter__ = MagicMock(side_effect=enter_side_effect)
+    mock_response.__aexit__ = AsyncMock(return_value=None)
+
+    mock_session.get.return_value = mock_response
 
     with patch(
         "homeassistant.helpers.aiohttp_client.async_get_clientsession",
@@ -64,17 +99,36 @@ async def test_async_get_station_candidates_html_fallback(hass):
     """Test fallback to HTML parsing when JSON fails or returns 300 with HTML."""
     mock_session = MagicMock()
 
-    # First response (JSON) fails with 300 but no JSON body
-    mock_json_response = AsyncMock()
-    mock_json_response.status = 300
-    mock_json_response.headers = {"Content-Type": "application/json"}
-    mock_json_response.json.side_effect = Exception("Not JSON")
+    # Configure mocks using MagicMock + async side effects (most stable)
+    def create_mock_response(status, content_type, text=None, json_data=None, json_err=None):
+        resp = MagicMock()
+        resp.status = status
+        resp.headers = {"Content-Type": content_type}
 
-    # Second response (HTML)
-    mock_html_response = AsyncMock()
-    mock_html_response.status = 300
-    mock_html_response.headers = {"Content-Type": "text/html"}
-    mock_html_response.text.return_value = """
+        async def text_func():
+            return text or ""
+
+        resp.text = MagicMock(side_effect=text_func)
+
+        async def json_func():
+            if json_err:
+                raise json_err
+            return json_data or {}
+
+        resp.json = MagicMock(side_effect=json_func)
+
+        async def enter_func():
+            return resp
+
+        resp.__aenter__ = MagicMock(side_effect=enter_func)
+        resp.__aexit__ = AsyncMock(return_value=None)
+        return resp
+
+    mock_json_response = create_mock_response(
+        300, "application/json", json_err=Exception("Not JSON")
+    )
+
+    html_content = """
     <html>
         <body>
             <div class="error">Wählen Sie eine Station aus</div>
@@ -85,12 +139,10 @@ async def test_async_get_station_candidates_html_fallback(hass):
         </body>
     </html>
     """
+    mock_html_response = create_mock_response(300, "text/html", text=html_content)
 
     # Configure mock session to return JSON then HTML
-    mock_session.get.return_value.__aenter__.side_effect = [
-        mock_json_response,
-        mock_html_response,
-    ]
+    mock_session.get.side_effect = [mock_json_response, mock_html_response]
 
     with patch(
         "homeassistant.helpers.aiohttp_client.async_get_clientsession",

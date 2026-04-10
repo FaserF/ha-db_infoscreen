@@ -4,7 +4,7 @@ import re
 import difflib
 import asyncio
 import async_timeout
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 from datetime import datetime, timedelta, timezone
 
 _LOGGER = logging.getLogger(__name__)
@@ -311,7 +311,7 @@ def parse_dbf_multiple_choices(html_text):
         if "station=" in href:
             match = re.search(r"station=([^&?]+)", href)
             if match:
-                code = match.group(1)
+                code = unquote(match.group(1))
                 candidates.append({"name": name, "code": code})
                 continue
 
@@ -320,7 +320,7 @@ def parse_dbf_multiple_choices(html_text):
             param in href for param in ["hafas=", "efa=", "db="]
         ):
             # The part before '?' is usually the station ID/Name slug
-            code = href.split("?", 1)[0].lstrip("/")
+            code = unquote(href.split("?", 1)[0].lstrip("/"))
             if code and code not in ["_autostop", "_backend", "search"]:
                 candidates.append({"name": name, "code": code})
                 continue
@@ -328,7 +328,7 @@ def parse_dbf_multiple_choices(html_text):
     # Pattern 3: <select name="input"> with <option> tags (used on user's server)
     for select in soup.find_all("select", attrs={"name": "input"}):
         for option in select.find_all("option"):
-            code = option.get("value")
+            code = unquote(option.get("value", ""))
             name = option.text.strip()
             if code and name:
                 candidates.append({"name": name, "code": code})
@@ -336,7 +336,7 @@ def parse_dbf_multiple_choices(html_text):
     # Fallback to any <select> if name="input" wasn't found but candidates are still empty
     if not candidates:
         for option in soup.find_all("option"):
-            code = option.get("value")
+            code = unquote(option.get("value", ""))
             name = option.text.strip()
             if (
                 code
