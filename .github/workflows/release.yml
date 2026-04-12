@@ -60,7 +60,7 @@ jobs:
             --output "CHANGELOG_BODY.md"
 
       - name: Create Release Notes
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         if: inputs.release_type != 'nightly'
         with:
           tag_name: ${{ steps.version.outputs.version }}
