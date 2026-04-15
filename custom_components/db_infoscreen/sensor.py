@@ -499,6 +499,16 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
             return opt
         return self.config_entry.data.get(CONF_WALK_TIME, 0)
 
+    def _get_next_departure(self):
+        """Get the next non-cancelled departure."""
+        if not self.coordinator.data or not isinstance(self.coordinator.data, list):
+            return None
+
+        for dep in self.coordinator.data:
+            if not dep.get("is_cancelled", False):
+                return dep
+        return None
+
     @property
     def native_value(self):
         """
@@ -506,11 +516,10 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
 
         Returns 'Leave now!' if the walk time has already passed.
         """
-        if not self.coordinator.data or not isinstance(self.coordinator.data, list):
+        next_dep = self._get_next_departure()
+        if not next_dep:
             return None
 
-        # Get next departure (first in list)
-        next_dep = self.coordinator.data[0]
         departure_timestamp = next_dep.get("departure_timestamp")
 
         if not departure_timestamp:
@@ -527,14 +536,9 @@ class DBInfoScreenLeaveNowSensor(DBInfoScreenBaseEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        if (
-            not self.coordinator.data
-            or not isinstance(self.coordinator.data, list)
-            or len(self.coordinator.data) == 0
-        ):
+        next_dep = self._get_next_departure()
+        if not next_dep:
             return {}
-
-        next_dep = self.coordinator.data[0]
 
         departure_timestamp = next_dep.get("departure_timestamp")
         if not departure_timestamp:
