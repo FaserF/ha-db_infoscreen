@@ -1034,6 +1034,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             except ValueError:
                 delay_departure = 0
 
+            departure["delay"] = delay_departure  # Normalization
+
             departure_time_adjusted = None
             if departure_time and delay_departure is not None:
                 departure_time_adjusted = departure_time + timedelta(
@@ -1158,6 +1160,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     delay_arrival = int(delay_arrival)
             except ValueError:
                 delay_arrival = 0
+
+            departure["delay_arrival"] = delay_arrival  # Normalization
 
             arrival_time_adjusted = None
             if scheduled_arrival is not None:
@@ -1614,15 +1618,18 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         # 2. Record/Update current departures
         for dep in departures:
             # Create a unique key for this specific departure instance
-            # Use trip_id if available, otherwise train + scheduled time
+            # Use trip_id if available, otherwise train + normalized scheduled timestamp
             train = dep.get("train")
-            sched_time = dep.get("scheduledDeparture") or dep.get("scheduledArrival")
             trip_id = dep.get("trip_id")
 
-            # Key should be unique for the specific instance (e.g. today's 10:00 train)
-            history_key = trip_id if trip_id else f"{train}_{sched_time}"
+            # Using the machine-readable timestamp ensures the key is stable across updates
+            # even if the raw 'scheduledDeparture' string format oscillates.
+            timestamp = dep.get("departure_timestamp") or dep.get("arrival_timestamp")
 
-            if not history_key:
+            # Key should be unique for the specific instance (e.g. today's 10:00 train)
+            history_key = trip_id if trip_id else f"{train}_{timestamp}"
+
+            if not history_key or not train:
                 continue
 
             # We store the latest known status.
@@ -1631,9 +1638,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             self.departure_history[history_key] = {
                 "train": train,
                 "timestamp": now,
-                "scheduled": sched_time,
-                "delay": dep.get("delayDeparture") or dep.get("delayArrival") or 0,
-                "cancelled": dep.get("is_cancelled", False),
+                "delay": dep.get("delay", 0),
+                "delay_arrival": dep.get("delay_arrival", 0),
+                "is_cancelled": dep.get("is_cancelled", False),
             }
 
     def _handle_update_error(self, error_message: str) -> None:

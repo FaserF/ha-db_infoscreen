@@ -21,9 +21,19 @@ async def test_punctuality_sensor_calculation(hass, mock_coordinator):
 
     # 1. Setup history: 1 on-time, 1 delayed (10m), 1 cancelled
     mock_coordinator.departure_history = {
-        "trip1": {"train": "ICE 1", "delay": 0, "cancelled": False, "timestamp": now},
-        "trip2": {"train": "ICE 2", "delay": 10, "cancelled": False, "timestamp": now},
-        "trip3": {"train": "ICE 3", "delay": 0, "cancelled": True, "timestamp": now},
+        "trip1": {
+            "train": "ICE 1",
+            "delay": 0,
+            "is_cancelled": False,
+            "timestamp": now,
+        },
+        "trip2": {
+            "train": "ICE 2",
+            "delay": 10,
+            "is_cancelled": False,
+            "timestamp": now,
+        },
+        "trip3": {"train": "ICE 3", "delay": 0, "is_cancelled": True, "timestamp": now},
     }
 
     sensor = DBInfoScreenPunctualitySensor(

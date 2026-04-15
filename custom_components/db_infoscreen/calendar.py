@@ -97,9 +97,7 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
                     "platform", departure.get("scheduledPlatform", "?")
                 )
                 delay = departure.get("delay", departure.get("delayDeparture", 0))
-                cancelled = departure.get(
-                    "isCancelled", departure.get("cancelled", False)
-                )
+                cancelled = departure.get("is_cancelled", False)
 
                 # Build event summary
                 try:

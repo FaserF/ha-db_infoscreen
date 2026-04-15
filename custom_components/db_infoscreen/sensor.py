@@ -609,9 +609,9 @@ class DBInfoScreenPunctualitySensor(DBInfoScreenBaseEntity, SensorEntity):
         delayed = sum(
             1
             for d in history.values()
-            if d.get("delay", 0) > 5 and not d.get("cancelled", False)
+            if d.get("delay", 0) > 5 and not d.get("is_cancelled", False)
         )
-        cancelled = sum(1 for d in history.values() if d.get("cancelled", False))
+        cancelled = sum(1 for d in history.values() if d.get("is_cancelled", False))
         on_time = total - delayed - cancelled
 
         punctuality = round((on_time / total) * 100, 1) if total > 0 else 100
