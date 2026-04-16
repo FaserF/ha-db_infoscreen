@@ -255,7 +255,7 @@ action:
 
 ## 🎨 Lovelace Dashboard Examples
 
-### 12. Premium Departure Board Card
+### 12. Premium Departure Board Card {: #premium-departure-board-card }
 A beautiful, dynamic departure board using a Markdown card. Shows delays, platform changes, and wagon order.
 
 ```yaml

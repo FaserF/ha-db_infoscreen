@@ -22,8 +22,8 @@ To get started with development, you'll need Python 3.12+ installed.
 
 3.  **Install dependencies**:
     ```bash
+    pip install .
     pip install -r requirements_test.txt
-    pip install -r custom_components/db_infoscreen/requirements.txt
     ```
 
 ---

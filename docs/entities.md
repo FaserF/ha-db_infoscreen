@@ -39,9 +39,11 @@ The primary sensor that displays the next departure time.
 
 - `alternative_connections` - List of later trains to the same destination (if detailed enabled)
 
+- `deduplication_key` - Unique identifier for the trip run (if detailed enabled)
+
 ---
 
-### Leave Now Alarm Sensor
+### Leave Now Alarm Sensor {: #leave-now-alarm }
 **Entity ID**: `sensor.db_infoscreen_{station}_leave_now_alarm`
 
 !!! note "Disabled by Default"
@@ -49,9 +51,8 @@ The primary sensor that displays the next departure time.
 
 | State | Meaning |
 | :--- | :--- |
-| **{Time to leave}** | Time until you need to leave to reach the station on time |
-| **On Time** | You are on time to leave |
-| **Delayed** | You are delayed to leave |
+| **{Number}** | Minutes remaining until you must leave to reach the station on time |
+| **0** | You must leave now or you have already missed the boarding window |
 | **Unknown** | No data available |
 
 **Attributes:**
@@ -108,7 +109,7 @@ The primary sensor that displays the next departure time.
 
 Three binary sensors are automatically created to provide quick status indicators.
 
-### Delay Sensor
+### Delay Sensor {: #delay-sensor }
 **Entity ID**: `binary_sensor.db_infoscreen_{station}_delay`
 
 !!! note "Disabled by Default"
@@ -141,7 +142,7 @@ Three binary sensors are automatically created to provide quick status indicator
 
 ---
 
-### Cancellation Sensor
+### Cancellation Sensor {: #cancellation-sensor }
 **Entity ID**: `binary_sensor.db_infoscreen_{station}_cancellation`
 
 !!! note "Disabled by Default"
@@ -160,7 +161,7 @@ Three binary sensors are automatically created to provide quick status indicator
 
 ---
 
-### API Connection Sensor (Diagnostic)
+### API Connection Sensor {: #api-connection-sensor }
 **Entity ID**: `binary_sensor.db_infoscreen_{station}_api_connection`
 
 !!! note "Disabled by Default"
@@ -179,7 +180,7 @@ Three binary sensors are automatically created to provide quick status indicator
 
 ---
 
-### Accessibility Sensor (Elevator)
+### Accessibility Sensor (Elevator) {: #accessibility-sensor }
 **Entity ID**: `binary_sensor.db_infoscreen_{station}_elevator_{platform}` or `_general_`
 
 !!! note "Disabled by Default"
@@ -198,7 +199,7 @@ Three binary sensors are automatically created to provide quick status indicator
 
 ---
 
-## 📅 Calendar Entity
+## 📅 Calendar Entity {: #calendar-entity }
 
 **Entity ID**: `calendar.db_infoscreen_{station}_departures`
 

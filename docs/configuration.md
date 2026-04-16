@@ -8,81 +8,87 @@
 
 When you first add a "DB Infoscreen" integration, you meet the setup wizard. This creates the "Base Sensor".
 
-### 1. Station Selection
+| Option | Description | Required | Example |
+| :--- | :--- | :--- | :--- |
+| **Station** | Name, DS100 code, or EVA ID of the station. | **Yes** | `Berlin Hbf` or `8000105` |
+| **Data Source** | Backend used to fetch data. `IRIS-TTS` is official DB data. | No | `IRIS-TTS` |
+| **Departures** | How many upcoming trains should be tracked (Default: 4). | No | `5` |
+| **Travel Time** | Minutes it takes you to walk to the station. | No | `5` |
 
--   **Search & Select**: Simply type the name of your city (e.g. `Frankfurt`). The integration will search the official database and present a list of stations to choose from.
-
--   **Direct Entry**: You can still enter a precise DS100 ID (e.g. `FF`) or EVA ID if you know it.
-
--   **Manual Override**: If a station is not found in the list, you can still proceed with your manual entry. A warning icon (⚠️) will indicate that the station name could not be verified, but the integration will attempt to fetch data for it anyway.
-
-!!! info "Learn More"
-    For detailed information about the station search feature, including search strategies and technical details, see the [Station Search Guide](station-search.md).
-
-### 2. Data Source
-
-Select the backend provider.
-
--   **IRIS-TTS**: The default and most reliable source for German stations. It provides high-frequency updates and quality notes.
-
--   **Regional/International**: Select providers like `ÖBB`, `SBB`, or regional networks when tracking trains outside Germany or on specific local lines not covered by the main DB IRIS system.
-
-!!! info "Full List"
-    See the complete [Data Sources Reference](data-sources.md) for all 45+ supported backends.
+!!! info "Station Search"
+    The setup flow includes an **autocomplete search** to help find the correct official name. For more details, see the [Station Search Guide](station-search.md).
 
 ---
 
 ## 🛠️ Options Flow (Fine Tuning)
 
-Once a sensor is created, click **Configure** on the integration card to access granular settings. These are categorized into meaningful groups.
+Once a sensor is created, click **Configure** on the integration card to access granular settings. These are categorized into meaningful groups. Use the "Finish and Save" button in the main menu to apply all changes at once.
 
-### :material-clock-outline: General Options
--   **Update Interval**: Default is 3 minutes. Lowering this to 1 minute provides near-instant delay updates but increases API load.
--   **Offset (HH:MM)**: Shift the search window into the future.
+### :material-clock-outline: General Options {: #general-options }
+Basic update behavior and timing.
+
+-   **Number of Upcoming Departures**: Updates the amount of tracked trains.
+-   **Update Interval (minutes)**: How often the sensor polls the API. Default is 3 minutes.
+-   **Offset (HH:MM)**: Shift the search window into the future. 
     -   *Example*: Use `00:15` if you want to skip all trains leaving in the next 15 minutes because you haven't left the house yet.
--   **Number of Departures**: Controls how many entries are stored in the `departures` attribute. Increasing this (e.g. to 15) gives more historical/future visibility but increases state size.
+-   **Travel Time (minutes)**: Used for the "Leave Now" alarm logic.
 
-### :material-filter-variant: Filter Options
-*This is where the magic happens for commuters.*
+### :material-filter-variant: Filter Options {: #filter-options }
+Refine which trains are shown on your dashboard.
 
 !!! important "Delimiter Rule"
     **Always use a comma `,`** to separate multiple values in text fields.
 
--   **Platforms**: Enter a list of tracks you care about (e.g. `4, 5, 21`).
--   **Via Stations**: Enter stations the train must pass through. If you enter multiple stations (separated by `,` or `|`), you can choose between **AND** (must pass all) and **OR** (must pass at least one) logic.
--   **Via Station Logic**:
+-   **Platforms**: Filter by platform names (e.g. `1, 4a, 5`).
+-   **Via Stations**: Comma-separated list of stations the train must pass through.
+-   **Via Station Logic**: 
     -   **OR** (Default): Shows trains stopping at *any* of the listed stations.
-        *   *Example*: `Köln, Düsseldorf`. Catch trains to either city.
     -   **AND**: Shows only trains stopping at *all* listed stations.
--   **Direction**: A substring search for the destination.
-    -   *Example*: Entering `München` will catch `München Hbf` and `München Ost`.
--   **Excluded Directions**: Hide specific destinations. Useful for stations where many lines overlap.
--   **Exclude Cancelled Trains**:
+-   **Direction**: A substring search for the destination (e.g. `München`).
+-   **Excluded Directions**: Hide trains heading toward specific destinations.
+-   **Ignored Train Types**: Multi-select list to hide `S-Bahn`, `Bus`, `ICE`, etc.
+-   **Exclude Cancelled Trains**: 
     -   `True`: Cancelled trains vanish from your dashboard entirely.
-    -   `False` (Default): Cancelled trains stay in the list (marked as `isCancelled: true`), allowing you to see *why* your commute is broken.
+    -   `False` (Default): Cancelled trains stay in the list (marked as `isCancelled: true`).
+-   **Favorite Trains**: A comma-separated list of specific train names (e.g., `ICE 123, RE 5`) to filter the board for commuters.
 
-### :material-monitor-dashboard: Display Options
--   **Detailed Information**: Enables extra JSON metadata in attributes.
--   **Preferred Time Mode**:
-    -   `Departure`: Default. Focuses on when the train leaves.
-    -   `Arrival`: Useful if you are using the integration to track when someone is arriving at your station.
--   **Enable Text View**: A powerful feature for ePaper displays. It compiles the most important info into a single formatted string.
-    -   **Text View Template**: Customize the exact layout of the Text View string. By default, it's `{line} -> {destination} (Pl {platform}): {time}{delay_str}`.
-        -   *Example (CSV for ESP32)*: `{line};{destination};{platform};{time}{delay_str}`
-        -   *Munich Example Output*: `S 3;Mamendorf;2;10:45 +2`
-        -   *Available variables*: `{line}`, `{destination}`, `{platform}`, `{time}`, `{delay}`, `{delay_str}`.
+### :material-monitor-dashboard: Display Options {: #display-options }
+Control how data is presented in Home Assistant entities.
+
+-   **Detailed Information**: Enables extra JSON metadata in attributes (e.g. full route details, trip IDs).
+-   **Display Mode (admode)**:
+    -   `preferred departure`: Planned time, switches to actual time if delayed.
+    -   `departure`: Always shows planned/actual departure time.
+    -   `arrival`: Shows arrival time (useful for tracking incoming trains).
+-   **Enable Text View**: Compiles important info into a single formatted string, ideal for ESPHome/ePaper displays.
+    -   **Text View Template**: Default is `{line} -> {destination} (Pl {platform}): {time}{delay_str}`.
 -   **Hide Low Delay**: Removes delay noise for delays less than 5 minutes.
--   **Show Occupancy**: Enables fetching of train occupancy data (load factor 1-4) if provided by the API.
+-   **Show Occupancy**: Enables fetching of train occupancy data (load factor 1-4) if available.
 
-### :material-flask: Advanced Options
--   **Custom API URL**: Essential if you are hosting your own [db-fakedisplay](https://github.com/derf/db-fakedisplay) instance.
--   **Deduplication**: Filters out redundant entries. Some data sources report the same train twice under different IDs; this keeps your UI clean.
--   **Deduplication Key**: Specify the identifying fields for a trip.
-    -   *Example (KVV)*: `{line}`. This ensures that the same line appearing on platform 1 and platform 3 is treated as one trip.
--   **Keep Route**: Normally, only the destination is stored. Enable this to keep the **entire list of intermediate stops**.
--   **Past 60 Minutes**: Include trains that have already left in the last hour. Great for "What did I miss?" views.
+### :material-flask: Advanced Options {: #advanced-options }
+Technical settings and provider-specific fixes.
+
+-   **Custom API URL**: Essential if self-hosting a [db-fakedisplay](https://github.com/derf/db-fakedisplay) instance.
+-   **Deduplicate Departures**: Filters out redundant entries. This is essential for providers like KVV where the same train might be reported for multiple platform variants simultaneously.
+    -   **How it works**: The integration compares departures within a **120-second (2 minute) window**. If two departures generate the same **Deduplication Key**, the second one is hidden.
+-   **Deduplication Key**: A template to identify a "unique" trip.
+    -   **When to change this?**: If you still see the same train twice on your dashboard despite deduplication being enabled, your key is "too unique" (values differ between the duplicates).
+    -   **Common Placeholders**:
+        -   `{line}`: The train name (e.g., `S 2`).
+        -   `{destination}`: Where it's going.
+        -   `{id}` / `{key}` / `{journeyID}`: Unique IDs from the provider (often contain timestamps).
+    -   **KVV / Regional Transport Tip**: Set this simply to `{line}`. This tells the system: "Only one S2 can leave every 2 minutes."
+    -   **Troubleshooting**: Enable **Detailed Information** (Display Options) and look at the `departures` attribute. Compare the two duplicates. If they have different IDs but the same line, use `{line}` as your key.
+-   **Keep Route Details**: Persists the full station list even if the API update is partial.
+-   **Keep if Endstation**: Prevents the sensor from clearing data when reaching the final stop.
+-   **Drop Late Trains**: Hide trains that have logically "departed" but are still in the system due to delay.
+-   **Past 60 Minutes**: Include trains that left in the last hour.
+-   **Data Source**: Switch between IRIS (DB) and regional HAFAS/EFA providers. See the [Data Sources Reference](data-sources.md).
 
 ---
 
 ### 🚀 Next Steps
-Now that you have configured your sensors, check out the [Automation Cookbook](automations.md) for inspiration on how to use them!
+
+- [Entities Reference](entities.md){ .md-button }
+- [Automation Cookbook](automations.md){ .md-button }
+- [Troubleshooting](troubleshooting.md){ .md-button }

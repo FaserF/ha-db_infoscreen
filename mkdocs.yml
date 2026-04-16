@@ -89,7 +89,9 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Configuration: configuration.md
-  - Options: options.md
+  - Station Search: station-search.md
+  - Data Sources: data-sources.md
+  - Entities: entities.md
   - Advanced: advanced.md
   - Services: services.md
   - Automations: automations.md

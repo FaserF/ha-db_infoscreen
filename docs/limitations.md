@@ -69,7 +69,7 @@ While the backend supports dozens of providers, not all providers offer the same
 
 ### Dashboard Examples
 
--   **[Markdown Card](docs/automations.md#12-premium-departure-board-card)**: Detailed departure board with colors and delays.
+-   **[Markdown Card](automations.md#premium-departure-board-card)**: Detailed departure board with colors and delays.
 
 ### Routing vs. Departures
 This integration is **not a router**. It will not tell you which train to take to reach a specific destination if that involves changes. It only tells you what is leaving the current station.

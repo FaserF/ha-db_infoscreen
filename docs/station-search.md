@@ -8,7 +8,7 @@ The DB Infoscreen integration features an intelligent station search system that
 
 When adding a new sensor, you'll be guided through a **multi-step configuration flow**:
 
-### Step 1: Search Station
+### Step 1: Search Station {: #step-1-search-station }
 Enter a search term for your desired station. The system will query the official DBF station database and suggest matching results.
 
 !!! tip "Search Strategy"
@@ -123,7 +123,7 @@ If you know the region, include it:
 
 ---
 
-## 🚌 Using HAFAS Station IDs (Regional Networks)
+## 🚌 Using HAFAS Station IDs {: #hafas-station-ids }
 
 !!! important "Station IDs vs. Station Names"
     The autocomplete database only contains **official Deutsche Bahn station names**. If you're tracking a **regional bus/train stop** that's not in the DB network, you need to use a **HAFAS station ID** with the appropriate backend.

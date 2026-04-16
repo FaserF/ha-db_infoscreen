@@ -16,7 +16,7 @@ The departures are provided as a list of dictionaries in the `departures` attrib
 
 The sensor stores its main payload in the `departures` attribute as a JSON list. This makes it incredibly easy to use Jinja2 templates for custom notifications or cards.
 
-### Example: Delay Notification
+### Example: Delay Notification {: #example-delay-notification }
 
 Trigger an automation only if the next train toward "Mainz" is delayed by more than 10 minutes.
 
@@ -62,7 +62,7 @@ The `departures` list contains rich data objects. Here are the keys available fo
 | `occupancy` | **Load Factor**. `1` (low) to `4` (full). | `2` |
 | `route_details` | **Real-time Route**. List of stops with delays. | `[{"stop": "Hanau", "delay": 2}, ...]` |
 
-### Example: Wagon Sector & Occupancy
+### Example: Wagon Sector & Occupancy {: #example-wagon-sector-occupancy }
 
 ```yaml
 - type: markdown
@@ -86,36 +86,51 @@ The `departures` list contains rich data objects. Here are the keys available fo
 
 ---
 
-## 🧹 Deduplication Mastery
-
-Deduplication is one of the most powerful and misunderstood features of `ha-db_infoscreen`. It is designed to handle "messy" data from transit providers.
-
-### The Algorithm
-The integration uses a **sliding window** approach:
-
-1.  All departures are sorted by their scheduled time.
-2.  The integration looks at each departure and generates a **Deduplication Key** based on your template.
-3.  If two departures have the **same key** and are within **120 seconds** of each other, the later one is discarded.
-
-### Common Scenarios
-
-| Scenario | Recommended Key | Why? |
-| :--- | :--- | :--- |
-| **Standard Trains (DB)** | *Leave empty* | The default key uses trip IDs provided by Deutsche Bahn which are very stable. |
-| **KVV (Karlsruhe)** | `{line}` | KVV often lists the same tram twice if it passes multiple platforms. Since regional trams don't have stable trip IDs in the API, using the line name is the safest way to merge them. |
-| **Same Destination** | `{destination}` | If you only care about "when is the next train to X" and don't care about the line/number, this merges all trains to the same place if they are within 2 minutes. |
-
-### Debugging Duplicates
-If you still see duplicates:
-
-1.  Enable **Detailed Information** in Display Settings.
-2.  Check the attributes of the `departures` list.
-3.  Compare the duplicate entries: look for fields that are different (e.g., `id` or `key`).
-4.  Adjust your **Deduplication Key** template to include only the fields that are identical for both entries.
-
+## 🧹 Deduplication Mastery {: #deduplication-mastery }
+ 
+Deduplication is one of the most powerful and misunderstood features of `ha-db_infoscreen`. It is designed to handle "messy" data from transit providers where the same physical train might be reported multiple times (e.g., once for Platform 1 and once for "Platform 1a").
+ 
+### 🧠 How it works behind the scenes
+ 
+The integration applies a **120-second (2 minute) sliding window** to all fetched departures:
+ 
+1.  **Sorting**: All incoming departures are sorted strictly by their **scheduled** departure time.
+2.  **Key Generation**: For every single departure, the integration takes the **Deduplication Key Template** (e.g., `{line}{destination}`) and replaces the placeholders with the actual data of that train.
+3.  **Comparison**: The integration compares the current train's key against the **last kept** train's key.
+4.  **The Decision**: 
+    *   If the **keys are identical** AND the **time difference is ≤ 120 seconds** -> The new train is considered a **duplicate** and is discarded.
+    *   Otherwise -> The train is kept, and its key becomes the new "last kept" key for future comparisons.
+ 
+### 🛠️ Building the Perfect Key
+ 
+The "Key" is your way of telling the integration what makes a train unique.
+ 
+ | Scenario | Recommended Key | Why? |
+ | :--- | :--- | :--- |
+ | **Deutsche Bahn (IRIS)** | `{journeyID}{journeyId}{id}{key}{trainNumber}` | **(Default)** DB provides stable, unique trip IDs. This key is very precise and only merges if it's the exact same technical run. |
+ | **KVV / Local Trams** | `{line}` | **Highly Recommended**. Regional APIs often change trip IDs for every platform variation. By using just `{line}`, you tell the system: "I only want to see the S2 once every 2 minutes." |
+ | **Commuter (Target)** | `{line}{destination}` | Perfect if you have multiple lines (S1, S2) going to the same place. It differentiates the lines but merges duplicates of the same line going to the same target. |
+ | **The "Simple" Board** | `{destination}` | Best if you don't care which train you take, as long as it goes to your city. Any trains arriving within 2 minutes of each other at the same destination are merged. |
+ 
+### 🕵️ Troubleshooting: "I still see duplicates!"
+ 
+If your dashboard shows the same train twice, follow these exact steps to find the "Idiot-proof" fix:
+ 
+1.  **Enable Details**: Go to **Configure -> Display Settings** and check **Detailed Information**.
+2.  **Inspect Attributes**: Open the sensor's state in Home Assistant (Developer Tools -> States). Look for the `next_departures` attribute.
+3.  **Find the Difference**: Compare the two duplicate entries. 
+    *   *Example*: One train has `id: "123"` and the other has `id: "456"`.
+    *   *Observation*: Because their IDs are different, the **Default Key** makes them "unique" in the eyes of the integration.
+4.  **Simplify**: Identify a field that is **identical** for both duplicates (usually `line` or `destination`).
+5.  **Apply**: Go to **Configure -> Advanced Options** and set the **Deduplication Key** to only that identical field (e.g., `{line}`).
+6.  **Verify**: The duplicates should disappear on the next update.
+ 
+!!! warning "Key Sensitivity"
+    The Deduplication Key is **case-insensitive** and ignores all whitespace. `{LINE}` is the same as `{line}`.
+ 
 ---
-
-## 📡 Self-Hosting the Backend
+ 
+## 📡 Self-Hosting the Backend {: #self-hosting }
 
 If you have a high number of sensors or want maximum privacy, you can host your own instance of the [db-fakedisplay](https://github.com/derf/db-fakedisplay) API.
 

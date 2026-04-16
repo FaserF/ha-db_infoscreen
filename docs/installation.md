@@ -86,3 +86,9 @@ Once installed (and after a restart), you need to add the integration to your in
 4.  Follow the setup wizard to configure your first station.
 
 [![Add Integration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=db_infoscreen)
+
+### 🚀 Next Steps
+
+- [Station Search Guide](station-search.md){ .md-button }
+- [Configuration Reference](configuration.md){ .md-button }
+- [Entities Reference](entities.md){ .md-button }
