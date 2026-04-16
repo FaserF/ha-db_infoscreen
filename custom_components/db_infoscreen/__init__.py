@@ -364,10 +364,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         admode = config.get(CONF_ADMODE, "")
         raw_update_interval = config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
         update_interval = int(max(raw_update_interval, MIN_UPDATE_INTERVAL))
+        self._api_update_interval = update_interval * 60
+        self._last_api_fetch = 0
+        self._raw_api_data = None
 
-        update_timedelta = (
-            timedelta(minutes=update_interval) if update_interval > 0 else None
-        )
+        # Fixed local update interval for calculation/pruning (30 seconds)
+        # If interval is 0, we disable automatic updates
+        local_calc_interval = timedelta(seconds=30) if update_interval > 0 else None
 
         station_cleaned = " ".join(str(self.station).split())
         encoded_station = quote(station_cleaned, safe="-:,")
@@ -425,7 +428,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             hass,
             _LOGGER,
             name=f"DB-Infoscreen {self.station}",
-            update_interval=update_timedelta,
+            update_interval=local_calc_interval,
         )
         self.config_entry = config_entry
         self._consecutive_errors = 0
@@ -590,15 +593,31 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         if self.server_version is None:
             await self.async_fetch_server_version()
 
-        # Check cache via generic fetch_url
-        if self.fetch_url in RESPONSE_CACHE:
+        do_api_fetch = False
+        if (
+            self._raw_api_data is None
+            or now.timestamp() - self._last_api_fetch >= self._api_update_interval
+        ):
+            do_api_fetch = True
+
+        if not do_api_fetch:
+            _LOGGER.debug(
+                "Skipping API fetch for %s, using local data (Next fetch in %d seconds)",
+                self.station,
+                int(
+                    self._api_update_interval - (now.timestamp() - self._last_api_fetch)
+                ),
+            )
+            data = self._raw_api_data
+        elif self.fetch_url in RESPONSE_CACHE:
             timestamp, cached_data = RESPONSE_CACHE[self.fetch_url]
             if now - timestamp < CACHE_TTL:
-                _LOGGER.debug("Using cached response for %s", self.fetch_url)
+                _LOGGER.debug("Using globally cached response for %s", self.fetch_url)
                 data = copy.deepcopy(cached_data)
-                # Skip to processing
+                self._raw_api_data = data
+                self._last_api_fetch = now.timestamp()
             else:
-                _LOGGER.debug("Cache expired for %s", self.fetch_url)
+                _LOGGER.debug("Global cache expired for %s", self.fetch_url)
                 RESPONSE_CACHE.pop(self.fetch_url, None)
                 data = None
         else:
@@ -631,6 +650,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                             data = await data
 
                         RESPONSE_CACHE[self.fetch_url] = (now, copy.deepcopy(data))
+                        self._raw_api_data = data
+                        self._last_api_fetch = now.timestamp()
                         break  # Success, exit retry loop
                 except aiohttp.ClientResponseError as err:
                     if err.status == 429:
