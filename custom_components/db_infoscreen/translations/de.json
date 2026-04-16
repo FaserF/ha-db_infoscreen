@@ -38,7 +38,7 @@
       },
       "advanced": {
         "title": "Erweitere Konfiguration",
-        "description": "Feineinstellungen für **{station}**.\n\n**Wichtig für lokale Stationen**: Ändere die 'Datenquelle' auf deinen Verbund (z.B. MVV), falls die Standardeinstellung keine Daten liefert.",
+        "description": "Feineinstellungen für **{station}**.\n\n**Deduplizierung**: Filtert doppelte Einträge desselben Zuges heraus (häufig beim KVV oder anderen Verkehrsverbünden). Es werden Abfahrten innerhalb eines 2-Minuten-Fensters verglichen, basierend auf dem untenstehenden 'Key'.",
         "data": {
           "hidelowdelay": "Kleine Verspätungen ausblenden (< 5 Min)",
           "drop_late_trains": "Züge nach Abfahrt entfernen",
@@ -59,7 +59,7 @@
           "show_occupancy": "Auslastung anzeigen (falls verfügbar)",
           "exclude_cancelled": "Ausgefallene Züge entfernen",
           "favorite_trains": "Mehrere Favoriten-Züge (kommagetrennt e.g. 'ICE 1, RE 2')",
-          "deduplicate_key": "Deduplizierungs-Key (Leer für Standard: {journeyID}{journeyId}{id}{key}{trainNumber})"
+          "deduplicate_key": "Eigener Deduplizierungs-Key (z.B. {line} - Leer für Standard: {journeyID}{journeyId}{id}{key}{trainNumber})"
         }
       },
       "manual_config": {
@@ -163,7 +163,7 @@
       },
       "advanced_options": {
         "title": "Erweiterte Einstellungen",
-        "description": "API- und Datenverarbeitung.",
+        "description": "API- und Datenverarbeitung.\n\n**Deduplizierung**: Filtert redundante Einträge desselben physischen Zuges heraus. Verwendet den untenstehenden 'Key' als Kennung. Einträge innerhalb von 2 Minuten mit demselben Key werden zusammengeführt.",
         "data": {
           "deduplicate_departures": "Dubletten filtern",
           "keep_route": "Fahrplan behalten",
@@ -171,7 +171,7 @@
           "drop_late_trains": "Verspätete Züge ausblenden",
           "past_60_minutes": "Letzte 60 Min anzeigen",
           "data_source": "Datenquelle",
-          "deduplicate_key": "Deduplizierungs-Key (Leer für Standard)"
+          "deduplicate_key": "Eigener Deduplizierungs-Key (z.B. {line} - Leer für Standard: {journeyID}{journeyId}{id}{key}{trainNumber})"
         }
       }
     }

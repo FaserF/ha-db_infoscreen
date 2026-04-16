@@ -57,11 +57,13 @@ Control how the data is presented in Home Assistant.
 ### ⚡ Advanced Settings
 Technical settings and edge cases.
 
-*   **Custom API URL**: If you self-host the backend, enter your URL here.
-*   **Deduplicate Departures**: Removes "ghost" or duplicate entries often found in regional data.
-*   **Deduplication Key**: Define which fields are used to identify a unique trip.
-    *   *Default*: `{journeyID}{journeyId}{id}{key}{trainNumber}`.
-    *   *KVV Example*: Use `{line}` if you experience duplicates where different platforms show the same train as different entries.
+*   **Custom API URL**: If you self-host the backend (e.g., using the [DBF Add-on](https://github.com/FaserF/hassio-addons/tree/master/dbf)), enter your URL here.
+*   **Deduplicate Departures**: Filters out redundant entries. This is common when a station has multiple platforms or the API provides double entries for the same physical train.
+    *   **How it works**: The integration compares departures within a **120-second (2 minute) window**. If two departures have the same **Deduplication Key**, only the earlier one is kept.
+*   **Deduplication Key**: A template to generate a unique ID for a trip.
+    *   **Default**: `{journeyID}{journeyId}{id}{key}{trainNumber}` (This works for 99% of cases).
+    *   **KVV / Local Transport Tip**: If you still see duplicates (e.g., same train on platform 1 and 3), set this simply to `{line}`. This tells the integration: "If any train of this line departs within 2 minutes of another, treat it as a duplicate."
+    *   **Available Placeholders**: Any attribute from the API can be used (e.g., `{line}`, `{destination}`, `{key}`).
 *   **Keep Route Details**: Persists the full station list even if the API update is partial.
 *   **Keep if Endstation**: Prevents the sensor from clearing data when reaching the final stop.
 *   **Drop Late Trains**: Hide trains that have already "departed" logically but are still in the system due to delay.

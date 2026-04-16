@@ -86,6 +86,35 @@ The `departures` list contains rich data objects. Here are the keys available fo
 
 ---
 
+## 🧹 Deduplication Mastery
+
+Deduplication is one of the most powerful and misunderstood features of `ha-db_infoscreen`. It is designed to handle "messy" data from transit providers.
+
+### The Algorithm
+The integration uses a **sliding window** approach:
+
+1.  All departures are sorted by their scheduled time.
+2.  The integration looks at each departure and generates a **Deduplication Key** based on your template.
+3.  If two departures have the **same key** and are within **120 seconds** of each other, the later one is discarded.
+
+### Common Scenarios
+
+| Scenario | Recommended Key | Why? |
+| :--- | :--- | :--- |
+| **Standard Trains (DB)** | *Leave empty* | The default key uses trip IDs provided by Deutsche Bahn which are very stable. |
+| **KVV (Karlsruhe)** | `{line}` | KVV often lists the same tram twice if it passes multiple platforms. Since regional trams don't have stable trip IDs in the API, using the line name is the safest way to merge them. |
+| **Same Destination** | `{destination}` | If you only care about "when is the next train to X" and don't care about the line/number, this merges all trains to the same place if they are within 2 minutes. |
+
+### Debugging Duplicates
+If you still see duplicates:
+
+1.  Enable **Detailed Information** in Display Settings.
+2.  Check the attributes of the `departures` list.
+3.  Compare the duplicate entries: look for fields that are different (e.g., `id` or `key`).
+4.  Adjust your **Deduplication Key** template to include only the fields that are identical for both entries.
+
+---
+
 ## 📡 Self-Hosting the Backend
 
 If you have a high number of sensors or want maximum privacy, you can host your own instance of the [db-fakedisplay](https://github.com/derf/db-fakedisplay) API.

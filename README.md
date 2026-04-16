@@ -130,6 +130,11 @@ All other settings are available via the **Configure** button on the integration
 | `ignored_train_types` | `[]` | List of train types to ignore. |
 | `enable_text_view` | `False` | Enable simplified text view for ePaper displays. |
 | `text_view_template` | (Default) | Template for the simplified text view (e.g., `{line};{destination};{platform};{time}`). |
+| `deduplicate_key` | (Default) | Template for the unique trip identifier used for deduplication. Default: `{journeyID}{journeyId}{id}{key}{trainNumber}`. |
+
+> [!TIP]
+> **Deduplication for KVV**
+> If you are using Karlsruher Verkehrsverbund (KVV) and see duplicate entries for different platforms, try setting the `deduplicate_key` to `{line}` or `{key}`. The default key may be too specific because the KVV API includes the scheduled time in the trip ID.
 
 > [!WARNING]
 > **Limitations & Performance**

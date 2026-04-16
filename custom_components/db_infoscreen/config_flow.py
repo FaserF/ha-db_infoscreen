@@ -799,6 +799,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         """Get value from our updated options or fall back to config data."""
         val = self._options.get(key, self._config_entry.data.get(key, default))
 
+        # If it's a template key and currently empty, use the default
+        if (
+            key in (CONF_DEDUPLICATE_KEY, CONF_TEXT_VIEW_TEMPLATE)
+            and not str(val).strip()
+        ):
+            return default
+
         # Infer server type if missing or default (for backward compatibility)
         if key == CONF_SERVER_TYPE and (not val or val == SERVER_TYPE_CUSTOM):
             url = self._get_config_value(CONF_SERVER_URL, "")

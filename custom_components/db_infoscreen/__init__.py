@@ -788,67 +788,84 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
         # --- DEDUPLICATION STEP ---
         if self.deduplicate_departures:
-            _LOGGER.debug("Deduplication is enabled. Processing departures.")
-            unique_departures: dict[Any, Any] = {}
-
+            _LOGGER.debug(
+                "Deduplication is enabled. Processing %d departures.",
+                len(departures_with_time),
+            )
+            # Sort by time to ensure we process trips in chronological order
             departures_to_process.sort(key=lambda d: d["departure_datetime"])
+
+            final_departures = []
+            # Keep track of the last processed departure for each unique key to handle multiple trips per line
+            last_kept_for_key: dict[Any, dict[str, Any]] = {}
 
             for departure in departures_to_process:
                 # Resolve the unique trip identifier using the configured key template
-                # Example: {journeyID}{id} -> resolve each {hash} against departure data
                 key_trip_id = ""
                 raw_key_parts = re.findall(r"\{([^}]+)\}", self.deduplicate_key)
                 if raw_key_parts:
                     for part in raw_key_parts:
                         val = departure.get(part)
                         if val is not None:
+                            # Normalize string components (strip whitespace, lowercase) for robustness
+                            if isinstance(val, str):
+                                val = val.strip().lower()
                             key_trip_id += str(val)
                 else:
                     # Fallback if no placeholders found (legacy behavior or static string)
-                    key_trip_id = self.deduplicate_key
+                    key_trip_id = self.deduplicate_key.strip().lower()
 
-                key_line = departure.get("line") or departure.get("train")
-                key_dest = departure.get("destination")
-
-                # If we don't even have line/dest/trip_id, treat as unique
-                if not key_line and not key_dest and not key_trip_id:
-                    unique_departures[id(departure)] = departure
-                    continue
+                key_line = (
+                    str(departure.get("line") or departure.get("train") or "")
+                    .strip()
+                    .lower()
+                )
+                key_dest = str(departure.get("destination") or "").strip().lower()
 
                 # Build the unique key using trip_id if available, otherwise fallback to line+dest
                 if key_trip_id:
                     unique_key: Any = key_trip_id
-                else:
+                elif key_line or key_dest:
                     unique_key = (key_line, key_dest)
-
-                # Check if we have already seen a departure for this trip
-                if unique_key not in unique_departures:
-                    unique_departures[unique_key] = departure
                 else:
-                    # We have seen this trip. Check the time difference.
-                    existing_departure = unique_departures[unique_key]
-                    time_diff = (
-                        departure["departure_datetime"]
-                        - existing_departure["departure_datetime"]
-                    ).total_seconds()
+                    # If we don't even have line/dest/trip_id, treat as unique to avoid over-deduplication
+                    final_departures.append(departure)
+                    continue
 
-                    # If the new one is within 2 minutes, it's a duplicate.
-                    if abs(time_diff) <= 120:
+                if unique_key not in last_kept_for_key:
+                    final_departures.append(departure)
+                    last_kept_for_key[unique_key] = departure
+                else:
+                    # We have seen this trip before. Check the time difference with the LAST kept one.
+                    existing_departure = last_kept_for_key[unique_key]
+                    time_diff = abs(
+                        (
+                            departure["departure_datetime"]
+                            - existing_departure["departure_datetime"]
+                        ).total_seconds()
+                    )
+
+                    # If the new one is within 2 minutes of the previous one, it's considered a duplicate.
+                    if time_diff <= 120:
                         _LOGGER.debug(
-                            "Found and filtering out duplicate departure. "
-                            "Key: %s, Keeping (earlier): %s, Removing (later): %s",
+                            "Filtering out duplicate departure. Key: %s, Keeping (earlier): %s, Removing (later): %s",
                             unique_key,
-                            existing_departure,
-                            departure,
+                            existing_departure.get(
+                                "id", existing_departure.get("line")
+                            ),
+                            departure.get("id", departure.get("line")),
                         )
+                        continue
                     else:
-                        # Time difference is too large. This is a different trip.
-                        # Using a unique ID based key for these rare cases.
-                        unique_departures[f"{unique_key}_{id(departure)}"] = departure
+                        # Time difference is large enough (> 2 mins). This is a NEW trip for the same key.
+                        final_departures.append(departure)
+                        last_kept_for_key[unique_key] = departure
 
-            departures_to_process = list(unique_departures.values())
-            # Re-sort because dictionary values don't guarantee order if we added time-suffixed keys
-            departures_to_process.sort(key=lambda d: d["departure_datetime"])
+            departures_to_process = final_departures
+            _LOGGER.debug(
+                "Deduplication complete. Remaining departures: %d",
+                len(departures_to_process),
+            )
 
         # --- MAIN FILTERING AND PROCESSING ---
         filtered_departures: list[dict[str, Any]] = []

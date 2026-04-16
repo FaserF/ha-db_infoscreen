@@ -38,7 +38,7 @@
       },
       "advanced": {
         "title": "Advanced Configuration",
-        "description": "Here you can fine-tune the sensor for **{station}**.",
+        "description": "Here you can fine-tune the sensor for **{station}**.\n\n**Deduplication**: Use this to filter out redundant entries for the same physical train (common with local transport like KVV). It compares departures within a 2-minute window based on the 'Key' below.",
         "data": {
           "hidelowdelay": "Hide Low Delays (under 5 mins)",
           "drop_late_trains": "Remove trains that are already gone",
@@ -59,7 +59,7 @@
           "show_occupancy": "Show Occupancy Information (if available)",
           "exclude_cancelled": "Remove Cancelled Trains",
           "favorite_trains": "Multiple Favorite Trains (comma separated e.g. 'ICE 1, RE 2')",
-          "deduplicate_key": "Deduplication Key (Empty for default: {journeyID}{journeyId}{id}{key}{trainNumber})"
+          "deduplicate_key": "Custom Deduplication Key (e.g. {line} - Leave empty for default: {journeyID}{journeyId}{id}{key}{trainNumber})"
         }
       },
       "manual_config": {
@@ -170,7 +170,7 @@
           "drop_late_trains": "Drop Late Trains",
           "past_60_minutes": "Include Past 60 Minutes",
           "data_source": "Data Source",
-          "deduplicate_key": "Deduplication Key (Empty for default)"
+          "deduplicate_key": "Custom Deduplication Key (e.g. {line} - Leave empty for default: {journeyID}{journeyId}{id}{key}{trainNumber})"
         }
       }
     }
