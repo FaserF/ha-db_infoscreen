@@ -128,22 +128,29 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         """
         departures: list[dict[str, Any]] = self._get_filtered_departures()
 
+        # Find the first non-cancelled departure for the main state
+        main_departure = None
+        for dep in departures:
+            if not dep.get("is_cancelled", False):
+                main_departure = dep
+                break
+
         # Check if there is data and if it is valid
-        if departures:
+        if main_departure:
             try:
                 # Try to get the scheduled departure time
                 departure_time = (
-                    departures[0].get("scheduledDeparture")
-                    or departures[0].get("sched_dep")
-                    or departures[0].get("scheduledArrival")
-                    or departures[0].get("sched_arr")
-                    or departures[0].get("scheduledTime")
-                    or departures[0].get("dep")
-                    or departures[0].get("datetime")
+                    main_departure.get("scheduledDeparture")
+                    or main_departure.get("sched_dep")
+                    or main_departure.get("scheduledArrival")
+                    or main_departure.get("sched_arr")
+                    or main_departure.get("scheduledTime")
+                    or main_departure.get("dep")
+                    or main_departure.get("datetime")
                 )
 
                 # Use normalized fields from coordinator
-                delay_departure = departures[0].get("delay", 0)
+                delay_departure = main_departure.get("delay", 0)
 
                 _LOGGER.debug("Raw departure time: %s", departure_time)
 
