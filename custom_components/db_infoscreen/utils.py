@@ -8,7 +8,7 @@ import asyncio
 import async_timeout
 from urllib.parse import quote, unquote
 from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -19,6 +19,83 @@ STATION_AUTOCOMPLETE_PATH = "/dyn/v110/autocomplete.js"
 CACHE_KEY_DATA = "db_infoscreen_stations"
 CACHE_KEY_UPDATE = "db_infoscreen_stations_last_update"
 CACHE_DURATION = timedelta(hours=24)
+
+
+def parse_datetime_flexible(value: Any, now: datetime) -> datetime | None:
+    """
+    Parse a datetime from various formats (timestamp, ISO, HH:MM).
+    Standardizes parsing logic used across the integration.
+    """
+    from homeassistant.util import dt as dt_util
+
+    if not value:
+        return None
+
+    try:
+        # 1. Numeric timestamp
+        if isinstance(value, (int, float)) or (
+            isinstance(value, str) and value.isdigit()
+        ):
+            return dt_util.utc_from_timestamp(int(value)).astimezone(now.tzinfo)
+
+        # 2. ISO format or similar via HA helper
+        parsed_dt = dt_util.parse_datetime(str(value))
+        if parsed_dt:
+            if parsed_dt.tzinfo is None:
+                # If no date part was in the string (unlikely for parse_datetime, but safe)
+                # or if we need to ensure local timezone
+                return parsed_dt.replace(tzinfo=now.tzinfo)
+            return parsed_dt.astimezone(now.tzinfo)
+
+        # 3. Fallback for HH:MM format
+        if isinstance(value, str) and ":" in value:
+            parts = value.split(":")
+            if len(parts) >= 2:
+                try:
+                    hour, minute = int(parts[0]), int(parts[1])
+                    parsed_dt = now.replace(
+                        hour=hour,
+                        minute=minute,
+                        second=0,
+                        microsecond=0,
+                    )
+                    # If the parsed time is significantly in the past, it's likely tomorrow
+                    if parsed_dt < now - timedelta(hours=12):
+                        parsed_dt += timedelta(days=1)
+                    # If it's significantly in the future (e.g. 23:00 vs 01:00), it's likely yesterday
+                    elif parsed_dt > now + timedelta(hours=12):
+                        parsed_dt -= timedelta(days=1)
+                    return parsed_dt
+                except ValueError:
+                    pass
+
+    except (ValueError, TypeError):
+        pass
+
+    return None
+
+
+def prune_response_cache(cache: dict, ttl: timedelta) -> None:
+    """Remove expired entries from the global response cache."""
+    from homeassistant.util import dt as dt_util
+
+    now = dt_util.now().timestamp()
+    expired = [
+        url
+        for url, (ts, _) in cache.items()
+        if now - ts.timestamp() > ttl.total_seconds() + 3600  # Keep an hour buffer
+    ]
+    for url in expired:
+        cache.pop(url, None)
+
+
+def simple_serializer(obj: Any) -> Any:
+    """JSON serializer for objects not serializable by default json code."""
+    from datetime import datetime, timedelta
+
+    if isinstance(obj, (datetime, timedelta)):
+        return str(obj)
+    raise TypeError(f"Type {type(obj)} not serializable")
 
 
 async def async_verify_server(hass: HomeAssistant, base_url: str) -> bool:

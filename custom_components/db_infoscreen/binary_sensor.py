@@ -95,7 +95,7 @@ class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
             list[dict[str, Any]], self.coordinator.data or []
         )
         for departure in departures:
-            delay = departure.get("delay", departure.get("delayDeparture", 0))
+            delay = departure.get("delay", 0)
             try:
                 if delay and int(delay) > 0:
                     return True
@@ -113,7 +113,7 @@ class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
         max_delay = 0
 
         for departure in departures:
-            delay = departure.get("delay", departure.get("delayDeparture", 0))
+            delay = departure.get("delay", 0)
             try:
                 delay_int = int(delay) if delay else 0
                 if delay_int > 0:
@@ -158,11 +158,7 @@ class DBInfoScreenCancellationBinarySensor(DBInfoScreenBaseBinarySensor):
             list[dict[str, Any]], self.coordinator.data or []
         )
         for departure in departures:
-            if (
-                departure.get("isCancelled", False)
-                or departure.get("is_cancelled", False)
-                or departure.get("cancelled", False)
-            ):
+            if departure.get("is_cancelled", False):
                 return True
         return False
 
@@ -175,11 +171,7 @@ class DBInfoScreenCancellationBinarySensor(DBInfoScreenBaseBinarySensor):
         cancelled_trains = []
 
         for departure in departures:
-            if (
-                departure.get("isCancelled", False)
-                or departure.get("is_cancelled", False)
-                or departure.get("cancelled", False)
-            ):
+            if departure.get("is_cancelled", False):
                 line = departure.get("line", departure.get("train", "Unknown"))
                 destination = departure.get("destination", "Unknown")
                 cancelled_trains.append(

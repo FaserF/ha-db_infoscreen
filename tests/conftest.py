@@ -119,7 +119,11 @@ if not PYTEST_HA_AVAILABLE:
             async def async_refresh(self):
                 pass
 
+        class UpdateFailed(Exception):
+            """Stub for UpdateFailed."""
+
         ha_uc.DataUpdateCoordinator = DataUpdateCoordinator  # type: ignore[attr-defined]
+        ha_uc.UpdateFailed = UpdateFailed  # type: ignore[attr-defined]
 
         class StubCoordinatorEntity:
             """Stub for CoordinatorEntity."""

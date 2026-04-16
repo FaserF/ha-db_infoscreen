@@ -14,6 +14,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .entity import DBInfoScreenBaseEntity
+from .utils import parse_datetime_flexible
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -162,7 +163,7 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
     def _parse_departure_time(
         self, departure: dict[str, Any], now: datetime
     ) -> datetime | None:
-        """Parse departure time from various formats."""
+        """Parse departure time using centralized logic."""
         departure_time_str = (
             departure.get("scheduledDeparture")
             or departure.get("sched_dep")
@@ -172,46 +173,4 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
             or departure.get("dep")
             or departure.get("datetime")
         )
-
-        if not departure_time_str:
-            return None
-
-        try:
-            if isinstance(departure_time_str, (int, float)):
-                return dt_util.utc_from_timestamp(int(departure_time_str)).astimezone(
-                    now.tzinfo
-                )
-
-            # Try HA datetime parsing
-            parsed_dt = dt_util.parse_datetime(departure_time_str)
-            if parsed_dt:
-                if parsed_dt.tzinfo is None:
-                    parsed_dt = now.replace(
-                        year=parsed_dt.year,
-                        month=parsed_dt.month,
-                        day=parsed_dt.day,
-                        hour=parsed_dt.hour,
-                        minute=parsed_dt.minute,
-                        second=parsed_dt.second,
-                    )
-                else:
-                    parsed_dt = parsed_dt.astimezone(now.tzinfo)
-                return parsed_dt
-
-            # Fallback for HH:MM format
-            temp_dt = datetime.strptime(departure_time_str, "%H:%M")
-            parsed_dt = now.replace(
-                hour=temp_dt.hour,
-                minute=temp_dt.minute,
-                second=0,
-                microsecond=0,
-            )
-            if parsed_dt < now - timedelta(minutes=5):
-                parsed_dt += timedelta(days=1)
-            return parsed_dt
-
-        except (ValueError, TypeError) as e:
-            _LOGGER.debug(
-                "Could not parse departure time %s: %s", departure_time_str, e
-            )
-            return None
+        return parse_datetime_flexible(departure_time_str, now)

@@ -6,25 +6,24 @@ information from the Deutsche Bahn (DBF) API and regional providers.
 """
 
 from typing import Any
-from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.util import dt as dt_util
-from datetime import timedelta, datetime
-import copy
 import async_timeout
 import asyncio
+import copy
 import logging
 import json
 import re
 import voluptuous as vol
+from datetime import datetime, timedelta
 from urllib.parse import quote, urlencode, urlparse
 
+from homeassistant import config_entries
+from homeassistant.components import repairs
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.network import get_url
-
-from . import repairs
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN,
@@ -67,6 +66,7 @@ from .const import (
     normalize_data_source,
     DATA_SOURCE_MAP,
 )
+from .utils import parse_datetime_flexible, prune_response_cache, simple_serializer
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -589,6 +589,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         """
         now = dt_util.now()
 
+        # Periodic cleanup of global cache
+        prune_response_cache(RESPONSE_CACHE, CACHE_TTL)
+
         # Fetch server version if we don't have it yet
         if self.server_version is None:
             await self.async_fetch_server_version()
@@ -677,6 +680,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                             max_retries,
                             err,
                         )
+                        # Activate Repairs issue
+                        self._handle_update_error(str(err))
                         return self._last_valid_value or []
                 except (
                     asyncio.TimeoutError,
@@ -701,6 +706,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                             max_retries,
                             err,
                         )
+                        # Activate Repairs issue
+                        self._handle_update_error(str(err))
                         return self._last_valid_value or []
 
         if not isinstance(data, dict):
@@ -750,49 +757,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 )
                 continue
 
-            if isinstance(departure_time_str, (int, float)):
-                departure_time_obj = dt_util.utc_from_timestamp(
-                    int(departure_time_str)
-                ).astimezone(now.tzinfo)
-            else:
-                # Attempt robust parsing using HA helper
-                parsed_dt = dt_util.parse_datetime(departure_time_str)
-                if parsed_dt:
-                    if parsed_dt.tzinfo is None:
-                        departure_time_obj = now.replace(
-                            year=parsed_dt.year,
-                            month=parsed_dt.month,
-                            day=parsed_dt.day,
-                            hour=parsed_dt.hour,
-                            minute=parsed_dt.minute,
-                            second=parsed_dt.second,
-                            microsecond=parsed_dt.microsecond,
-                        )
-                        # Use a 5-minute grace window to handle next-day rollover
-                        if departure_time_obj < now - timedelta(minutes=5):
-                            departure_time_obj += timedelta(days=1)
-                    else:
-                        departure_time_obj = parsed_dt.astimezone(now.tzinfo)
-                else:
-                    # Fallback for HH:MM format (assume today)
-                    try:
-                        parsed_time = datetime.strptime(departure_time_str, "%H:%M")
-                        departure_time_obj = dt_util.now().replace(
-                            hour=parsed_time.hour,
-                            minute=parsed_time.minute,
-                            second=0,
-                            microsecond=0,
-                        )
-                        if departure_time_obj < now - timedelta(
-                            minutes=5
-                        ):  # Allow for slight past times
-                            departure_time_obj += timedelta(days=1)
-                    except (ValueError, TypeError):
-                        _LOGGER.error(
-                            "Invalid time format, skipping departure: %s",
-                            departure_time_str,
-                        )
-                        continue
+            # Use centralized robust parsing
+            departure_time_obj = parse_datetime_flexible(departure_time_str, now)
+
+            if not departure_time_obj:
+                _LOGGER.error(
+                    "Invalid time format, skipping departure: %s",
+                    departure_time_str,
+                )
+                continue
 
             # Excluded Direction filter
             if self.excluded_directions:
@@ -901,11 +874,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             )
 
         MAX_SIZE_BYTES = 16000
-
-        def simple_serializer(obj):
-            if isinstance(obj, (datetime, timedelta)):
-                return str(obj)
-            raise TypeError(f"Type {type(obj)} not serializable")
 
         for departure in departures_to_process:
             _LOGGER.debug("Processing departure: %s", departure)
@@ -1186,72 +1154,25 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
             arrival_time_adjusted = None
             if scheduled_arrival is not None:
-                try:
-                    arrival_time = None
-                    if isinstance(scheduled_arrival, (int, float)):
-                        arrival_time = dt_util.utc_from_timestamp(
-                            int(scheduled_arrival)
-                        ).astimezone(now.tzinfo)
-                    elif isinstance(scheduled_arrival, str):
-                        # Attempt robust parsing using HA helper
-                        parsed_dt = dt_util.parse_datetime(scheduled_arrival)
-                        if parsed_dt:
-                            if parsed_dt.tzinfo is None:
-                                arrival_time = now.replace(
-                                    year=parsed_dt.year,
-                                    month=parsed_dt.month,
-                                    day=parsed_dt.day,
-                                    hour=parsed_dt.hour,
-                                    minute=parsed_dt.minute,
-                                    second=parsed_dt.second,
-                                    microsecond=parsed_dt.microsecond,
-                                )
-                                # Use a 5-minute grace window to handle next-day rollover
-                                if arrival_time < now - timedelta(minutes=5):
-                                    arrival_time += timedelta(days=1)
-                            else:
-                                arrival_time = parsed_dt.astimezone(now.tzinfo)
-                        else:
-                            # Fallback for HH:MM format (assume today)
-                            try:
-                                temp_dt = datetime.strptime(scheduled_arrival, "%H:%M")
-                                arrival_time = now.replace(
-                                    hour=temp_dt.hour,
-                                    minute=temp_dt.minute,
-                                    second=0,
-                                    microsecond=0,
-                                )
-                                # Use a 5-minute grace window to handle next-day rollover
-                                if arrival_time < now - timedelta(minutes=5):
-                                    arrival_time += timedelta(days=1)
-                            except (ValueError, TypeError):
-                                _LOGGER.error(
-                                    "Invalid time format for scheduledArrival fallback: %s",
-                                    scheduled_arrival,
-                                )
-                    else:
-                        _LOGGER.warning(
-                            "Unsupported scheduledArrival type: %s",
-                            type(scheduled_arrival),
-                        )
+                # Use robust centralized parsing
+                arrival_time = parse_datetime_flexible(scheduled_arrival, now)
 
-                    if arrival_time:
-                        arrival_delay = int(delay_arrival)
-                        arrival_time_adjusted = arrival_time + timedelta(
-                            minutes=arrival_delay
-                        )
-                        # Keep existing human-readable time string
-                        departure["arrival_current"] = (
-                            arrival_time_adjusted.strftime("%Y-%m-%dT%H:%M")
-                            if arrival_time_adjusted.date() != today
-                            else arrival_time_adjusted.strftime("%H:%M")
-                        )
-                        # Add new machine-readable Unix timestamp
-                        departure["arrival_timestamp"] = int(
-                            arrival_time_adjusted.timestamp()
-                        )
-
-                except (TypeError, ValueError):
+                if arrival_time:
+                    arrival_delay = int(delay_arrival)
+                    arrival_time_adjusted = arrival_time + timedelta(
+                        minutes=arrival_delay
+                    )
+                    # Keep existing human-readable time string
+                    departure["arrival_current"] = (
+                        arrival_time_adjusted.strftime("%Y-%m-%dT%H:%M")
+                        if arrival_time_adjusted.date() != today
+                        else arrival_time_adjusted.strftime("%H:%M")
+                    )
+                    # Add new machine-readable Unix timestamp
+                    departure["arrival_timestamp"] = int(
+                        arrival_time_adjusted.timestamp()
+                    )
+                else:
                     _LOGGER.error(
                         "Invalid time format for scheduledArrival: %s",
                         scheduled_arrival,
@@ -1481,9 +1402,20 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             # Found it, reset counter
             watch_config["missed_update_count"] = 0
 
-            delay = trip_found.get("delayDeparture", 0)
+            delay = (
+                trip_found.get("delay")
+                if "delay" in trip_found
+                else trip_found.get("delayDeparture", 0)
+            )
             platform = trip_found.get("platform")
-            is_cancelled = trip_found.get("is_cancelled", False)
+            is_cancelled = (
+                trip_found.get("is_cancelled")
+                if "is_cancelled" in trip_found
+                else (
+                    trip_found.get("cancelled", False)
+                    or trip_found.get("isCancelled", False)
+                )
+            )
             destination = trip_found.get("destination")
 
             notify = False
@@ -1656,9 +1588,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             # We store the latest known status.
             # In a real system, we'd record it when it departs, but we don't always know when it's "gone".
             # So we just keep the latest info we saw for this train.
+            # Use the train's actual timestamp for history to ensure a cleaner 24h window
             self.departure_history[history_key] = {
                 "train": train,
-                "timestamp": now,
+                "timestamp": (
+                    dt_util.utc_from_timestamp(timestamp) if timestamp else now
+                ),
                 "delay": dep.get("delay", 0),
                 "delay_arrival": dep.get("delay_arrival", 0),
                 "is_cancelled": dep.get("is_cancelled", False),
