@@ -15,6 +15,7 @@ import re
 import voluptuous as vol
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlencode, urlparse
+import os
 
 from homeassistant import config_entries
 from homeassistant.components import repairs
@@ -96,6 +97,29 @@ async def async_setup_entry(
     await hass.config_entries.async_forward_entry_setups(
         config_entry, ["sensor", "calendar", "binary_sensor"]
     )
+
+    # Register Lovelace Strategies
+    try:
+        from .lovelace import DBInfoscreenDashboardStrategy, DBInfoscreenViewStrategy
+        if "lovelace" in hass.data:
+            # Register both dashboard and view strategies
+            hass.data["lovelace"].add_strategy(DOMAIN, "dashboard", DBInfoscreenDashboardStrategy)
+            hass.data["lovelace"].add_strategy(DOMAIN, "view", DBInfoscreenViewStrategy)
+            _LOGGER.debug("DB Infoscreen Lovelace Strategies registered")
+    except Exception as e:
+        _LOGGER.warning("Could not register Lovelace strategies: %s", e)
+
+    # Register Custom Card (Static Path)
+    # This allows users to add the card via /db_infoscreen/card.js
+    card_path = os.path.join(os.path.dirname(__file__), "www", "db-infoscreen-card.js")
+    if os.path.exists(card_path):
+        # Register static path for the card JS
+        hass.http.register_static_path(
+            "/db_infoscreen/card.js",
+            card_path,
+            cache_headers=False
+        )
+        _LOGGER.debug("Registered static path for DB Infoscreen Card")
 
     # Add an update listener for options
     config_entry.add_update_listener(update_listener)
