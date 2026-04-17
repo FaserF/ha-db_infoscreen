@@ -27,7 +27,10 @@ const TRANSLATIONS = {
     editor_entity: "Sensor Entität",
     editor_weather: "Wetter Entität (für Effekte)",
     status_stable: "STABIL",
-    status_congested: "ÜBERLASTET"
+    status_congested: "ÜBERLASTET",
+    share_message: "{train} nach {dest}: {time} (+{delay}m Verspätung)",
+    share_clipboard_copied: "Details in die Zwischenablage kopiert",
+    share_clipboard_failed: "Kopieren fehlgeschlagen"
   },
   en: {
     initializing: "Initializing system...",
@@ -48,7 +51,10 @@ const TRANSLATIONS = {
     editor_entity: "Sensor Entity",
     editor_weather: "Weather Entity (for effects)",
     status_stable: "STABLE",
-    status_congested: "CONGESTED"
+    status_congested: "CONGESTED",
+    share_message: "{train} to {dest}: {time} ({delay}m delay)",
+    share_clipboard_copied: "Trip details copied to clipboard",
+    share_clipboard_failed: "Failed to copy trip details"
   }
 };
 
@@ -216,8 +222,9 @@ class DBInfoscreenCard extends LitElement {
   }
 
   _renderParticles(weather) {
-    if (!['rainy', 'snowy', 'pouring'].some(s => weather.includes(s))) return html``;
-    const isSnow = weather.includes('snow');
+    const weatherStr = (typeof weather === 'string' ? weather : 'sunny').toLowerCase();
+    if (!['rainy', 'snowy', 'pouring'].some(s => weatherStr.includes(s))) return html``;
+    const isSnow = weatherStr.includes('snow');
     return Array.from({ length: 20 }).map(() => {
       const style = `left:${Math.random() * 100}%; animation-duration:${1 + Math.random() * 2}s; animation-delay:-${Math.random() * 5}s; width:${isSnow ? 5 : 1}px; height:${isSnow ? 5 : 15}px;`;
       return html`<div class="particle" style="${style}"></div>`;
@@ -238,32 +245,62 @@ class DBInfoscreenCard extends LitElement {
   }
 
   _runAction(type) {
-    if (!this.config || !this.config.actions || !this.config.actions[type]) {
-        console.warn(`No action configured for ${type}`);
+    if (!this.config?.actions?.[type]) {
+        console.warn(`[DB Infoscreen] No action configured for ${type}`);
         return;
     }
     const action = this.config.actions[type];
+    if (typeof action.service !== 'string' || !action.service.includes('.')) {
+        console.error(`[DB Infoscreen] Malformed service string in _runAction: ${action.service}`);
+        return;
+    }
     const [domain, service] = action.service.split('.');
-    this.hass.callService(domain, service, action.data || {});
+    if (domain && service) {
+        this.hass.callService(domain, service, action.data || {});
+    }
   }
 
   _announce(dep) {
-    const text = this._localize('tts_attention', { train: dep.train, dest: dep.destination, plat: dep.platform });
-    const sit = new SpeechSynthesisUtterance(text); sit.lang = this.hass.language;
-    window.speechSynthesis.speak(sit);
+    if (typeof SpeechSynthesisUtterance === 'undefined' || !window.speechSynthesis) {
+        console.warn("[DB Infoscreen] Speech synthesis not supported in this browser.");
+        return;
+    }
+    try {
+        const text = this._localize('tts_attention', { train: dep.train || '', dest: dep.destination || '', plat: dep.platform || '' });
+        const sit = new SpeechSynthesisUtterance(text);
+        const lang = this.hass.language || 'en';
+        sit.lang = lang.includes('-') ? lang : (lang === 'de' ? 'de-DE' : 'en-US');
+        window.speechSynthesis.speak(sit);
+    } catch (e) {
+        console.error("[DB Infoscreen] Announcement failed", e);
+    }
   }
 
   _share(dep) {
-    const text = `${dep.train || 'Train'} to ${dep.destination || 'Destination'}: ${dep.departure_current || dep.scheduledDeparture || ''} (${dep.delay || 0}m delay)`;
+    const text = this._localize('share_message', {
+        train: dep.train || 'Train',
+        dest: dep.destination || 'Destination',
+        time: dep.departure_current || dep.scheduledDeparture || '',
+        delay: dep.delay || 0
+    });
+    
     if (navigator.share) {
-        navigator.share({ title: dep.train, text: text });
+        navigator.share({ title: dep.train || 'DB', text: text });
     } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).then(() => {
-            this.hass.callService('persistent_notification', 'create', {
-                title: 'DB Infoscreen',
-                message: 'Trip details copied to clipboard'
+        navigator.clipboard.writeText(text)
+            .then(() => {
+                this.hass.callService('persistent_notification', 'create', {
+                    title: 'DB Infoscreen',
+                    message: this._localize('share_clipboard_copied')
+                });
+            })
+            .catch((err) => {
+                console.error("[DB Infoscreen] Clipboard copy failed", err);
+                this.hass.callService('persistent_notification', 'create', {
+                    title: 'DB Infoscreen',
+                    message: this._localize('share_clipboard_failed')
+                });
             });
-        });
     }
   }
 
@@ -274,8 +311,15 @@ class DBInfoscreenCard extends LitElement {
     this.requestUpdate();
   }
 
-  setConfig(config) { this.config = config; }
-  getCardSize() { return (this.config.count || DEFAULT_COUNT) + 1; }
+  setConfig(config) {
+    if (!config || !config.entity) {
+        throw new Error("Missing required 'entity' in card configuration");
+    }
+    this.config = config;
+  }
+  getCardSize() {
+    return Math.ceil((this.config.count || DEFAULT_COUNT) * 1.5) + 1;
+  }
   static getConfigElement() { return document.createElement("db-infoscreen-card-editor"); }
 }
 
