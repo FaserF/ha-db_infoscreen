@@ -13,7 +13,7 @@ import logging
 import json
 import re
 import voluptuous as vol
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlencode, urlparse
 
 from homeassistant import config_entries
@@ -1319,15 +1319,16 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         :3
                     ]  # Limit to 3
 
-        # Favorite Trains Filtering
-        # Capture the full list for background tasks (notifications, history) BEFORE filtering
-        pre_filtered_departures = filtered_departures
+        # Punctuality Statistics
+        # We track history for ALL departures that passed deduplication,
+        # so the stats represent the station overall, not just the filtered subset.
+        self._update_history(departures_to_process)
 
+        # Favorite Trains Filtering
         if self.favorite_trains:
             fav_filtered = []
             for dep in filtered_departures:
                 train_name = dep.get("train", "")
-                # Match if train_name contains any of the favorite strings
                 if any(fav in train_name for fav in self.favorite_trains):
                     fav_filtered.append(dep)
             filtered_departures = fav_filtered
@@ -1336,11 +1337,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 len(filtered_departures),
             )
 
-        if filtered_departures or pre_filtered_departures:
-            # Cache the visible ones if available, otherwise just keep going.
-            # Actually _last_valid_value is used for sensor display, so it SHOULD be the filtered list.
-            if filtered_departures:
-                self._last_valid_value = list(filtered_departures)
+        if filtered_departures:
+            # Cache the visible ones if available
+            self._last_valid_value = list(filtered_departures)
 
             # Real-time Connection Tracking
             if self.tracked_connections:
@@ -1371,9 +1370,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                                 "target_delay": next_dep.get("delayDeparture"),
                                 "transfer_station": change_station,
                             }
-
-            # Punctuality Statistics
-            self._update_history(pre_filtered_departures)
 
             return list(filtered_departures)[: int(self.next_departures)]
         else:
@@ -1575,8 +1571,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         Records the final seen status (delay, cancellation) for each train instance.
         Used to calculate percentage-based punctuality metrics in sensors.
         """
-        now = dt_util.now()
-        threshold_24h = now - timedelta(hours=24)
+        now_utc = datetime.now(timezone.utc)
+        threshold_24h = now_utc - timedelta(hours=24)
 
         # 1. Purge old history
         self.departure_history = {
@@ -1609,7 +1605,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             self.departure_history[history_key] = {
                 "train": train,
                 "timestamp": (
-                    dt_util.utc_from_timestamp(timestamp) if timestamp else now
+                    dt_util.utc_from_timestamp(timestamp) if timestamp else now_utc
                 ),
                 "delay": dep.get("delay", 0),
                 "delay_arrival": dep.get("delay_arrival", 0),

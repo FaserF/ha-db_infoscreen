@@ -81,7 +81,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
     Handle the initial configuration and setup wizard for DB Infoscreen.
 
     This class manages the multi-step process:
-    1. Server selection (user step) - NEW
+    1. Server selection (user step)
     2. Station search (station_search step)
     3. Station selection/resolve (choose step)
     4. Basic configuration (details step)
@@ -158,7 +158,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
     async def async_step_station_search(self, user_input=None):
         """
-        Handle the station search step (formerly step 'user').
+        Handle the station search step.
         """
         errors: dict[str, Any] = {}
 

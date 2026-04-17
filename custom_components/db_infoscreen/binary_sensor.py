@@ -302,6 +302,16 @@ class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
                 lower_text = text.lower()
                 # Check for elevator keywords
                 if any(k in lower_text for k in keywords):
+                    # Robustness: Skip messages that indicate the elevator is working/restored
+                    working_keywords = [
+                        "in betrieb",
+                        "ok",
+                        "behoben",
+                        "funktioniert wieder",
+                        "verfügbar",
+                    ]
+                    if any(wk in lower_text for wk in working_keywords):
+                        continue
                     # Check for platform relevance
                     # If we filter by platform, only include if matches platform OR is global?
                     # "Aufzug Gleis 1 defekt" -> Match "1"

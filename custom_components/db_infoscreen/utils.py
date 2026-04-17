@@ -179,6 +179,10 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
                 match = re.search(r"stations=\[(.*?)\];", content, re.DOTALL)
                 if match:
                     json_str = f"[{match.group(1)}]"
+                    # JS arrays might use single quotes or unquoted keys, which isn't valid JSON.
+                    # We normalize this by replacing single quotes with double quotes
+                    # and ensuring we have a valid JSON list of strings.
+                    json_str = json_str.replace("'", '"')
                     stations = json.loads(json_str)
                     hass.data[data_key] = stations
                     hass.data[update_key] = now

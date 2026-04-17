@@ -62,4 +62,4 @@ async def test_punctuality_sensor_empty(hass, mock_coordinator):
     stats = sensor._get_stats()
 
     assert stats["total_trains"] == 0
-    assert stats["punctuality_percent"] is None
+    assert stats["punctuality_percent"] == 100.0

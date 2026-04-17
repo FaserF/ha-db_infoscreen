@@ -538,11 +538,11 @@ class DBInfoScreenPunctualitySensor(DBInfoScreenBaseEntity, SensorEntity):
         history = getattr(self.coordinator, "departure_history", {})
         if not history:
             return {
-                "punctuality_percent": None,
+                "punctuality_percent": 100.0,
                 "total_trains": 0,
                 "delayed_trains": 0,
                 "cancelled_trains": 0,
-                "average_delay": 0,
+                "average_delay": 0.0,
             }
 
         total = len(history)
@@ -554,15 +554,17 @@ class DBInfoScreenPunctualitySensor(DBInfoScreenBaseEntity, SensorEntity):
         cancelled = sum(1 for d in history.values() if d.get("is_cancelled", False))
         on_time = total - delayed - cancelled
 
-        punctuality = round((on_time / total) * 100, 1) if total > 0 else 100
+        punctuality = round((on_time / total) * 100, 1) if total > 0 else 100.0
 
         total_delay = sum(
-            d.get("delay", 0) for d in history.values() if not d.get("cancelled", False)
+            d.get("delay", 0)
+            for d in history.values()
+            if not d.get("is_cancelled", False)
         )
         avg_delay = (
             round(total_delay / (total - cancelled), 1)
             if (total - cancelled) > 0
-            else 0
+            else 0.0
         )
 
         return {

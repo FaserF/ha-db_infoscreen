@@ -111,6 +111,11 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
                 except (ValueError, TypeError):
                     delay_int = 0
 
+                # Account for delay in calendar event times
+                actual_start_time = departure_time + timedelta(minutes=delay_int)
+                # Create 5-minute event duration (trains don't stay long)
+                end_time = actual_start_time + timedelta(minutes=5)
+
                 delay_str = f" (+{delay_int}min)" if delay_int > 0 else ""
                 cancelled_str = " ⚠️ CANCELLED" if cancelled else ""
                 summary = f"{line} → {destination}{delay_str}{cancelled_str}"
@@ -121,9 +126,13 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
                     f"Destination: {destination}",
                     f"Platform: {platform}",
                     f"Station: {self.station}",
+                    f"Scheduled Time: {departure_time.strftime('%H:%M')}",
                 ]
                 if delay_int > 0:
                     description_parts.append(f"Delay: {delay_int} minutes")
+                    description_parts.append(
+                        f"Estimated Departure: {actual_start_time.strftime('%H:%M')}"
+                    )
                 if cancelled:
                     description_parts.append("⚠️ This train has been CANCELLED")
 
@@ -140,11 +149,8 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
 
                 description = "\n".join(description_parts)
 
-                # Create 5-minute event duration (trains don't stay long)
-                end_time = departure_time + timedelta(minutes=5)
-
                 event = CalendarEvent(
-                    start=departure_time,
+                    start=actual_start_time,
                     end=end_time,
                     summary=summary,
                     description=description,
