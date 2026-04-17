@@ -173,7 +173,10 @@ class DBInfoscreenCard extends LitElement {
       <tr class="row ${isGhost ? 'ghost' : ''}" @click="${() => this._toggle(tripId)}">
         <td class="cell">
            <div style="display:flex; align-items:center; gap:20px">
-              <span class="line-badge ${dep.train.toLowerCase().includes('ice') ? 'line-ice' : ''}">${dep.train}</span>
+              ${(() => {
+                const trainLabel = (dep.train || dep.line || '').toString();
+                return html`<span class="line-badge ${trainLabel.toLowerCase().includes('ice') ? 'line-ice' : ''}">${trainLabel}</span>`;
+              })()}
               <div>
                  <span class="dest-main">${dep.destination}</span>
                  <span class="dest-sub">${isGhost ? this._localize('cancelled') : (dep.route ? 'via ' + dep.route.slice(0, 2).map(r => (r && r.name) || (typeof r === "string" ? r : "")).filter(Boolean).join(', ') : 'Direct')}</span>
@@ -182,7 +185,7 @@ class DBInfoscreenCard extends LitElement {
         </td>
         <td class="cell" align="center"><div class="platform-v">${dep.platform || '—'}</div></td>
         <td class="cell">
-           <div class="time-v">${dep.time}</div>
+           <div class="time-v">${dep.departure_current || dep.scheduledDeparture || '--:--'}</div>
            ${(() => {
              const delay = parseInt(dep.delay, 10);
              return (Number.isFinite(delay) && delay > 0) ? html`<div style="color:#ff3b30; text-align:right; font-weight:850; font-size:0.8rem">+${delay}’</div>` : '';
@@ -234,7 +237,15 @@ class DBInfoscreenCard extends LitElement {
     return Math.round((deps.filter(d => (d.delay || 0) < 5).length / deps.length) * 100);
   }
 
-  _runAction(type) { alert(`Action '${type}' triggered.`); }
+  _runAction(type) {
+    if (!this.config || !this.config.actions || !this.config.actions[type]) {
+        console.warn(`No action configured for ${type}`);
+        return;
+    }
+    const action = this.config.actions[type];
+    const [domain, service] = action.service.split('.');
+    this.hass.callService(domain, service, action.data || {});
+  }
 
   _announce(dep) {
     const text = this._localize('tts_attention', { train: dep.train, dest: dep.destination, plat: dep.platform });
@@ -242,7 +253,19 @@ class DBInfoscreenCard extends LitElement {
     window.speechSynthesis.speak(sit);
   }
 
-  _share(dep) { if (navigator.share) navigator.share({ title: dep.train, text: dep.destination }); }
+  _share(dep) {
+    const text = `${dep.train || 'Train'} to ${dep.destination || 'Destination'}: ${dep.departure_current || dep.scheduledDeparture || ''} (${dep.delay || 0}m delay)`;
+    if (navigator.share) {
+        navigator.share({ title: dep.train, text: text });
+    } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+            this.hass.callService('persistent_notification', 'create', {
+                title: 'DB Infoscreen',
+                message: 'Trip details copied to clipboard'
+            });
+        });
+    }
+  }
 
   _toggle(id) {
     const s = new Set(this._expandedRows);
@@ -257,16 +280,24 @@ class DBInfoscreenCard extends LitElement {
 }
 
 class DBInfoscreenCardEditor extends LitElement {
-  static get properties() { return { _config: {} }; }
+  static get properties() {
+    return {
+      hass: { type: Object },
+      _config: { type: Object }
+    };
+  }
   setConfig(config) { this._config = config; }
   _localize(key) {
-    const lang = (this.hass.language || 'en').split('-')[0];
+    const lang = (this.hass && this.hass.language ? this.hass.language : 'en').split('-')[0];
     return (TRANSLATIONS[lang] || TRANSLATIONS.en)[key] || key;
   }
   render() {
+    if (!this.hass) return html``;
+    const config = this._config || {};
+
     return html`<div style="padding:20px">
-      <ha-textfield label="${this._localize('editor_entity')}" .value="${this._config.entity}" @input="${this._changed}" .configValue="${'entity'}"></ha-textfield>
-      <ha-textfield label="${this._localize('editor_weather')}" .value="${this._config.weather_entity}" @input="${this._changed}" .configValue="${'weather_entity'}"></ha-textfield>
+      <ha-textfield label="${this._localize('editor_entity')}" .value="${config.entity || ''}" @input="${this._changed}" .configValue="${'entity'}"></ha-textfield>
+      <ha-textfield label="${this._localize('editor_weather')}" .value="${config.weather_entity || ''}" @input="${this._changed}" .configValue="${'weather_entity'}"></ha-textfield>
     </div>`;
   }
   _changed(ev) {
@@ -277,4 +308,5 @@ class DBInfoscreenCardEditor extends LitElement {
 
 customElements.define("db-infoscreen-card-editor", DBInfoscreenCardEditor);
 customElements.define("db-infoscreen-card", DBInfoscreenCard);
+window.customCards = window.customCards || [];
 window.customCards.push({ type: "db-infoscreen-card", name: "DB Infoscreen I18N EDITION", preview: true });

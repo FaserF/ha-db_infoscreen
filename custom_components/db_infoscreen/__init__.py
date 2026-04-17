@@ -105,23 +105,22 @@ async def async_setup_entry(
             DBInfoscreenDashboardStrategy,
             DBInfoscreenViewStrategy,
         )
-    except (ImportError, AttributeError, KeyError):
+    except ImportError:
         _LOGGER.exception("Could not import Lovelace strategies")
 
     # Register Custom Card (Static Path)
     # This allows users to add the card via /db_infoscreen/card.js
     card_path = os.path.join(os.path.dirname(__file__), "www", "db-infoscreen-card.js")
     if await hass.async_add_executor_job(os.path.exists, card_path):
-        from homeassistant.components.http import StaticPathConfig
-
-        await hass.http.async_register_static_paths(
-            [StaticPathConfig("/db_infoscreen/card.js", card_path, False)]
-        )
-        _LOGGER.debug("Registered static path for DB Infoscreen Card")
-
         # Automatically load the card in the Lovelace frontend
         if not hass.data[DOMAIN].get("extra_js_registered"):
+            from homeassistant.components.http import StaticPathConfig
             from homeassistant.components.frontend import add_extra_js_url
+
+            await hass.http.async_register_static_paths(
+                [StaticPathConfig("/db_infoscreen/card.js", card_path, False)]
+            )
+            _LOGGER.debug("Registered static path for DB Infoscreen Card")
 
             add_extra_js_url(hass, "/db_infoscreen/card.js")
             hass.data[DOMAIN]["extra_js_registered"] = True
@@ -423,6 +422,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         elif self.data_source in data_source_map:
             key, value = data_source_map[self.data_source].split("=")
             fetch_params[key] = value
+        elif "=" in str(self.data_source):
+            # Support raw strings like "efa=AVV" directly
+            try:
+                key, value = str(self.data_source).split("=", 1)
+                fetch_params[key] = value
+            except ValueError:
+                pass
 
         if self.detailed:
             fetch_params["detailed"] = "1"
