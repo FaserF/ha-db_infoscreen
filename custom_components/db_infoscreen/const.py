@@ -129,11 +129,17 @@ def normalize_data_source(value: str) -> str:
     matches = []
     for option, mapped_val in DATA_SOURCE_MAP.items():
         # Exact match of the full mapped value or exact match of the part after '='
-        if mapped_val == code or mapped_val.endswith("=" + code):
+        if mapped_val == value or (mapped_val.endswith("=" + code) and "=" in mapped_val):
             matches.append(option)
 
     if len(matches) == 1:
         return matches[0]
+
+    # Special handling for common ambiguous codes like AVV
+    if value == "AVV" or value == "efa=AVV":
+        return "AVV – Augsburger Verkehrs- & Tarifverbund"
+    if value == "hafas=AVV":
+        return "AVV – Aachener Verkehrsverbund"
 
     return value
 
