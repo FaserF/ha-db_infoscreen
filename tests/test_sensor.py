@@ -9,6 +9,8 @@ def mock_config_entry():
     entry = MagicMock()
     entry.entry_id = "test_entry"
     entry.data = {CONF_STATION: "München Hbf"}
+    entry.title = "München Hbf"
+    entry.options = {}
     return entry
 
 
@@ -17,18 +19,19 @@ def mock_coordinator(mock_config_entry):
     coordinator = MagicMock()
     coordinator.data = []
     coordinator.config_entry = mock_config_entry
+    coordinator.detailed = True
     return coordinator
 
 
 def test_watchdog_no_data(mock_coordinator, mock_config_entry):
     sensor = DBInfoScreenWatchdogSensor(mock_coordinator, mock_config_entry)
-    assert sensor.native_value == "Unknown"
+    assert sensor.native_value == "No Departures"
 
 
 def test_watchdog_no_route(mock_coordinator, mock_config_entry):
     mock_coordinator.data = [{"train": "ICE 1", "route": []}]
     sensor = DBInfoScreenWatchdogSensor(mock_coordinator, mock_config_entry)
-    assert sensor.native_value == "Unknown"
+    assert sensor.native_value == "No Route Data"
 
 
 def test_watchdog_station_not_found(mock_coordinator, mock_config_entry):
@@ -40,7 +43,7 @@ def test_watchdog_station_not_found(mock_coordinator, mock_config_entry):
         }
     ]
     sensor = DBInfoScreenWatchdogSensor(mock_coordinator, mock_config_entry)
-    assert sensor.native_value == "Unknown"
+    assert sensor.native_value == "Trip Origin / First Stop"
 
 
 def test_watchdog_valid_previous(mock_coordinator, mock_config_entry):

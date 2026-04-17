@@ -6,7 +6,6 @@ from typing import Any, cast
 from .const import (
     DOMAIN,
     CONF_ENABLE_TEXT_VIEW,
-    CONF_STATION,
     CONF_WALK_TIME,
     CONF_TEXT_VIEW_TEMPLATE,
     DEFAULT_TEXT_VIEW_TEMPLATE,
@@ -339,18 +338,30 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
         Shows the name and delay of the previous station for the next train.
         """
         data = self._get_watchdog_data()
-        if not data:
-            return "Unknown"
+        if data:
+            station = data.get("previous_station_name")
+            delay = data.get("previous_delay", 0)
 
-        station = data.get("previous_station_name")
-        delay = data.get("previous_delay", 0)
+            if station:
+                if delay and delay > 0:
+                    return f"{station}: +{delay} min"
+                return f"{station}: On Time"
 
-        if station:
-            if delay and delay > 0:
-                return f"{station}: +{delay} min"
-            return f"{station}: On Time"
+        # Provide more descriptive fallbacks than just "Unknown"
+        if not self.coordinator.data:
+            return "No Departures"
 
-        return "Unknown"
+        # Check for first departure since that's what we watch
+        next_train = self.coordinator.data[0] if self.coordinator.data else {}
+        if not self.coordinator.detailed:
+            return "Enable Detailed Data"
+
+        route = next_train.get("route", [])
+        if not route:
+            return "No Route Data"
+
+        # If we are here, matching failed or we are at index 0
+        return "Trip Origin / First Stop"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -375,32 +386,50 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
         if self.coordinator.config_entry is None:
             return None
 
-        my_station_name = self.coordinator.config_entry.data.get(CONF_STATION)
-        # Clean up station name (sometimes has IDs or commas)
-        # Strategy:
-        # 1. Try to find exact match of `self.station` (or coordinator.station) in route names.
-        # 2. If found, take index - 1.
+        my_station_name = str(self.station)
+        my_display_name = (
+            str(self.config_entry.title) if self.config_entry.title else ""
+        )
 
-        # Let's try to find a fuzzy match or exact match
         found_index = -1
         for idx, stop in enumerate(route):
-            stop_name = stop.get("name", "")
-            # Simple check
-            if stop_name == my_station_name or (
-                my_station_name and my_station_name in stop_name
+            stop_name = stop.get("name", "") if isinstance(stop, dict) else str(stop)
+            if not stop_name:
+                continue
+
+            # Robust matching: Exact, Partial, or Config Title
+            if (
+                stop_name.lower() == my_station_name.lower()
+                or stop_name.lower() == my_display_name.lower()
+                or (
+                    my_station_name.lower()
+                    and my_station_name.lower() in stop_name.lower()
+                )
+                or (
+                    my_display_name.lower()
+                    and my_display_name.lower() in stop_name.lower()
+                )
             ):
                 found_index = idx
+                _LOGGER.debug(
+                    "Matched station '%s' in route at index %d (Match criteria: %s / %s)",
+                    stop_name,
+                    idx,
+                    my_station_name,
+                    my_display_name,
+                )
                 break
-
-        # Use first stop if not found? No, that's unreliable.
-        # But for 'detailed=1', route usually contains ALL stops.
 
         if found_index > 0:
             prev_stop = route[found_index - 1]
-            prev_name = prev_stop.get("name")
+            prev_name = (
+                prev_stop.get("name") if isinstance(prev_stop, dict) else str(prev_stop)
+            )
             # dep_delay is delay at departure from that stop
             # arr_delay is delay at arrival at that stop
-            delay = prev_stop.get("dep_delay") or prev_stop.get("arr_delay") or 0
+            delay = 0
+            if isinstance(prev_stop, dict):
+                delay = prev_stop.get("dep_delay") or prev_stop.get("arr_delay") or 0
 
             return {
                 "train": next_train.get("train"),
@@ -410,6 +439,13 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
                 "updated": getattr(self.coordinator, "last_update", None),
             }
 
+        _LOGGER.debug(
+            "Watchdog: Station '%s' (%s) not found in route or is first stop (found_index=%d). Route: %s",
+            my_station_name,
+            my_display_name,
+            found_index,
+            [s.get("name") if isinstance(s, dict) else s for s in route[:5]],
+        )
         return None
 
 
