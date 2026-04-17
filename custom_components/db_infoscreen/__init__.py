@@ -99,27 +99,32 @@ async def async_setup_entry(
     )
 
     # Register Lovelace Strategies
+    # Note: These are consumed by the frontend; we only ensure the module is importable
     try:
-        from .lovelace import DBInfoscreenDashboardStrategy, DBInfoscreenViewStrategy
-        if "lovelace" in hass.data:
-            # Register both dashboard and view strategies
-            hass.data["lovelace"].add_strategy(DOMAIN, "dashboard", DBInfoscreenDashboardStrategy)
-            hass.data["lovelace"].add_strategy(DOMAIN, "view", DBInfoscreenViewStrategy)
-            _LOGGER.debug("DB Infoscreen Lovelace Strategies registered")
-    except Exception as e:
-        _LOGGER.warning("Could not register Lovelace strategies: %s", e)
+        from .lovelace import (  # noqa: F401
+            DBInfoscreenDashboardStrategy,
+            DBInfoscreenViewStrategy,
+        )
+    except (ImportError, AttributeError, KeyError):
+        _LOGGER.exception("Could not import Lovelace strategies")
 
     # Register Custom Card (Static Path)
     # This allows users to add the card via /db_infoscreen/card.js
     card_path = os.path.join(os.path.dirname(__file__), "www", "db-infoscreen-card.js")
-    if os.path.exists(card_path):
-        # Register static path for the card JS
-        hass.http.register_static_path(
-            "/db_infoscreen/card.js",
-            card_path,
-            cache_headers=False
+    if await hass.async_add_executor_job(os.path.exists, card_path):
+        from homeassistant.components.http import StaticPathConfig
+
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig("/db_infoscreen/card.js", card_path, False)]
         )
         _LOGGER.debug("Registered static path for DB Infoscreen Card")
+
+        # Automatically load the card in the Lovelace frontend
+        if not hass.data[DOMAIN].get("extra_js_registered"):
+            from homeassistant.components.frontend import add_extra_js_url
+
+            add_extra_js_url(hass, "/db_infoscreen/card.js")
+            hass.data[DOMAIN]["extra_js_registered"] = True
 
     # Add an update listener for options
     config_entry.add_update_listener(update_listener)

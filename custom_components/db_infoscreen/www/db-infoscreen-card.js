@@ -1,345 +1,280 @@
-
 /**
- * DB-Infoscreen Modern Departure Card (Premium Edition)
- * A state-of-the-art station-board style card for Home Assistant 2026.
+ * DB-INFOSCREEN
  */
 
-const LitElement = Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
+const LitElement = window.LitElement || Object.getPrototypeOf(customElements.get("ha-panel-lovelace"));
 const { html, css } = LitElement.prototype;
 
+const DEFAULT_COUNT = 6;
+
+const TRANSLATIONS = {
+  de: {
+    initializing: "System wird initialisiert...",
+    sentiment: "Stimmung",
+    on_time: "Pünktlich",
+    delayed: "Verspätet",
+    cancelled: "AUSFALL",
+    news_ticker: "LIVE BAHNHOFS-NEWS",
+    scan_me: "REISEPLAN",
+    insight_title: "Kontext-Check",
+    insight_text: "AI berechnet hohe Stabilität für diese Verbindung.",
+    action_coffee: "Brauche Kaffee",
+    action_sync: "Exit-Sync",
+    action_announce: "Ansage",
+    action_share: "Teilen",
+    sentiments: ["Chaos-Modus", "Frustriert", "In Ordnung", "Sehr entspannt"],
+    tts_attention: "Achtung. Zug {train} nach {dest} heute auf Gleis {plat}.",
+    editor_entity: "Sensor Entität",
+    editor_weather: "Wetter Entität (für Effekte)",
+    status_stable: "STABIL",
+    status_congested: "ÜBERLASTET"
+  },
+  en: {
+    initializing: "Initializing system...",
+    sentiment: "Sentiment",
+    on_time: "On time",
+    delayed: "Delayed",
+    cancelled: "CANCELLED",
+    news_ticker: "LIVE STATION NEWS",
+    scan_me: "TRAVEL PLAN",
+    insight_title: "Intelligence Insight",
+    insight_text: "AI predicts high stability for this connection.",
+    action_coffee: "Need Coffee",
+    action_sync: "Exit-Sync",
+    action_announce: "Announce",
+    action_share: "Share",
+    sentiments: ["Total Chaos", "Frustrated", "Neutral", "Very Relaxed"],
+    tts_attention: "Attention. Train {train} to {dest} is on platform {plat}.",
+    editor_entity: "Sensor Entity",
+    editor_weather: "Weather Entity (for effects)",
+    status_stable: "STABLE",
+    status_congested: "CONGESTED"
+  }
+};
+
 class DBInfoscreenCard extends LitElement {
+  constructor() {
+    super();
+    this._expandedRows = new Set();
+    this._clockInterval = null;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this._clockInterval = setInterval(() => this.requestUpdate(), 30000);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this._clockInterval) {
+      clearInterval(this._clockInterval);
+    }
+  }
+
   static get properties() {
     return {
       hass: { type: Object },
       config: { type: Object },
+      _expandedRows: { type: Object },
     };
+  }
+
+  _localize(key, dict = {}) {
+    const lang = (this.hass.language || 'en').split('-')[0];
+    const translations = TRANSLATIONS[lang] || TRANSLATIONS.en;
+    let text = translations[key] || TRANSLATIONS.en[key] || key;
+
+    Object.keys(dict).forEach(k => {
+      text = text.replace(`{${k}}`, dict[k]);
+    });
+    return text;
   }
 
   static get styles() {
     return css`
       :host {
-        --board-bg: var(--ha-card-background, var(--card-background-color, #111));
-        --board-text: var(--primary-text-color, #fff);
-        --accent-color: var(--primary-color, #03a9f4);
-        --delay-color: #ff5252;
-        --ontime-color: #4caf50;
-        --platform-bg: rgba(255, 255, 255, 0.1);
-        --glass-bg: rgba(255, 255, 255, 0.03);
-        --row-hover: rgba(255, 255, 255, 0.08);
-        display: block;
-        transition: all 0.3s ease;
+        --core-accent: #00d2ff;
+        --core-bg: #000;
+        --ontime: #34c759;
+        --delay: #ff3b30;
       }
-
       ha-card {
-        overflow: hidden;
-        background: var(--board-bg);
-        color: var(--board-text);
-        border-radius: var(--ha-card-border-radius, 16px);
-        box-shadow: var(--ha-card-box-shadow, 0 8px 24px rgba(0, 0, 0, 0.3));
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        background: var(--core-bg); color: #fff; border-radius: 40px;
+        border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden;
+        font-family: 'Inter', -apple-system, system-ui, sans-serif;
+        box-shadow: 0 40px 100px rgba(0,0,0,0.8); position: relative;
       }
-
-      .header {
-        padding: 24px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: linear-gradient(135deg, var(--accent-color) 0%, rgba(3, 169, 244, 0.8) 100%);
-        color: white;
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
+      .weather-particles {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        pointer-events: none; z-index: 0; overflow: hidden;
       }
-
-      .header::after {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="white" fill-opacity="0.05" x="0" y="0" width="100" height="100"/></svg>');
-        opacity: 0.1;
-      }
-
-      .header-title {
-        font-size: 1.6rem;
-        font-weight: 800;
-        letter-spacing: -0.8px;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      }
-
-      .header-clock {
-        font-family: 'SF Mono', 'JetBrains Mono', monospace;
-        font-size: 1.3rem;
-        font-weight: 600;
-        background: rgba(0, 0, 0, 0.2);
-        padding: 4px 12px;
-        border-radius: 8px;
-        letter-spacing: 1px;
-      }
-
-      .board-table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-
-      .board-header {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-        color: rgba(255, 255, 255, 0.4);
-        background: rgba(0, 0, 0, 0.1);
-      }
-
-      .board-header th {
-        padding: 14px 20px;
-        text-align: left;
-        font-weight: 700;
-      }
-
-      .departure-row {
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        animation: fadeIn 0.5s ease backwards;
-      }
-
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      .departure-row:hover {
-        background: var(--row-hover);
-        transform: scale(1.005);
-        z-index: 10;
-      }
-
-      .departure-row.cancelled {
-        text-decoration: line-through;
-        opacity: 0.4;
-        background: rgba(255, 82, 82, 0.05);
-      }
-
-      .departure-row td {
-        padding: 18px 20px;
-        vertical-align: middle;
-      }
-
-      .line-cell {
-        width: 80px;
-      }
-
-      .line-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 5px 10px;
-        border-radius: 6px;
-        font-weight: 900;
-        font-size: 0.85rem;
-        min-width: 50px;
-        text-transform: uppercase;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      }
-
-      .line-s-bahn { color: #fff; background: #008d3f; }
-      .line-r-bahn { color: #fff; background: #c00000; }
-      .line-ice { color: #c00000; background: #fff; border: 2px solid #c00000; }
-      .line-ic { color: #fff; background: #c00000; }
-      .line-u-bahn { color: #fff; background: #00509b; }
-      .line-bus { color: #fff; background: #9527b7; }
-
-      .destination-cell {
-        font-weight: 600;
-        font-size: 1.15rem;
-      }
-
-      .destination-sub {
-        display: block;
-        font-size: 0.8rem;
-        font-weight: 400;
-        opacity: 0.5;
-        margin-top: 2px;
-      }
-
-      .platform-cell {
-        text-align: center;
-        width: 60px;
-      }
-
-      .platform-num {
-        background: var(--platform-bg);
-        color: white;
-        padding: 6px 12px;
-        border-radius: 8px;
-        font-weight: 800;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-      }
-
-      .time-cell {
-        text-align: right;
-        font-family: 'SF Mono', 'JetBrains Mono', monospace;
-        font-size: 1.15rem;
-        width: 100px;
-      }
-
-      .delay-indicator {
-        font-size: 0.9rem;
-        display: block;
-        font-weight: 700;
-        margin-top: 2px;
-      }
-
-      .delay-plus { 
-        color: var(--delay-color);
-        animation: pulse 2s infinite;
-      }
-      
-      @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.6; }
-        100% { opacity: 1; }
-      }
-
-      .delay-ok { color: var(--ontime-color); opacity: 0.8; }
-
-      .no-departures {
-        padding: 60px 40px;
-        text-align: center;
-        opacity: 0.4;
-        font-style: italic;
-      }
-
-      .footer {
-        padding: 12px 20px;
-        font-size: 0.7rem;
-        opacity: 0.3;
-        text-align: right;
-        background: rgba(0, 0, 0, 0.1);
-      }
-
-      @media (max-width: 500px) {
-        .board-header th:nth-child(3),
-        .departure-row td:nth-child(3) {
-          display: none;
-        }
-        .header-title { font-size: 1.3rem; }
-        .destination-cell { font-size: 1.05rem; }
-      }
+      .particle { position: absolute; background: #fff; opacity: 0.5; top: -10%; animation: fall linear infinite; }
+      @keyframes fall { to { transform: translateY(110vh); } }
+      .header { padding: 45px; position: relative; z-index: 1; background: linear-gradient(180deg, rgba(20,20,20,0.8) 0%, transparent 100%); }
+      .station-name { font-size: 3.5rem; font-weight: 950; letter-spacing: -4px; line-height: 0.8; margin-bottom: 15px; }
+      .stats-bar { display: flex; gap: 20px; align-items: center; margin-top: 25px; }
+      .stat-pill { background: rgba(255,255,255,0.05); padding: 8px 16px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(10px); }
+      .board-table { width: 100%; border-collapse: collapse; position: relative; z-index: 1; }
+      .row { border-bottom: 1px solid rgba(255, 255, 255, 0.03); cursor: pointer; transition: 0.3s; }
+      .row.ghost { opacity: 0.35; filter: grayscale(1); }
+      .cell { padding: 25px 45px; }
+      .line-badge { background: #fff; color: #000; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 0.8rem; min-width: 50px; text-align: center; }
+      .line-ice { background: #ff3b30; color: #fff; }
+      .dest-main { font-size: 1.3rem; font-weight: 800; display: block; }
+      .dest-sub { font-size: 0.8rem; opacity: 0.4; }
+      .time-v { font-family: monospace; font-size: 1.5rem; font-weight: 900; text-align: right; color: var(--core-accent); }
+      .platform-v { width: 60px; height: 60px; border: 2px solid #fff; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 950; }
+      .details-area { padding: 35px 45px 45px 120px; border-left: 8px solid var(--core-accent); background: rgba(255,255,255,0.02); }
+      .context-actions { display: flex; gap: 15px; margin-top: 20px; }
+      .action-btn { background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 12px 18px; border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 10px; }
+      .action-btn:hover { background: var(--core-accent); color: #000; }
+      .footer { padding: 20px 45px; font-size: 0.6rem; opacity: 0.2; display: flex; justify-content: space-between; background: rgba(0,0,0,0.3); }
     `;
   }
 
   render() {
     if (!this.hass || !this.config) return html``;
+    const stateObj = this.hass.states[this.config.entity];
+    if (!stateObj) return html`<ha-card>${this._localize('initializing')}</ha-card>`;
 
-    const entityId = this.config.entity;
-    const stateObj = this.hass.states[entityId];
-
-    if (!stateObj) {
-      return html`
-        <ha-card>
-          <div class="no-departures">Entity <b>${entityId}</b> not found.</div>
-        </ha-card>
-      `;
-    }
-
-    const departures = (stateObj.attributes.next_departures || []).filter(dep => dep.train || dep.line);
-    const stationName = stateObj.attributes.station || stateObj.attributes.friendly_name || "Departure Board";
-    const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const departures = (stateObj.attributes.next_departures || []);
+    const score = this._calcScore(departures);
+    const sentiment = this._getSentiment(score);
+    const weather = this.hass.states[this.config.weather_entity]?.state || 'sunny';
 
     return html`
       <ha-card>
-        <div class="header" @click="${() => this._handleAction()}">
-          <div class="header-title">${stationName}</div>
-          <div class="header-clock">${currentTime}</div>
+        <div class="weather-particles">${this._renderParticles(weather)}</div>
+        <div class="header">
+          <div class="station-name">${stateObj.attributes.station}</div>
+          <div class="stats-bar">
+             <div class="stat-pill"><ha-icon icon="mdi:pulse"></ha-icon> ${score}%</div>
+             <div class="stat-pill"><ha-icon icon="${sentiment.icon}"></ha-icon> ${sentiment.text}</div>
+             <div class="stat-pill"><ha-icon icon="mdi:clock-outline"></ha-icon> ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
         </div>
         <table class="board-table">
-          <thead>
-            <tr class="board-header">
-              <th>Line</th>
-              <th>Destination</th>
-              <th>Pl.</th>
-              <th style="text-align: right">Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${departures.length === 0 
-              ? html`<tr><td colspan="4" class="no-departures">No upcoming departures found for this station.</td></tr>`
-              : departures.slice(0, this.config.count || 10).map((dep, idx) => this._renderDeparture(dep, idx))
-            }
-          </tbody>
+          <tbody>${departures.slice(0, this.config.count || DEFAULT_COUNT).map((dep, idx) => this._renderRow(dep, idx))}</tbody>
         </table>
         <div class="footer">
-          DB-Infoscreen Modern UI &bull; ${stateObj.attributes.attribution || ''}
+          <span>v2026.FINAL // I18N SUPPORTED</span>
+          <span>STATION STATUS: ${score > 80 ? this._localize('status_stable') : this._localize('status_congested')}</span>
         </div>
       </ha-card>
     `;
   }
 
-  _renderDeparture(dep, idx) {
-    const isCancelled = dep.is_cancelled || dep.isCancelled;
-    const trainName = dep.train || dep.line || "";
-    const trainType = trainName.toLowerCase();
-    
-    let typeClass = "";
-    if (trainType.startsWith("s ") || trainType.startsWith("s-")) typeClass = "line-s-bahn";
-    else if (["re", "rb", "ire"].some(t => trainType.startsWith(t)) || trainType.includes("regional")) typeClass = "line-r-bahn";
-    else if (trainType.includes("ice")) typeClass = "line-ice";
-    else if (trainType.includes("ic")) typeClass = "line-ic";
-    else if (trainType.startsWith("u ") || trainType.startsWith("u-")) typeClass = "line-u-bahn";
-    else if (trainType.startsWith("bus")) typeClass = "line-bus";
-
-    const delay = parseInt(dep.delay || 0);
-    const scheduled = dep.time || dep.scheduledTime || dep.scheduledDeparture || "--:--";
-    
-    // Extract intermediate stops if detailed mode is on
-    const via = dep.route ? dep.route.slice(0, 2).map(r => r.name || r).join(", ") : "";
+  _renderRow(dep, idx) {
+    const isGhost = dep.is_cancelled || dep.isCancelled;
+    const tripId = dep.trip_id || `idx-${idx}`;
+    const expanded = this._expandedRows.has(tripId);
 
     return html`
-      <tr class="departure-row ${isCancelled ? 'cancelled' : ''}" style="animation-delay: ${idx * 50}ms">
-        <td class="line-cell"><span class="line-badge ${typeClass}">${trainName}</span></td>
-        <td class="destination-cell">
-          ${dep.destination}
-          ${via ? html`<span class="destination-sub">via ${via}</span>` : ''}
+      <tr class="row ${isGhost ? 'ghost' : ''}" @click="${() => this._toggle(tripId)}">
+        <td class="cell">
+           <div style="display:flex; align-items:center; gap:20px">
+              <span class="line-badge ${dep.train.toLowerCase().includes('ice') ? 'line-ice' : ''}">${dep.train}</span>
+              <div>
+                 <span class="dest-main">${dep.destination}</span>
+                 <span class="dest-sub">${isGhost ? this._localize('cancelled') : (dep.route ? 'via ' + dep.route.slice(0, 2).map(r => (r && r.name) || (typeof r === "string" ? r : "")).filter(Boolean).join(', ') : 'Direct')}</span>
+              </div>
+           </div>
         </td>
-        <td class="platform-cell"><span class="platform-num">${dep.platform || '—'}</span></td>
-        <td class="time-cell">
-          ${scheduled}
-          ${delay > 0 
-            ? html`<span class="delay-indicator delay-plus">+${delay}’</span>` 
-            : delay === 0 && !isCancelled ? html`<span class="delay-indicator delay-ok">on time</span>` : ''
-          }
-          ${isCancelled ? html`<span class="delay-indicator delay-plus">CANCELLED</span>` : ''}
+        <td class="cell" align="center"><div class="platform-v">${dep.platform || '—'}</div></td>
+        <td class="cell">
+           <div class="time-v">${dep.time}</div>
+           ${(() => {
+             const delay = parseInt(dep.delay, 10);
+             return (Number.isFinite(delay) && delay > 0) ? html`<div style="color:#ff3b30; text-align:right; font-weight:850; font-size:0.8rem">+${delay}’</div>` : '';
+           })()}
+        </td>
+      </tr>
+      ${expanded ? this._renderDetails(dep) : ''}
+    `;
+  }
+
+  _renderDetails(dep) {
+    const isLate = (dep.delay || 0) > 5;
+    return html`
+      <tr>
+        <td colspan="3">
+           <div class="details-area">
+              <div style="font-size:0.75rem; text-transform:uppercase; color:rgba(255,255,255,0.4); margin-bottom:10px">${this._localize('insight_title')}</div>
+              <div class="context-actions">
+                 <button class="action-btn" @click="${() => this._runAction('exit_sync')}"><ha-icon icon="mdi:sync"></ha-icon> ${this._localize('action_sync')}</button>
+                 ${isLate ? html`<button class="action-btn" @click="${() => this._runAction('coffee')}"><ha-icon icon="mdi:coffee"></ha-icon> ${this._localize('action_coffee')}</button>` : ''}
+                 <button class="action-btn" @click="${() => this._announce(dep)}"><ha-icon icon="mdi:bullhorn"></ha-icon> ${this._localize('action_announce')}</button>
+                 <button class="action-btn" @click="${() => this._share(dep)}"><ha-icon icon="mdi:share-variant"></ha-icon> ${this._localize('action_share')}</button>
+              </div>
+           </div>
         </td>
       </tr>
     `;
   }
 
-  _handleAction() {
-    const event = new CustomEvent("hass-more-info", {
-      detail: { entityId: this.config.entity },
-      bubbles: true,
-      composed: true,
+  _renderParticles(weather) {
+    if (!['rainy', 'snowy', 'pouring'].some(s => weather.includes(s))) return html``;
+    const isSnow = weather.includes('snow');
+    return Array.from({ length: 20 }).map(() => {
+      const style = `left:${Math.random() * 100}%; animation-duration:${1 + Math.random() * 2}s; animation-delay:-${Math.random() * 5}s; width:${isSnow ? 5 : 1}px; height:${isSnow ? 5 : 15}px;`;
+      return html`<div class="particle" style="${style}"></div>`;
     });
-    this.dispatchEvent(event);
   }
 
-  setConfig(config) {
-    if (!config.entity) throw new Error("Please define an entity");
-    this.config = config;
+  _getSentiment(score) {
+    const texts = this._localize('sentiments');
+    if (score > 90) return { icon: 'mdi:emoticon-excited-outline', text: texts[3] };
+    if (score > 75) return { icon: 'mdi:emoticon-happy-outline', text: texts[2] };
+    if (score > 50) return { icon: 'mdi:emoticon-neutral-outline', text: texts[1] };
+    return { icon: 'mdi:emoticon-angry-outline', text: texts[0] };
   }
 
-  getCardSize() {
-    return (this.config.count || 5) * 1.5 + 1;
+  _calcScore(deps) {
+    if (!deps.length) return 100;
+    return Math.round((deps.filter(d => (d.delay || 0) < 5).length / deps.length) * 100);
+  }
+
+  _runAction(type) { alert(`Action '${type}' triggered.`); }
+
+  _announce(dep) {
+    const text = this._localize('tts_attention', { train: dep.train, dest: dep.destination, plat: dep.platform });
+    const sit = new SpeechSynthesisUtterance(text); sit.lang = this.hass.language;
+    window.speechSynthesis.speak(sit);
+  }
+
+  _share(dep) { if (navigator.share) navigator.share({ title: dep.train, text: dep.destination }); }
+
+  _toggle(id) {
+    const s = new Set(this._expandedRows);
+    if (s.has(id)) s.delete(id); else s.add(id);
+    this._expandedRows = s;
+    this.requestUpdate();
+  }
+
+  setConfig(config) { this.config = config; }
+  getCardSize() { return (this.config.count || DEFAULT_COUNT) + 1; }
+  static getConfigElement() { return document.createElement("db-infoscreen-card-editor"); }
+}
+
+class DBInfoscreenCardEditor extends LitElement {
+  static get properties() { return { _config: {} }; }
+  setConfig(config) { this._config = config; }
+  _localize(key) {
+    const lang = (this.hass.language || 'en').split('-')[0];
+    return (TRANSLATIONS[lang] || TRANSLATIONS.en)[key] || key;
+  }
+  render() {
+    return html`<div style="padding:20px">
+      <ha-textfield label="${this._localize('editor_entity')}" .value="${this._config.entity}" @input="${this._changed}" .configValue="${'entity'}"></ha-textfield>
+      <ha-textfield label="${this._localize('editor_weather')}" .value="${this._config.weather_entity}" @input="${this._changed}" .configValue="${'weather_entity'}"></ha-textfield>
+    </div>`;
+  }
+  _changed(ev) {
+    this._config = { ...this._config, [ev.target.configValue]: ev.target.value };
+    this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true }));
   }
 }
 
+customElements.define("db-infoscreen-card-editor", DBInfoscreenCardEditor);
 customElements.define("db-infoscreen-card", DBInfoscreenCard);
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "db-infoscreen-card",
-  name: "DB Infoscreen Card",
-  preview: true,
-  description: "A premium, station-board style card for train departures."
-});
+window.customCards.push({ type: "db-infoscreen-card", name: "DB Infoscreen I18N EDITION", preview: true });
