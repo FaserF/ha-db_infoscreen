@@ -129,7 +129,9 @@ def normalize_data_source(value: str) -> str:
     matches = []
     for option, mapped_val in DATA_SOURCE_MAP.items():
         # Exact match of the full mapped value or exact match of the part after '='
-        if mapped_val == value or (mapped_val.endswith("=" + code) and "=" in mapped_val):
+        if mapped_val == value or (
+            mapped_val.endswith("=" + code) and "=" in mapped_val
+        ):
             matches.append(option)
 
     if len(matches) == 1:
