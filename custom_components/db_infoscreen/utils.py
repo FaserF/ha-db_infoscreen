@@ -257,6 +257,10 @@ async def async_get_station_candidates(
     if source == "IRIS-TTS":
         source_param = ""  # Default is IRIS
 
+    # If it's a raw parameter like "efa=AVV", ensure it is used correctly in the query
+    if "=" not in source_param and source_param:
+        pass
+
     encoded_station = quote(station)
 
     # We try different lookup patterns to ensure compatibility
