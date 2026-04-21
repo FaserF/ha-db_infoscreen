@@ -51,6 +51,23 @@ TRAIN_TYPE_MAPPING = {
     "F": "long_distance",
     "Unknown": "unknown",
     "": "unknown",
+    # HAFAS / Common classes
+    "ICE": "long_distance",
+    "IC": "long_distance",
+    "EC": "long_distance",
+    "TGV": "long_distance",
+    "RJ": "long_distance",
+    "RJX": "long_distance",
+    "NJ": "long_distance",
+    "RE": "regional_db",
+    "RB": "regional_db",
+    "S-Bahn": "s_bahn",
+    "U-Bahn": "u_bahn",
+    "Tram": "tram",
+    "Bus": "bus",
+    "Stadtbus": "bus",
+    "Metrobus": "bus",
+    "Unbekannter Zugtyp": "unknown",
 }
 
 DATA_SOURCE_MAP = {

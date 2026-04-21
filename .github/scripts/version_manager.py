@@ -12,7 +12,12 @@ def find_manifest():
     return matches[0] if matches else None
 
 
-def get_current_version(manifest_path):
+MANIFEST_FILE = find_manifest()
+
+
+def get_current_version(manifest_path=None):
+    if manifest_path is None:
+        manifest_path = MANIFEST_FILE
     try:
         tags = (
             subprocess.check_output(["git", "tag"], stderr=subprocess.DEVNULL)
@@ -47,7 +52,9 @@ def get_current_version(manifest_path):
     return "2026.1.0"
 
 
-def write_version(v, manifest_path):
+def write_version(v, manifest_path=None):
+    if manifest_path is None:
+        manifest_path = MANIFEST_FILE
     with open("VERSION", "w") as f:
         f.write(v)
     if manifest_path and os.path.exists(manifest_path):
@@ -59,8 +66,11 @@ def write_version(v, manifest_path):
             f.write("\n")
 
 
-def calculate_version(rtype, curr):
-    now = datetime.datetime.now()
+def calculate_version(rtype, curr=None, now=None):
+    if now is None:
+        now = datetime.datetime.now()
+    if curr is None:
+        curr = get_current_version(MANIFEST_FILE)
     year, month = now.year, now.month
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)(?:(b)(\d+)|(-dev)(\d+))?$", curr)
     if match:
@@ -80,19 +90,17 @@ def calculate_version(rtype, curr):
     if rtype == "beta":
         if new_cyc:
             return f"{year}.{month}.0b0"
-        return (
-            f"{year}.{month}.{p}b{snum+1}"
-            if stype == "b"
-            else f"{year}.{month}.{p+1}b0"
-        )
+        if stype == "b":
+            return f"{year}.{month}.{p}b{snum+1}"
+        if stype == "-dev":
+            return f"{year}.{month}.{p}b0"
+        return f"{year}.{month}.{p+1}b0"
     if rtype in ["dev", "nightly"]:
         if new_cyc:
             return f"{year}.{month}.0-dev0"
-        return (
-            f"{year}.{month}.{p}-dev{snum+1}"
-            if stype == "-dev"
-            else f"{year}.{month}.{p+1}-dev0"
-        )
+        if stype == "-dev":
+            return f"{year}.{month}.{p}-dev{snum+1}"
+        return f"{year}.{month}.{p+1}-dev0"
     raise ValueError(f"Unknown type: {rtype}")
 
 
@@ -102,7 +110,7 @@ if __name__ == "__main__":
     parser.add_argument("--type", choices=["stable", "beta", "nightly", "dev"])
     parser.add_argument("--manifest", default=None)
     args = parser.parse_args()
-    m_path = args.manifest or find_manifest()
+    m_path = args.manifest or MANIFEST_FILE
     if args.action == "get":
         print(get_current_version(m_path))
     elif args.action == "bump":

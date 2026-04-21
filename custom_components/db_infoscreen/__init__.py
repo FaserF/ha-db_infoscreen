@@ -881,8 +881,16 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         # Some data sources might use other values, ensure compatibility.
         if "S" in ignored_train_types:
             mapped_ignored_train_types.add("S-Bahn")
+            mapped_ignored_train_types.add("s_bahn")
         if "StadtBus" in ignored_train_types:
             mapped_ignored_train_types.add("MetroBus")
+            mapped_ignored_train_types.add("bus")
+        if "F" in ignored_train_types:
+            mapped_ignored_train_types.add("Fernverkehr")
+            mapped_ignored_train_types.add("long_distance")
+        if "N" in ignored_train_types:
+            mapped_ignored_train_types.add("Regionalverkehr")
+            mapped_ignored_train_types.add("regional_db")
 
         if mapped_ignored_train_types:
             _LOGGER.debug(
@@ -910,9 +918,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     continue
 
             if not self.keep_endstation:
-                if departure.get("destination") == self.station:
+                dest = str(departure.get("destination", "")).strip().lower()
+                stat = str(self.station).strip().lower()
+                if dest == stat:
                     _LOGGER.debug(
-                        "Skipping departure as %s is the final stop.",
+                        "Skipping departure as %s is the final stop (normalized destination match).",
                         self.station,
                     )
                     continue
@@ -1000,10 +1010,21 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             if isinstance(train_classes, str):
                 train_classes = [train_classes]
 
-            # If the API returns an empty list, we treat it as an "unknown" type,
-            # represented by an empty string, so it can be filtered.
+            # If the API returns an empty list, we try to infer it from the train name.
             if not train_classes and isinstance(train_classes, list):
-                api_classes_to_process = [""]
+                train_name = str(departure.get("train", "")).upper()
+                if "ICE" in train_name:
+                    api_classes_to_process = ["ICE"]
+                elif "IC" in train_name or "EC" in train_name or "TGV" in train_name:
+                    api_classes_to_process = ["ICE"]
+                elif "RE" in train_name:
+                    api_classes_to_process = ["RE"]
+                elif "RB" in train_name:
+                    api_classes_to_process = ["RB"]
+                elif "S " in train_name or "S1" in train_name or "S2" in train_name:
+                    api_classes_to_process = ["S"]
+                else:
+                    api_classes_to_process = [""]
             else:
                 api_classes_to_process = train_classes
 
@@ -1291,15 +1312,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         # that depart later. This helps users find backup options.
         if self.detailed and len(filtered_departures) > 1:
             for i, dep in enumerate(filtered_departures):
-                dest = dep.get("destination")
-                if not dest:
+                dest_search: str | None = dep.get("destination")
+                if not dest_search:
                     continue
 
                 alternatives = []
                 for j, other_dep in enumerate(filtered_departures):
                     if i == j:
                         continue
-                    if other_dep.get("destination") == dest:
+                    if other_dep.get("destination") == dest_search:
                         # Only include if it departs later
                         my_time = dep.get("departure_timestamp")
                         other_time = other_dep.get("departure_timestamp")

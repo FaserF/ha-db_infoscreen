@@ -246,6 +246,8 @@
           "invalid_time": "Invalid Time",
           "error": "Error",
           "s_bahn": "S-Bahn",
+          "u_bahn": "U-Bahn",
+          "tram": "Tram",
           "regional_db": "Regional (DB)",
           "regional": "Regional",
           "long_distance": "Long Distance (ICE/IC/EC)",

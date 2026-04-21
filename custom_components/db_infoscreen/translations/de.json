@@ -247,6 +247,8 @@
           "invalid_time": "Ungültige Zeit",
           "error": "Fehler",
           "s_bahn": "S-Bahn",
+          "u_bahn": "U-Bahn",
+          "tram": "Straßenbahn",
           "regional_db": "Regionalbahn (DB)",
           "regional": "Regionalbahn",
           "long_distance": "Fernverkehr (ICE/IC/EC)",
