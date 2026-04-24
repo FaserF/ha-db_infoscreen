@@ -303,15 +303,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
     """
 
     def __init__(self, hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
-        """
-        Initialize coordinator state from a config entry, build the API endpoint, and configure the DataUpdateCoordinator.
-
-        Reads runtime configuration and options from the provided config entry to set coordinator attributes (for example: station, next_departures, hide_low_delay, detailed, past_60_minutes, data_source, offset, via_stations, direction, ignored_train_types, drop_late_trains, final-stop exclusion, size limits), adjusts departure/arrival times for delays, and prunes detail fields according to configuration. The most recent valid result is cached and used as a fallback when no valid departures can be produced.
-
-        Parameters:
-            hass (HomeAssistant): Home Assistant core instance.
-            config_entry (config_entries.ConfigEntry): Integration config entry providing `data` and `options` used to configure the coordinator.
-        """
+        """Initialize coordinator state from a config entry."""
         self.config_entry = config_entry
 
         # Get config from data and options
@@ -579,14 +571,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         }
 
     async def _async_update_data(self):
-        """
-        Retrieve and process next departures for the configured station.
-
-        Fetches JSON from the coordinator's API, parses and normalizes departure times, optionally deduplicates entries, applies configured filters (direction, ignored train types, offset, final-stop exclusion, size limits), adjusts departure/arrival times for delays, and prunes detail fields according to configuration. The most recent valid result is cached and used as a fallback when no valid departures can be produced.
-
-        Returns:
-            list[dict]: Processed departure objects limited to the configured `next_departures` count. If no valid departures can be produced, returns the last cached valid list or an empty list.
-        """
+        """Retrieve and process next departures for the configured station."""
         now = dt_util.now()
 
         # Periodic cleanup of global cache
@@ -1400,14 +1385,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             return self._last_valid_value or []
 
     async def _check_watched_trips(self, departures):
-        """
-        Check for important updates on watched trains and send notifications.
-
-        Compares current departures against the 'watched_trips' list. If a delay
-        passes the threshold, a platform changes, or a train is cancelled, it
-        triggers a notification via the configured Home Assistant notify service.
-        Includes a retry/stale check for trains that disappear from the board.
-        """
+        """Check for important updates on watched trains and send notifications."""
         if not self.watched_trips:
             return
 
@@ -1604,42 +1582,65 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
         # 2. Record/Update current departures
         for dep in departures:
-            # Create a unique key for this specific departure instance
-            # Use trip_id if available, otherwise train + normalized scheduled timestamp
-            train = dep.get("train")
+            # Fallback to 'line' for APIs like AVV buses
+            train = dep.get("train") or dep.get("line")
             trip_id = dep.get("trip_id")
 
-            # Using the machine-readable timestamp ensures the key is stable across updates
-            # even if the raw 'scheduledDeparture' string format oscillates.
+            # Use parsed datetime as stable fallback for entries filtered early
             timestamp = dep.get("departure_timestamp") or dep.get("arrival_timestamp")
+            if timestamp is None:
+                dt_obj = dep.get("departure_datetime")
+                if dt_obj is not None:
+                    try:
+                        timestamp = int(dt_obj.timestamp())
+                    except (AttributeError, OSError, OverflowError):
+                        timestamp = None
 
-            # Key should be unique for the specific instance (e.g. today's 10:00 train)
-            history_key = trip_id if trip_id else f"{train}_{timestamp}"
+            history_key = (
+                trip_id if trip_id else (f"{train}_{timestamp}" if timestamp else None)
+            )
 
             if not history_key or not train:
+                _LOGGER.debug(
+                    "_update_history: skipping entry with no stable key. train=%s, trip_id=%s, timestamp=%s",
+                    train,
+                    trip_id,
+                    timestamp,
+                )
                 continue
 
-            # We store the latest known status.
-            # In a real system, we'd record it when it departs, but we don't always know when it's "gone".
-            # So we just keep the latest info we saw for this train.
-            # Use the train's actual timestamp for history to ensure a cleaner 24h window
+            # Local normalization for entries skipped in main loop
+            raw_delay = (
+                dep.get("delay")
+                or dep.get("delayDeparture")
+                or dep.get("dep_delay")
+                or 0
+            )
+            try:
+                delay_val = int(raw_delay) if raw_delay not in (None, "") else 0
+            except (ValueError, TypeError):
+                delay_val = 0
+
+            is_cancelled_val = bool(
+                dep.get("is_cancelled")
+                or dep.get("cancelled")
+                or dep.get("isCancelled")
+            )
+
             self.departure_history[history_key] = {
                 "train": train,
                 "timestamp": (
-                    dt_util.utc_from_timestamp(timestamp) if timestamp else now_utc
+                    dt_util.utc_from_timestamp(timestamp)
+                    if isinstance(timestamp, (int, float))
+                    else now_utc
                 ),
-                "delay": dep.get("delay", 0),
+                "delay": delay_val,
                 "delay_arrival": dep.get("delay_arrival", 0),
-                "is_cancelled": dep.get("is_cancelled", False),
+                "is_cancelled": is_cancelled_val,
             }
 
     def _handle_update_error(self, error_message: str) -> None:
-        """
-        Register a data fetch error and check for stale data issues.
-
-        Increments consecutive error counts and raises a Home Assistant repair
-        issue if the data has not been successfully updated for more than 24 hours.
-        """
+        """Register a data fetch error and check for stale data issues."""
         if "429" in error_message or "Too Many Requests" in error_message:
             return
 
