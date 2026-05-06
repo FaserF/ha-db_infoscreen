@@ -15,6 +15,7 @@ import re
 import voluptuous as vol
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlencode, urlparse
+import os
 
 from homeassistant import config_entries
 from homeassistant.components import repairs
@@ -73,6 +74,40 @@ _LOGGER = logging.getLogger(__name__)
 # Key: URL, Value: (Timestamp, Data)
 RESPONSE_CACHE: dict[str, Any] = {}
 CACHE_TTL = timedelta(seconds=55)
+
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the DB Infoscreen integration."""
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN].setdefault("setup_lock", asyncio.Lock())
+
+    # Register Lovelace Strategies
+    # Note: These are consumed by the frontend; we only ensure the module is importable
+    try:
+        from .lovelace import (  # noqa: F401
+            DBInfoscreenDashboardStrategy,
+            DBInfoscreenViewStrategy,
+        )
+    except ImportError:
+        _LOGGER.debug(
+            "Could not import Lovelace strategies (this is normal if not using Lovelace)"
+        )
+
+    # Register Custom Card (Static Path)
+    # This allows users to add the card via /db_infoscreen/card.js
+    card_path = os.path.join(os.path.dirname(__file__), "www", "db-infoscreen-card.js")
+    if await hass.async_add_executor_job(os.path.exists, card_path):
+        from homeassistant.components.http import StaticPathConfig
+        from homeassistant.components.frontend import add_extra_js_url
+
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig("/db_infoscreen/card.js", card_path, False)]
+        )
+        _LOGGER.debug("Registered static path for DB Infoscreen Card")
+        add_extra_js_url(hass, "/db_infoscreen/card.js")
+        hass.data[DOMAIN]["extra_js_registered"] = True
+
+    return True
 
 
 async def async_setup_entry(
@@ -386,6 +421,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         elif self.data_source in data_source_map:
             key, value = data_source_map[self.data_source].split("=")
             fetch_params[key] = value
+        elif "=" in str(self.data_source):
+            # Support raw strings like "efa=AVV" directly
+            try:
+                key, value = str(self.data_source).split("=", 1)
+                fetch_params[key] = value
+            except ValueError:
+                pass
 
         if self.detailed:
             fetch_params["detailed"] = "1"
