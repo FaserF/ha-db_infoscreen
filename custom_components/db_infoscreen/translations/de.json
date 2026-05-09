@@ -33,7 +33,8 @@
           "next_departures": "Anzahl der anzuzeigenden Abfahrten",
           "update_interval": "Aktualisierungsintervall (Minuten)",
           "walk_time": "Gehzeit zur Station (Minuten)",
-          "advanced": "Erweiterte Optionen anzeigen (Filter / Spezielle Handhabung)"
+          "advanced": "Erweiterte Optionen anzeigen (Filter / Spezielle Handhabung)",
+          "paused": "Pausiere periodische Updates (Datenabfrage stoppen)"
         }
       },
       "advanced": {
@@ -124,7 +125,8 @@
           "next_departures": "Anzahl Abfahrten",
           "update_interval": "Aktualisierungsintervall (Minuten)",
           "offset": "Versatz (HH:MM)",
-          "walk_time": "Gehzeit (Minuten)"
+          "walk_time": "Gehzeit (Minuten)",
+          "paused": "Pausiere periodische Updates (Datenabfrage stoppen)"
         }
       },
       "server_options": {
@@ -354,6 +356,20 @@
         "station": {
           "name": "Station",
           "description": "Die Station, für die der Versatz gelten soll. Leer lassen für alle Stationen."
+        }
+      }
+    },
+    "set_paused": {
+      "name": "Pausierungs-Status setzen",
+      "description": "Aktiviert oder deaktiviert die periodische Datenabfrage für eine bestimmte oder alle Stationen.",
+      "fields": {
+        "paused": {
+          "name": "Pausiert",
+          "description": "Ob die Aktualisierungen pausiert werden sollen (True = stoppen, False = fortsetzen)."
+        },
+        "station": {
+          "name": "Station",
+          "description": "Der Name der Station. Leer lassen für alle Stationen."
         }
       }
     }

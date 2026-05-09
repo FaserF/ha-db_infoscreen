@@ -17,7 +17,8 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlencode, urlparse
 
 from homeassistant import config_entries
-from homeassistant.components import repairs
+from homeassistant.components import repairs as ha_repairs
+from . import repairs
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
@@ -26,6 +27,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_PAUSED,
     DOMAIN,
     CONF_STATION,
     CONF_NEXT_DEPARTURES,
@@ -100,7 +102,6 @@ async def async_setup_entry(
     # Add an update listener for options
     config_entry.add_update_listener(update_listener)
 
-    # Register Services (only once)
     if not hass.services.has_service(DOMAIN, "watch_train"):
 
         async def async_watch_train(service_call):
@@ -188,6 +189,7 @@ async def async_setup_entry(
             "refresh_departures",
             async_refresh_departures,
         )
+
     if not hass.services.has_service(DOMAIN, "set_offset"):
 
         async def async_set_offset(service_call):
@@ -221,6 +223,45 @@ async def async_setup_entry(
                 {
                     vol.Optional("station"): cv.string,
                     vol.Required("offset"): cv.string,
+                }
+            ),
+        )
+
+    if not hass.services.has_service(DOMAIN, "set_paused"):
+
+        async def async_set_paused(service_call):
+            """Handle the set_paused service call to toggle periodic updates."""
+            target_station = service_call.data.get("station")
+            paused = service_call.data["paused"]
+
+            for entry in hass.config_entries.async_entries(DOMAIN):
+                coordinator = hass.data[DOMAIN].get(entry.entry_id)
+                if not coordinator:
+                    continue
+
+                if (
+                    target_station
+                    and str(coordinator.station).lower() != str(target_station).lower()
+                ):
+                    continue
+
+                # Merge new paused state into existing options
+                new_options = {**entry.options, CONF_PAUSED: paused}
+                hass.config_entries.async_update_entry(entry, options=new_options)
+                _LOGGER.info(
+                    "Setting paused state for station %s to %s",
+                    coordinator.station,
+                    paused,
+                )
+
+        hass.services.async_register(
+            DOMAIN,
+            "set_paused",
+            async_set_paused,
+            schema=vol.Schema(
+                {
+                    vol.Optional("station"): cv.string,
+                    vol.Required("paused"): cv.boolean,
                 }
             ),
         )
@@ -352,12 +393,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         self.exclude_cancelled = config.get(CONF_EXCLUDE_CANCELLED, False)
         self.show_occupancy = config.get(CONF_SHOW_OCCUPANCY, False)
         self.platforms = config.get(CONF_PLATFORMS, "")
+        self.paused = bool(config.get(CONF_PAUSED, False))
         self.via_stations_logic = config.get(CONF_VIA_STATIONS_LOGIC, "OR")
         admode = config.get(CONF_ADMODE, "")
         raw_update_interval = config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
         update_interval = int(max(raw_update_interval, MIN_UPDATE_INTERVAL))
         self._api_update_interval = update_interval * 60
-        self._last_api_fetch = 0
+        self._last_api_fetch = 0.0
         self._raw_api_data = None
 
         # Fixed local update interval for calculation/pruning (30 seconds)
@@ -572,6 +614,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
     async def _async_update_data(self):
         """Retrieve and process next departures for the configured station."""
+        if self.paused:
+            _LOGGER.debug("Updates are paused for %s", self.station)
+            return self._last_valid_value or []
         now = dt_util.now()
 
         # Periodic cleanup of global cache

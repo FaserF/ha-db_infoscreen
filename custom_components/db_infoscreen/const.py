@@ -43,6 +43,7 @@ DEFAULT_TEXT_VIEW_TEMPLATE = (
 CONF_EXCLUDE_CANCELLED = "exclude_cancelled"
 CONF_FAVORITE_TRAINS = "favorite_trains"
 CONF_WALK_TIME = "walk_time"
+CONF_PAUSED = "paused"
 
 TRAIN_TYPE_MAPPING = {
     "S": "s_bahn",

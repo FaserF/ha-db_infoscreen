@@ -352,3 +352,62 @@ entity: sensor.frankfurt_hbf_trip_watchdog
 name: Previous Station
 icon: mdi:eye-check
 ```
+
+---
+
+## 🔋 Smart Power & API Management {: #smart-pausing }
+
+### 17. Pause Updates when leaving Home (Zone-based)
+Automatically stop fetching data when you leave the house to save API queries.
+
+```yaml
+alias: "Train: Pause Updates when Away"
+description: "Pause updates for the station when I am not at home"
+trigger:
+  - platform: zone
+    entity_id: person.your_name
+    zone: zone.home
+    event: leave
+action:
+  - service: db_infoscreen.set_paused
+    data:
+      station: "Your Station Name"
+      paused: true
+```
+
+### 18. Resume Updates when arriving Home
+Automatically resume data fetching when you return.
+
+```yaml
+alias: "Train: Resume Updates when Home"
+trigger:
+  - platform: zone
+    entity_id: person.your_name
+    zone: zone.home
+    event: enter
+action:
+  - service: db_infoscreen.set_paused
+    data:
+      station: "Your Station Name"
+      paused: false
+```
+
+### 19. Schedule-based Pausing (Night Mode)
+If you don't want to specify complex time ranges in the UI, use this simple automation to turn off updates at night.
+
+```yaml
+alias: "Train: Night Mode (Pause Updates)"
+trigger:
+  - platform: time
+    at: "23:00:00"
+action:
+  - service: db_infoscreen.set_paused
+    data:
+      station: "Your Station Name"
+      paused: true
+
+# Create a second automation for 06:00:00 with paused: false to resume.
+```
+
+!!! tip "Targeting specific stations"
+    You can leave the `station` field blank to pause/resume **all** configured stations at once.

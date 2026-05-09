@@ -51,6 +51,7 @@ This integration is best used with the **DBF (DB-Infoscreen) App**. While the in
 | 🌍 **Wide Coverage** | Supports DB and many local transport associations (via HAFAS/EFA). |
 | ⚙️ **Highly Configurable** | Filter by direction, train type, specific platforms, and more. |
 | 💖 **Favorite Trains** | Filter for specific "Favorite Trains" (Commuter Profile). |
+| ⏸️ **Pause Updates** | Stop periodic data fetches to save API queries. See [Smart Pausing Examples](https://faserf.github.io/ha-db_infoscreen/automations/#smart-pausing). |
 | ℹ️ **Detailed Attributes** | Access route info, warnings, platform changes (`changed_platform`), wagon order (`wagon_order`), wagon order summary (`wagon_order_html`), sector info (`platform_sectors`), facilities (`facilities`), real-time route progress (`route_details`), and unique trip ID (`trip_id`). |
 
 ---
@@ -126,6 +127,7 @@ All other settings are available via the **Configure** button on the integration
 | `custom_api_url` | - | Use a private/custom API instance. |
 | `offset` | `00:00` | Time offset for search (HH:MM or HH:MM:SS). |
 | `admode` | `departure` | Display departure or arrival times. |
+| `paused` | `False` | Pause periodic updates (Stop data fetching). |
 | `excluded_directions` | - | Exclude departures with specific direction (substring match). |
 | `ignored_train_types` | `[]` | List of train types to ignore. |
 | `enable_text_view` | `False` | Enable simplified text view for ePaper displays. |

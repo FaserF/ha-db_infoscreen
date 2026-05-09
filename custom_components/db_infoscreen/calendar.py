@@ -142,7 +142,7 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
                     if isinstance(route, list):
                         route_str = " → ".join([str(s) for s in route[:5]])
                         if len(route) > 5:
-                            route_str += f" ... (+{len(route)-5} more)"
+                            route_str += f" ... (+{len(route) - 5} more)"
                     else:
                         route_str = str(route)
                     description_parts.append(f"Via: {route_str}")

@@ -7,6 +7,7 @@ from typing import Any
 from homeassistant import config_entries
 import homeassistant.helpers.config_validation as cv
 from .const import (
+    CONF_PAUSED,
     DOMAIN,
     CONF_STATION,
     CONF_NEXT_DEPARTURES,
@@ -639,6 +640,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     ): cv.positive_int,
                     vol.Optional("advanced", default=False): cv.boolean,
                     vol.Optional(CONF_WALK_TIME, default=0): cv.positive_int,
+                    vol.Optional(CONF_PAUSED, default=False): cv.boolean,
                 }
             )
 
@@ -859,6 +861,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_OFFSET,
                         default=self._get_config_value(CONF_OFFSET, DEFAULT_OFFSET),
                     ): cv.string,
+                    vol.Optional(
+                        CONF_PAUSED,
+                        default=self._get_config_value(CONF_PAUSED, False),
+                    ): cv.boolean,
                     vol.Optional(
                         CONF_WALK_TIME,
                         default=self._get_config_value(CONF_WALK_TIME, 0),

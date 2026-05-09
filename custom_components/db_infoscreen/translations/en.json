@@ -33,7 +33,8 @@
           "next_departures": "Number of Upcoming Departures to show",
           "update_interval": "Update Interval (minutes)",
           "walk_time": "Walk Time to Station (minutes)",
-          "advanced": "Show Advanced Options (Filter Settings / Special Handling)"
+          "advanced": "Show Advanced Options (Filter Settings / Special Handling)",
+          "paused": "Pause periodic updates (Stop data fetching)"
         }
       },
       "advanced": {
@@ -123,7 +124,8 @@
           "next_departures": "Number of Upcoming Departures",
           "update_interval": "Update Interval (minutes)",
           "offset": "Offset (HH:MM)",
-          "walk_time": "Walk Time to Station (minutes)"
+          "walk_time": "Walk Time to Station (minutes)",
+          "paused": "Pause periodic updates (Stop data fetching)"
         }
       },
       "server_options": {
@@ -353,6 +355,20 @@
         "station": {
           "name": "Station",
           "description": "The station name to apply the offset to. If left blank, it applies to all stations."
+        }
+      }
+    },
+    "set_paused": {
+      "name": "Set Paused State",
+      "description": "Enables or disables periodic data fetching for a specific station or all stations.",
+      "fields": {
+        "paused": {
+          "name": "Paused",
+          "description": "Whether to pause periodic updates (True = stop fetching, False = resume fetching)."
+        },
+        "station": {
+          "name": "Station",
+          "description": "The station name to apply the paused state to. If left blank, it applies to all stations."
         }
       }
     }

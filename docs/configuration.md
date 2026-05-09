@@ -32,6 +32,9 @@ Basic update behavior and timing.
 -   **Offset (HH:MM)**: Shift the search window into the future. 
     -   *Example*: Use `00:15` if you want to skip all trains leaving in the next 15 minutes because you haven't left the house yet.
 -   **Travel Time (minutes)**: Used for the "Leave Now" alarm logic.
+-   **Pause periodic updates**: A master switch to stop all API requests for this station.
+    -   *Why use this?*: To save server resources and prevent rate-limiting when you don't need the data (e.g., at night or when you are on vacation).
+    -   *How to automate?*: This is a simple `True/False` toggle. To create "schedules" or "location-based pausing", use Home Assistant automations. See the [Automation Cookbook](automations.md#smart-pausing) for "idiot-proof" examples.
 
 ### :material-filter-variant: Filter Options {: #filter-options }
 Refine which trains are shown on your dashboard.
