@@ -14,6 +14,7 @@ from custom_components.db_infoscreen.const import (
 )
 from tests.common import patch_session
 
+
 @pytest.fixture(autouse=True)
 def patch_coordinator():
     with patch(
@@ -22,12 +23,15 @@ def patch_coordinator():
     ):
         yield
 
+
 @pytest.fixture(autouse=True)
 def clear_cache():
     from custom_components.db_infoscreen import RESPONSE_CACHE
+
     RESPONSE_CACHE.clear()
     yield
     RESPONSE_CACHE.clear()
+
 
 @pytest.fixture
 def mock_config_entry():
@@ -42,12 +46,13 @@ def mock_config_entry():
     entry.entry_id = "mock_entry_id"
     return entry
 
+
 @pytest.mark.asyncio
 async def test_coordinator_pause_updates(hass, mock_config_entry):
     """Test that updates can be paused in the coordinator."""
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
     coordinator.async_fetch_server_version = AsyncMock()
-    
+
     mock_data = {
         "departures": [
             {
@@ -71,7 +76,7 @@ async def test_coordinator_pause_updates(hass, mock_config_entry):
     mock_config_entry.options[CONF_PAUSED] = True
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
     coordinator.async_fetch_server_version = AsyncMock()
-    
+
     with patch_session(mock_data) as mock_sess:
         data = await coordinator._async_update_data()
         assert len(data) == 0
@@ -85,16 +90,19 @@ async def test_coordinator_pause_updates(hass, mock_config_entry):
         assert data[0]["train"] == "Last Valid"
         assert mock_sess.get.call_count == 0
 
+
 @pytest.mark.asyncio
 async def test_config_flow_schema_has_paused(hass):
     """Test that the config flow details schema contains the paused option."""
     from custom_components.db_infoscreen.config_flow import ConfigFlow
+
     flow = ConfigFlow()
     flow.hass = hass
     flow.selected_station = "Berlin Hbf"
-    
+
     schema = flow.details_schema(basic=True)
     assert CONF_PAUSED in schema.schema
+
 
 @pytest.mark.asyncio
 async def test_options_flow_schema_has_paused(hass):
@@ -102,35 +110,36 @@ async def test_options_flow_schema_has_paused(hass):
     hass.config_entries.options.async_configure.return_value = {
         "type": FlowResultType.FORM,
         "step_id": "general_options",
-        "data_schema": MagicMock()
+        "data_schema": MagicMock(),
     }
     hass.config_entries.options.async_configure.return_value["data_schema"].schema = {
         CONF_PAUSED: True
     }
-    
+
     from pytest_homeassistant_custom_component.common import MockConfigEntry
+
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_STATION: "Karlsruhe Hbf"},
         options={CONF_PAUSED: False},
     )
     entry.add_to_hass(hass)
-    
+
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"],
-        user_input={"next_step_id": "general_options"}
+        result["flow_id"], user_input={"next_step_id": "general_options"}
     )
-    
+
     assert result["type"] == FlowResultType.FORM
     assert CONF_PAUSED in result["data_schema"].schema
+
 
 @pytest.mark.asyncio
 async def test_set_paused_service(hass):
     """Test the set_paused service."""
     from pytest_homeassistant_custom_component.common import MockConfigEntry
     from custom_components.db_infoscreen import async_setup_entry
-    
+
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={CONF_STATION: "Karlsruhe Hbf"},
@@ -138,18 +147,18 @@ async def test_set_paused_service(hass):
         entry_id="test_service",
     )
     entry.add_to_hass(hass)
-    
+
     # Mock forward entry setups and service call to avoid TypeError
     hass.config_entries.async_forward_entry_setups = AsyncMock()
     hass.services.async_call = AsyncMock()
-    
+
     # Setup entry to register services
     await async_setup_entry(hass, entry)
-    
+
     # Manually extract the service handler since we mocked async_call
-    # Actually, we can just call the handler directly if we can find it, 
+    # Actually, we can just call the handler directly if we can find it,
     # but it's better to just mock the register function to get the handler.
-    
+
     with patch("homeassistant.core.ServiceRegistry.async_register") as mock_reg:
         await async_setup_entry(hass, entry)
         # Find set_paused registration
@@ -158,14 +167,14 @@ async def test_set_paused_service(hass):
             if call[0][1] == "set_paused":
                 handler = call[0][2]
                 break
-        
+
         if handler:
             # Call handler directly
             call = MagicMock()
             call.data = {"station": "Karlsruhe Hbf", "paused": True}
             await handler(call)
             assert entry.options[CONF_PAUSED] is True
-            
+
             call.data = {"station": "Karlsruhe Hbf", "paused": False}
             await handler(call)
             assert entry.options[CONF_PAUSED] is False
