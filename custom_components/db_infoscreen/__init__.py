@@ -613,7 +613,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
     async def _async_update_data(self):
         """Retrieve and process next departures for the configured station."""
-        if self.paused:
+        if self.paused and self._raw_api_data is not None:
             _LOGGER.debug("Updates are paused for %s", self.station)
             return self._last_valid_value or []
         now = dt_util.now()

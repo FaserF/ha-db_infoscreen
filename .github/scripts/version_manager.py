@@ -27,7 +27,7 @@ def get_current_version(manifest_path=None):
         v_tags = []
         for tag in tags:
             tag = tag.strip()
-            match = re.match(r"^(\d+)\.(\d+)\.(\d+)(?:(b)(\d+)|(-dev)(\d+))?$", tag)
+            match = re.match(r"^v?(\d+)\.(\d+)\.(\d+)(?:(b)(\d+)|(-dev)(\d+))?$", tag)
             if match:
                 y, m, p, bp, bn, dp, dn = match.groups()
                 v_tags.append(
@@ -72,7 +72,7 @@ def calculate_version(rtype, curr=None, now=None):
     if curr is None:
         curr = get_current_version(MANIFEST_FILE)
     year, month = now.year, now.month
-    match = re.match(r"^(\d+)\.(\d+)\.(\d+)(?:(b)(\d+)|(-dev)(\d+))?$", curr)
+    match = re.match(r"^v?(\d+)\.(\d+)\.(\d+)(?:(b)(\d+)|(-dev)(\d+))?$", curr)
     if match:
         cy, cm, cp, b_p, b_n, d_p, d_n = match.groups()
         cy, cm, cp = int(cy), int(cm), int(cp)
