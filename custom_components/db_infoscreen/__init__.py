@@ -17,7 +17,6 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlencode, urlparse
 
 from homeassistant import config_entries
-from homeassistant.components import repairs as ha_repairs
 from . import repairs
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -1104,10 +1103,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     if departure_time_adjusted.date() != today
                     else departure_time_adjusted.strftime("%H:%M")
                 )
-                # Add new machine-readable Unix timestamp
+                # Add new machine-readable Unix timestamp (Real-time)
                 departure["departure_timestamp"] = int(
                     departure_time_adjusted.timestamp()
                 )
+                # Add stable scheduled timestamp for history tracking
+                departure["scheduled_timestamp"] = int(departure_time.timestamp())
 
             if self.show_occupancy:
                 occupancy = departure.get("occupancy")
@@ -1299,8 +1300,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 for key in ["route", "via", "prev_route", "next_route"]:
                     departure.pop(key, None)
 
-            # Remove temporary datetime object
-            departure.pop("departure_datetime", None)
+            # departure_datetime is needed for _update_history below,
+            # so we don't pop it here anymore. It's cleaned up after the loop if needed.
 
             departure_seconds = (effective_departure_time - now).total_seconds()
             if departure_seconds >= self.offset:
@@ -1374,6 +1375,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         # We track history for ALL departures that passed deduplication,
         # so the stats represent the station overall, not just the filtered subset.
         self._update_history(departures_to_process)
+
+        # Cleanup temporary objects used for history calculation
+        for dep in departures_to_process:
+            dep.pop("departure_datetime", None)
+            dep.pop("scheduled_timestamp", None)
 
         # Favorite Trains Filtering
         if self.favorite_trains:
@@ -1627,12 +1633,23 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
         # 2. Record/Update current departures
         for dep in departures:
-            # Fallback to 'line' for APIs like AVV buses
-            train = dep.get("train") or dep.get("line")
-            trip_id = dep.get("trip_id")
+            # Fallback to multiple fields for APIs like AVV buses (EFA/HAFAS)
+            train = (
+                dep.get("train")
+                or dep.get("line")
+                or dep.get("number")
+                or dep.get("name")
+                or dep.get("label")
+            )
+            trip_id = dep.get("trip_id") or dep.get("tripId") or dep.get("trainId")
 
-            # Use parsed datetime as stable fallback for entries filtered early
-            timestamp = dep.get("departure_timestamp") or dep.get("arrival_timestamp")
+            # Use scheduled timestamp for a stable history key (ignores delay changes)
+            timestamp = (
+                dep.get("scheduled_timestamp")
+                or dep.get("departure_timestamp")
+                or dep.get("arrival_timestamp")
+            )
+
             if timestamp is None:
                 dt_obj = dep.get("departure_datetime")
                 if dt_obj is not None:
@@ -1659,10 +1676,18 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 dep.get("delay")
                 or dep.get("delayDeparture")
                 or dep.get("dep_delay")
+                or dep.get("delay_dep")
+                or dep.get("departureDelay")
                 or 0
             )
             try:
-                delay_val = int(raw_delay) if raw_delay not in (None, "") else 0
+                # Handle cases where delay might be a string with units or symbols
+                if isinstance(raw_delay, str):
+                    # Extract numeric part if it's something like "+5" or "5 min"
+                    match = re.search(r"([+-]?\d+)", raw_delay)
+                    delay_val = int(match.group(1)) if match else 0
+                else:
+                    delay_val = int(raw_delay) if raw_delay not in (None, "") else 0
             except (ValueError, TypeError):
                 delay_val = 0
 

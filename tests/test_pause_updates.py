@@ -1,4 +1,4 @@
-﻿from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import timedelta
 import pytest
 from homeassistant.util import dt as dt_util
@@ -10,7 +10,6 @@ from custom_components.db_infoscreen.const import (
     CONF_STATION,
     CONF_UPDATE_INTERVAL,
     CONF_PAUSED,
-    CONF_NEXT_DEPARTURES,
 )
 from tests.common import patch_session
 
@@ -159,7 +158,7 @@ async def test_set_paused_service(hass):
     # Actually, we can just call the handler directly if we can find it,
     # but it's better to just mock the register function to get the handler.
 
-    with patch("homeassistant.core.ServiceRegistry.async_register") as mock_reg:
+    with patch("homeassistant.core.ServiceRegistry.async_register"):
         await async_setup_entry(hass, entry)
         # Find set_paused registration
         handler = None
