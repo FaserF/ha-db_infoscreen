@@ -64,7 +64,7 @@ set_offset:
       selector:
         text:
     station:
-      description: The station name to apply the offset to.
+      description: The station name to apply the offset to. If left blank, it applies to all stations.
       example: München Hbf
       required: false
       selector:

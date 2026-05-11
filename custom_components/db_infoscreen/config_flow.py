@@ -52,7 +52,7 @@ from .const import (
     SERVER_URL_FASERF,
     normalize_data_source,
 )
-from .utils import async_get_stations, find_station_matches
+from .utils import async_get_stations, find_station_matches, normalize_whitespace
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -172,7 +172,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             )
 
         if user_input is not None:
-            station_query = user_input.get(CONF_STATION)
+            station_query = normalize_whitespace(user_input.get(CONF_STATION))
             data_source = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
 
             # Save state for possible "Go Back"
@@ -495,7 +495,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if hasattr(self, "selected_code") and self.selected_code:
             user_input[CONF_STATION] = self.selected_code
         else:
-            user_input[CONF_STATION] = display_name
+            user_input[CONF_STATION] = normalize_whitespace(display_name)
 
         # Validate station data can be retrieved
         station_raw = user_input.get(CONF_STATION, "")
@@ -555,19 +555,28 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         via_raw = user_input.get(CONF_VIA_STATIONS, "")
         if isinstance(via_raw, str):
             user_input[CONF_VIA_STATIONS] = [
-                s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
+                normalize_whitespace(s) for s in re.split(r",|\|", via_raw) if s.strip()
             ]
 
         user_input[CONF_SERVER_URL] = self.server_url
         user_input[CONF_SERVER_TYPE] = self.server_type
         via = user_input.get(CONF_VIA_STATIONS, [])
         user_input[CONF_VIA_STATIONS] = via
-        direction = user_input.get(CONF_DIRECTION, "")
+        direction = normalize_whitespace(user_input.get(CONF_DIRECTION, ""))
         user_input[CONF_DIRECTION] = direction
         excluded_directions = user_input.get(CONF_EXCLUDED_DIRECTIONS, "")
+        if isinstance(excluded_directions, str):
+            excluded_directions = ", ".join(
+                [normalize_whitespace(s) for s in excluded_directions.split(",")]
+            )
         user_input[CONF_EXCLUDED_DIRECTIONS] = excluded_directions
         platforms = user_input.get(CONF_PLATFORMS, "")
-        user_input[CONF_PLATFORMS] = platforms
+        user_input[CONF_PLATFORMS] = str(platforms).replace(" ", "")
+        fav_trains = user_input.get(CONF_FAVORITE_TRAINS, "")
+        if isinstance(fav_trains, str):
+            user_input[CONF_FAVORITE_TRAINS] = ", ".join(
+                [normalize_whitespace(s) for s in fav_trains.split(",")]
+            )
 
         # Ensure we keep the valid data_source correctly tracked for the final entry
         user_input[CONF_DATA_SOURCE] = data_source
@@ -780,6 +789,34 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 and not str(user_input.get(CONF_DEDUPLICATE_KEY, "")).strip()
             ):
                 user_input[CONF_DEDUPLICATE_KEY] = DEFAULT_DEDUPLICATE_KEY
+
+            # Normalize text inputs
+            for key in [CONF_DIRECTION, CONF_STATION]:
+                if key in user_input:
+                    user_input[key] = normalize_whitespace(user_input[key])
+
+            if CONF_PLATFORMS in user_input:
+                user_input[CONF_PLATFORMS] = str(user_input[CONF_PLATFORMS]).replace(
+                    " ", ""
+                )
+
+            if CONF_VIA_STATIONS in user_input:
+                via_raw = user_input.get(CONF_VIA_STATIONS, "")
+                if isinstance(via_raw, str):
+                    user_input[CONF_VIA_STATIONS] = [
+                        normalize_whitespace(s)
+                        for s in re.split(r",|\|", via_raw)
+                        if s.strip()
+                    ]
+
+            for key in [CONF_EXCLUDED_DIRECTIONS, CONF_FAVORITE_TRAINS]:
+                if key in user_input:
+                    val = user_input[key]
+                    if isinstance(val, str):
+                        user_input[key] = ", ".join(
+                            [normalize_whitespace(s) for s in val.split(",")]
+                        )
+
             self._options.update(user_input)
 
         # Recalculate title based on merged data and options

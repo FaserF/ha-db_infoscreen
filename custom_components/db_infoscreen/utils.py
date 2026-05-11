@@ -21,6 +21,16 @@ CACHE_KEY_UPDATE = "db_infoscreen_stations_last_update"
 CACHE_DURATION = timedelta(hours=24)
 
 
+def normalize_whitespace(value: Any) -> str:
+    """
+    Remove double spaces and leading/trailing whitespace.
+    Returns an empty string if value is None.
+    """
+    if value is None:
+        return ""
+    return " ".join(str(value).split()).strip()
+
+
 def parse_datetime_flexible(value: Any, now: datetime) -> datetime | None:
     """
     Parse a datetime from various formats (timestamp, ISO, HH:MM).
@@ -211,6 +221,8 @@ def find_station_matches(stations, query):
     if not query or not stations:
         return []
 
+    # Normalize whitespace: remove double spaces and leading/trailing whitespace
+    query = " ".join(str(query).split()).strip()
     query_lower = query.lower()
 
     # 1. Exact match (case-insensitive)
@@ -257,10 +269,8 @@ async def async_get_station_candidates(
     if source == "IRIS-TTS":
         source_param = ""  # Default is IRIS
 
-    # If it's a raw parameter like "efa=AVV", ensure it is used correctly in the query
-    if "=" not in source_param and source_param:
-        pass
-
+    # Normalize whitespace
+    station = " ".join(str(station).split()).strip()
     encoded_station = quote(station)
 
     # We try different lookup patterns to ensure compatibility

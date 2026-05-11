@@ -352,8 +352,9 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
             return "No Departures"
 
         # Check for first departure since that's what we watch
-        next_train = self.coordinator.data[0] if self.coordinator.data else {}
-        if not self.coordinator.detailed:
+        coord_data = cast(list[dict[str, Any]], self.coordinator.data)
+        next_train = coord_data[0] if coord_data else {}
+        if not getattr(self.coordinator, "detailed", False):
             return "Enable Detailed Data"
 
         route = next_train.get("route", [])

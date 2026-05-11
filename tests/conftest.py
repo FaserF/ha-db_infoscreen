@@ -201,6 +201,10 @@ if not PYTEST_HA_AVAILABLE:
         sys.modules["homeassistant.helpers.selector"] = MagicMock()
     if "homeassistant.helpers.network" not in sys.modules:
         sys.modules["homeassistant.helpers.network"] = MagicMock()
+    if "homeassistant.helpers.device_registry" not in sys.modules:
+        sys.modules["homeassistant.helpers.device_registry"] = MagicMock()
+    if "homeassistant.helpers.entity_registry" not in sys.modules:
+        sys.modules["homeassistant.helpers.entity_registry"] = MagicMock()
 
     # Mock util
     if "homeassistant.util" not in sys.modules:

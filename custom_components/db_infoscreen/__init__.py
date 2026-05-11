@@ -68,7 +68,12 @@ from .const import (
     normalize_data_source,
     DATA_SOURCE_MAP,
 )
-from .utils import parse_datetime_flexible, prune_response_cache, simple_serializer
+from .utils import (
+    normalize_whitespace,
+    parse_datetime_flexible,
+    prune_response_cache,
+    simple_serializer,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -194,7 +199,7 @@ async def async_setup_entry(
 
         async def async_set_offset(service_call):
             """Handle the set_offset service call to dynamically adjust time offset."""
-            target_station = service_call.data.get("station")
+            target_station = normalize_whitespace(service_call.data.get("station"))
             new_offset = service_call.data.get("offset", "00:00")
 
             # Resolve entities/devices to entry IDs
@@ -202,9 +207,9 @@ async def async_setup_entry(
             if "entity_id" in service_call.data:
                 ent_reg = er.async_get(hass)
                 for entity_id in service_call.data["entity_id"]:
-                    if entry := ent_reg.async_get(entity_id):
-                        if entry.platform == DOMAIN:
-                            target_entry_ids.add(entry.config_entry_id)
+                    if ent_entry := ent_reg.async_get(entity_id):
+                        if ent_entry.platform == DOMAIN:
+                            target_entry_ids.add(ent_entry.config_entry_id)
             if "device_id" in service_call.data:
                 dev_reg = dr.async_get(hass)
                 for device_id in service_call.data["device_id"]:
@@ -216,9 +221,13 @@ async def async_setup_entry(
                     if (target_station or target_entry_ids) and not (
                         (
                             target_station
-                            and str(coord.station).lower() == str(target_station).lower()
+                            and str(coord.station).lower()
+                            == str(target_station).lower()
                         )
-                        or (coord.config_entry.entry_id in target_entry_ids)
+                        or (
+                            coord.config_entry
+                            and coord.config_entry.entry_id in target_entry_ids
+                        )
                     ):
                         continue
 
@@ -240,7 +249,7 @@ async def async_setup_entry(
                 {
                     vol.Optional("station"): cv.string,
                     vol.Optional("entity_id"): cv.entity_ids,
-                    vol.Optional("device_id"): cv.device_ids,
+                    vol.Optional("device_id"): vol.All(cv.ensure_list, [cv.string]),
                     vol.Required("offset"): cv.string,
                 }
             ),
@@ -250,7 +259,7 @@ async def async_setup_entry(
 
         async def async_set_paused(service_call):
             """Handle the set_paused service call to toggle periodic updates."""
-            target_station = service_call.data.get("station")
+            target_station = normalize_whitespace(service_call.data.get("station"))
             paused = service_call.data["paused"]
 
             # Resolve entities/devices to entry IDs
@@ -258,9 +267,9 @@ async def async_setup_entry(
             if "entity_id" in service_call.data:
                 ent_reg = er.async_get(hass)
                 for entity_id in service_call.data["entity_id"]:
-                    if entry := ent_reg.async_get(entity_id):
-                        if entry.platform == DOMAIN:
-                            target_entry_ids.add(entry.config_entry_id)
+                    if ent_entry := ent_reg.async_get(entity_id):
+                        if ent_entry.platform == DOMAIN:
+                            target_entry_ids.add(ent_entry.config_entry_id)
             if "device_id" in service_call.data:
                 dev_reg = dr.async_get(hass)
                 for device_id in service_call.data["device_id"]:
@@ -278,7 +287,7 @@ async def async_setup_entry(
                         and str(coordinator.station).lower()
                         == str(target_station).lower()
                     )
-                    or (entry.entry_id in target_entry_ids)
+                    or (entry and entry.entry_id in target_entry_ids)
                 ):
                     continue
 
@@ -299,7 +308,7 @@ async def async_setup_entry(
                 {
                     vol.Optional("station"): cv.string,
                     vol.Optional("entity_id"): cv.entity_ids,
-                    vol.Optional("device_id"): cv.device_ids,
+                    vol.Optional("device_id"): vol.All(cv.ensure_list, [cv.string]),
                     vol.Required("paused"): cv.boolean,
                 }
             ),
@@ -653,7 +662,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
     async def _async_update_data(self):
         """Retrieve and process next departures for the configured station."""
-        if self.paused and self._raw_api_data is not None:
+        if self.paused:
             _LOGGER.debug("Updates are paused for %s", self.station)
             return self._last_valid_value or []
         now = dt_util.now()
