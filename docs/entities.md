@@ -15,6 +15,7 @@ The primary sensor that displays the next departure time.
 | `next_departures` | List of all upcoming departures with full details |
 | `station` | Configured station name |
 | `last_updated` | Last successful data refresh |
+| `is_paused` | Whether updates are currently paused |
 | `attribution` | Data source URL |
 
 **Attributes per Departure:**
@@ -196,6 +197,22 @@ Three binary sensors are automatically created to provide quick status indicator
 
 - `issues` - List of specific issue messages (e.g. "Aufzug zu Gleis 1 defekt")
 - `issue_count` - Number of active issues
+
+---
+
+### Update Status Sensor {: #paused-sensor }
+**Entity ID**: `binary_sensor.db_infoscreen_{station}_paused`
+
+!!! note "Disabled by Default"
+
+    This sensor is disabled by default. Enable it in the entity settings if you wish to monitor whether updates are currently paused.
+
+| State | Meaning |
+| :--- | :--- |
+| **ON** | Periodic updates are paused (no data fetching) |
+| **OFF** | Periodic updates are active |
+
+---
 
 ---
 

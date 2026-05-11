@@ -34,6 +34,7 @@ async def async_setup_entry(
             DBInfoScreenDelayBinarySensor(coordinator, config_entry),
             DBInfoScreenCancellationBinarySensor(coordinator, config_entry),
             DBInfoScreenConnectionBinarySensor(coordinator, config_entry),
+            DBInfoScreenPausedBinarySensor(coordinator, config_entry),
         ]
     )
 
@@ -224,6 +225,26 @@ class DBInfoScreenConnectionBinarySensor(DBInfoScreenBaseBinarySensor):
             ),
             "consecutive_errors": consecutive_errors,
         }
+
+
+class DBInfoScreenPausedBinarySensor(DBInfoScreenBaseBinarySensor):
+    """Binary sensor that indicates if updates are paused."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_has_entity_name = True
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator, config_entry: ConfigEntry) -> None:
+        """Initialize the paused sensor."""
+        super().__init__(coordinator, config_entry)
+        self._attr_unique_id = f"db_infoscreen_paused_{config_entry.entry_id}"
+        self._attr_translation_key = "paused"
+        self._attr_icon = "mdi:pause-circle-outline"
+
+    @property
+    def is_on(self) -> bool:
+        """Return True if updates are paused."""
+        return getattr(self.coordinator, "paused", False)
 
 
 class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):

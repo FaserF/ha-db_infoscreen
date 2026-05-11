@@ -232,6 +232,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
             "direction": self.direction,
             "last_updated": last_updated,
             "attribution": attribution,
+            "is_paused": getattr(self.coordinator, "paused", False),
             "via_stations_logic": getattr(self.coordinator, "via_stations_logic", "OR"),
         }
 

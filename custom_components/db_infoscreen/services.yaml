@@ -72,8 +72,6 @@ set_offset:
   target:
     entity:
       integration: db_infoscreen
-    device:
-      integration: db_infoscreen
 
 set_paused:
   description: Toggles periodic updates for one or more stations.
@@ -91,6 +89,4 @@ set_paused:
         text:
   target:
     entity:
-      integration: db_infoscreen
-    device:
       integration: db_infoscreen

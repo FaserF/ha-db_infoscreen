@@ -34,6 +34,7 @@ Basic update behavior and timing.
 -   **Travel Time (minutes)**: Used for the "Leave Now" alarm logic.
 -   **Pause periodic updates**: A master switch to stop all API requests for this station.
     -   *Why use this?*: To save server resources and prevent rate-limiting when you don't need the data (e.g., at night or when you are on vacation).
+    -   *Monitoring*: You can monitor the pause state via the `is_paused` attribute on the main departures sensor or the (disabled by default) `Update Status` binary sensor.
     -   *How to automate?*: This is a simple `True/False` toggle. To create "schedules" or "location-based pausing", use Home Assistant automations. See the [Automation Cookbook](automations.md#smart-pausing) for "idiot-proof" examples.
 
 ### :material-filter-variant: Filter Options {: #filter-options }

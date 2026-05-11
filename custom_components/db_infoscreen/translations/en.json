@@ -282,6 +282,9 @@
       "api_connection": {
         "name": "API Connection"
       },
+      "paused": {
+        "name": "Update Status"
+      },
       "elevator": {
         "name": "Station Accessibility"
       },

@@ -283,6 +283,9 @@
       "api_connection": {
         "name": "API-Verbindung"
       },
+      "paused": {
+        "name": "Aktualisierungsstatus"
+      },
       "elevator": {
         "name": "Barrierefreiheit"
       },
