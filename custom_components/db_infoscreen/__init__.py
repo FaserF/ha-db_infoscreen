@@ -105,7 +105,7 @@ async def async_setup_entry(
     )
 
     # Add an update listener for options
-    config_entry.add_update_listener(update_listener)
+    config_entry.async_on_unload(config_entry.add_update_listener(update_listener))
 
     if not hass.services.has_service(DOMAIN, "watch_train"):
 

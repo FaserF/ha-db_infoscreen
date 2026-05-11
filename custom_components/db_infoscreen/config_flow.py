@@ -827,12 +827,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if f"({merged_config.get(CONF_DATA_SOURCE)})" in self._config_entry.title:
             new_title += f" ({merged_config.get(CONF_DATA_SOURCE)})"
 
-        if new_title != self._config_entry.title:
-            self.hass.config_entries.async_update_entry(
-                self._config_entry, title=new_title
-            )
-
-        return self.async_create_entry(title="", data=self._options)
+        return self.async_create_entry(title=new_title, data=self._options)
 
     def _get_config_value(self, key, default=None):
         """Get value from our updated options or fall back to config data."""
