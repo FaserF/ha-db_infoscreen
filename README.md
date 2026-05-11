@@ -153,6 +153,8 @@ All other settings are available via the **Configure** button on the integration
 | :--- | :--- |
 | `watch_train` | Monitor a specific train and notify on delay/platform changes. |
 | `track_connection` | Monitor a connecting train at a transfer station. |
+| `set_paused` | Toggle periodic updates for one or more stations (Smart Pausing). |
+| `set_offset` | Dynamically override the departure time offset temporarily. |
 | `refresh_departures` | Manually trigger a data update for all stations. |
 
 ---

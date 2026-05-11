@@ -74,5 +74,56 @@ data:
 
 ---
 
+## `set_paused` ⏸️
+
+Toggles periodic updates for one or more stations. This is useful for "Smart Pausing" when you are not at home or during the night to save API queries.
+
+### Service Data
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `paused` | boolean | **Required**. Whether to pause (`true`) or resume (`false`) updates. |
+| `station` | string | **Optional**. The station name to apply the paused state to. |
+| `entity_id` / `device_id` | target | **Optional**. The Home Assistant entities or devices to target. |
+
+### Example Usage
+
+```yaml
+service: db_infoscreen.set_paused
+target:
+  entity_id: sensor.frankfurt_hbf
+data:
+  paused: true
+```
+
+---
+
+## `set_offset` ⏱️
+
+Dynamically overrides the default time offset for departures temporarily. This can be used if you know you are walking slower today or if you want to see trains further in the future for a short period.
+
+### Service Data
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `offset` | string | **Required**. The new time offset in format `HH:MM` (e.g. `00:05`). |
+| `station` | string | **Optional**. The station name to apply the offset to. |
+| `entity_id` / `device_id` | target | **Optional**. The Home Assistant entities or devices to target. |
+
+### Example Usage
+
+```yaml
+service: db_infoscreen.set_offset
+target:
+  device_id: 1234567890abcdef
+data:
+  offset: "00:15"
+```
+
+---
+
+!!! tip "Tip: Targeting Stations"
+    You can target stations by their **Station Name** (text), by selecting their **Entities**, or by selecting the **Device**. If you leave the target/station blank, the service will apply to **all** configured stations.
+
 !!! tip "Tip: Track from Dashboard"
     You can use a `button` card in Lovelace to start watching your next train with a single tap before you leave the house!

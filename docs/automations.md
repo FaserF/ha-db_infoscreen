@@ -370,8 +370,9 @@ trigger:
     event: leave
 action:
   - service: db_infoscreen.set_paused
+    target:
+      entity_id: sensor.your_station_departures
     data:
-      station: "Your Station Name"
       paused: true
 ```
 
@@ -387,8 +388,9 @@ trigger:
     event: enter
 action:
   - service: db_infoscreen.set_paused
+    target:
+      device_id: 1234567890abcdef  # Use the device picker in the UI
     data:
-      station: "Your Station Name"
       paused: false
 ```
 
@@ -402,12 +404,18 @@ trigger:
     at: "23:00:00"
 action:
   - service: db_infoscreen.set_paused
+    target:
+      entity_id:
+        - sensor.station_1
+        - sensor.station_2
     data:
-      station: "Your Station Name"
       paused: true
 
 # Create a second automation for 06:00:00 with paused: false to resume.
 ```
 
 !!! tip "Targeting specific stations"
-    You can leave the `station` field blank to pause/resume **all** configured stations at once.
+    You can target stations in three ways:
+    1. **Target**: Use the `entity_id` or `device_id` picker in the UI.
+    2. **Station Name**: Provide the exact `station` name as text.
+    3. **All**: Leave both blank to pause/resume **all** configured stations at once.

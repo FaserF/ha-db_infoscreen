@@ -23,6 +23,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.network import get_url
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -196,11 +197,28 @@ async def async_setup_entry(
             target_station = service_call.data.get("station")
             new_offset = service_call.data.get("offset", "00:00")
 
+            # Resolve entities/devices to entry IDs
+            target_entry_ids = set()
+            if "entity_id" in service_call.data:
+                ent_reg = er.async_get(hass)
+                for entity_id in service_call.data["entity_id"]:
+                    if entry := ent_reg.async_get(entity_id):
+                        if entry.platform == DOMAIN:
+                            target_entry_ids.add(entry.config_entry_id)
+            if "device_id" in service_call.data:
+                dev_reg = dr.async_get(hass)
+                for device_id in service_call.data["device_id"]:
+                    if device := dev_reg.async_get(device_id):
+                        target_entry_ids.update(device.config_entries)
+
             for coord in hass.data[DOMAIN].values():
                 if isinstance(coord, DBInfoScreenCoordinator):
-                    if (
-                        target_station
-                        and str(coord.station).lower() != str(target_station).lower()
+                    if (target_station or target_entry_ids) and not (
+                        (
+                            target_station
+                            and str(coord.station).lower() == str(target_station).lower()
+                        )
+                        or (coord.config_entry.entry_id in target_entry_ids)
                     ):
                         continue
 
@@ -221,6 +239,8 @@ async def async_setup_entry(
             schema=vol.Schema(
                 {
                     vol.Optional("station"): cv.string,
+                    vol.Optional("entity_id"): cv.entity_ids,
+                    vol.Optional("device_id"): cv.device_ids,
                     vol.Required("offset"): cv.string,
                 }
             ),
@@ -233,14 +253,32 @@ async def async_setup_entry(
             target_station = service_call.data.get("station")
             paused = service_call.data["paused"]
 
+            # Resolve entities/devices to entry IDs
+            target_entry_ids = set()
+            if "entity_id" in service_call.data:
+                ent_reg = er.async_get(hass)
+                for entity_id in service_call.data["entity_id"]:
+                    if entry := ent_reg.async_get(entity_id):
+                        if entry.platform == DOMAIN:
+                            target_entry_ids.add(entry.config_entry_id)
+            if "device_id" in service_call.data:
+                dev_reg = dr.async_get(hass)
+                for device_id in service_call.data["device_id"]:
+                    if device := dev_reg.async_get(device_id):
+                        target_entry_ids.update(device.config_entries)
+
             for entry in hass.config_entries.async_entries(DOMAIN):
                 coordinator = hass.data[DOMAIN].get(entry.entry_id)
                 if not coordinator:
                     continue
 
-                if (
-                    target_station
-                    and str(coordinator.station).lower() != str(target_station).lower()
+                if (target_station or target_entry_ids) and not (
+                    (
+                        target_station
+                        and str(coordinator.station).lower()
+                        == str(target_station).lower()
+                    )
+                    or (entry.entry_id in target_entry_ids)
                 ):
                     continue
 
@@ -260,6 +298,8 @@ async def async_setup_entry(
             schema=vol.Schema(
                 {
                     vol.Optional("station"): cv.string,
+                    vol.Optional("entity_id"): cv.entity_ids,
+                    vol.Optional("device_id"): cv.device_ids,
                     vol.Required("paused"): cv.boolean,
                 }
             ),

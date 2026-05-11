@@ -64,8 +64,33 @@ set_offset:
       selector:
         text:
     station:
-      description: The station name to apply the offset to. If left blank, it applies to all stations.
+      description: The station name to apply the offset to.
       example: München Hbf
       required: false
       selector:
         text:
+  target:
+    entity:
+      integration: db_infoscreen
+    device:
+      integration: db_infoscreen
+
+set_paused:
+  description: Toggles periodic updates for one or more stations.
+  fields:
+    paused:
+      description: Whether to pause (true) or resume (false) updates.
+      required: true
+      selector:
+        boolean:
+    station:
+      description: The station name to apply the paused state to.
+      example: München Hbf
+      required: false
+      selector:
+        text:
+  target:
+    entity:
+      integration: db_infoscreen
+    device:
+      integration: db_infoscreen
