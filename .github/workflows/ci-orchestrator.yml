@@ -7,8 +7,6 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
   workflow_call:
-  schedule:
-    - cron: '44 12 * * 6'
 
 permissions:
   contents: write
