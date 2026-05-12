@@ -153,20 +153,32 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
 
                 _LOGGER.debug("Raw departure time: %s", departure_time)
 
-                # Format the departure time if it's valid
-                departure_time = self.format_departure_time(departure_time)
-                if departure_time is None:
-                    _LOGGER.debug("Formatted departure time is None, skipping update.")
-                    # If the time is not valid, return the last valid value or "invalid_time"
-                    return self._last_valid_value or "invalid_time"
+                # Use the admode from coordinator to determine the display format
+                admode = getattr(self.coordinator, "admode", "preferred departure")
 
-                # If there is no delay, update the last valid value with the departure time
-                if delay_departure in (0, None, "None"):
+                if admode == "preferred departure":
+                    # For preferred departure, show actual time (scheduled + delay)
+                    # departure_timestamp already includes the delay
+                    actual_time = main_departure.get("departure_timestamp")
+                    departure_time = self.format_departure_time(actual_time)
+
+                    if departure_time is None:
+                        _LOGGER.debug("Formatted departure time is None, skipping update.")
+                        return self._last_valid_value or "invalid_time"
+
                     self._last_valid_value = departure_time
                 else:
-                    # If there is a delay, append the delay to the departure time
-                    departure_time = f"{departure_time} +{delay_departure}"
-                    self._last_valid_value = departure_time
+                    # For "departure" and "arrival" modes, show scheduled time + delay notation
+                    departure_time = self.format_departure_time(departure_time)
+                    if departure_time is None:
+                        _LOGGER.debug("Formatted departure time is None, skipping update.")
+                        return self._last_valid_value or "invalid_time"
+
+                    if delay_departure in (0, None, "None"):
+                        self._last_valid_value = departure_time
+                    else:
+                        departure_time = f"{departure_time} +{delay_departure}"
+                        self._last_valid_value = departure_time
 
                 _LOGGER.debug("Sensor state updated: %s", self._last_valid_value)
                 return self._last_valid_value

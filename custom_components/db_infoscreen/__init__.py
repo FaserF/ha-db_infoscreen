@@ -443,7 +443,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         self.platforms = config.get(CONF_PLATFORMS, "")
         self.paused = bool(config.get(CONF_PAUSED, False))
         self.via_stations_logic = config.get(CONF_VIA_STATIONS_LOGIC, "OR")
-        admode = config.get(CONF_ADMODE, "")
+        self.admode = config.get(CONF_ADMODE, "preferred departure")
         raw_update_interval = config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
         update_interval = int(max(raw_update_interval, MIN_UPDATE_INTERVAL))
         self._api_update_interval = update_interval * 60
@@ -465,9 +465,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
         # Assemble Fetch URL (Generic for caching)
         fetch_params = {}
-        if admode == "arrival":
+        if self.admode == "arrival":
             fetch_params["admode"] = "arr"
-        elif admode == "departure":
+        elif self.admode in ["departure", "preferred departure"]:
             fetch_params["admode"] = "dep"
 
         # Check if the data source is in the HAFAS list
