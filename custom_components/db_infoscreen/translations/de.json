@@ -60,7 +60,7 @@
           "show_occupancy": "Auslastung anzeigen (falls verfügbar)",
           "exclude_cancelled": "Ausgefallene Züge entfernen",
           "favorite_trains": "Mehrere Favoriten-Züge (kommagetrennt e.g. 'ICE 1, RE 2')",
-          "deduplicate_key": "Eigener Deduplizierungs-Key (z.B. '{line}' - Leer für Standard: '{journeyID}{journeyId}{id}{key}{trainNumber}')"
+          "deduplicate_key": "Eigener Deduplizierungs-Key (z.B. '{'line'}' - Leer für Standard: '{'journeyID'}''{'journeyId'}''{'id'}''{'key'}''{'trainNumber'}')"
         }
       },
       "manual_config": {
@@ -173,7 +173,7 @@
           "drop_late_trains": "Verspätete Züge ausblenden",
           "past_60_minutes": "Letzte 60 Min anzeigen",
           "data_source": "Datenquelle",
-          "deduplicate_key": "Eigener Deduplizierungs-Key (z.B. '{line}' - Leer für Standard: '{journeyID}{journeyId}{id}{key}{trainNumber}')"
+          "deduplicate_key": "Eigener Deduplizierungs-Key (z.B. '{'line'}' - Leer für Standard: '{'journeyID'}''{'journeyId'}''{'id'}''{'key'}''{'trainNumber'}')"
         }
       }
     }
