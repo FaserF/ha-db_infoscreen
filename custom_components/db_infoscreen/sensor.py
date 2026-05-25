@@ -163,7 +163,9 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                     departure_time = self.format_departure_time(actual_time)
 
                     if departure_time is None:
-                        _LOGGER.debug("Formatted departure time is None, skipping update.")
+                        _LOGGER.debug(
+                            "Formatted departure time is None, skipping update."
+                        )
                         return self._last_valid_value or "invalid_time"
 
                     self._last_valid_value = departure_time
@@ -171,7 +173,9 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                     # For "departure" and "arrival" modes, show scheduled time + delay notation
                     departure_time = self.format_departure_time(departure_time)
                     if departure_time is None:
-                        _LOGGER.debug("Formatted departure time is None, skipping update.")
+                        _LOGGER.debug(
+                            "Formatted departure time is None, skipping update."
+                        )
                         return self._last_valid_value or "invalid_time"
 
                     if delay_departure in (0, None, "None"):
