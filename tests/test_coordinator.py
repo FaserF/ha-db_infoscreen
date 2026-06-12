@@ -18,6 +18,26 @@ from custom_components.db_infoscreen.const import (
 from tests.common import patch_session
 
 
+def _mock_response(status=200, data=None):
+    """Create a minimal async context manager response."""
+    resp = MagicMock()
+    resp.status = status
+
+    async def json_func():
+        return data if data is not None else {}
+
+    async def enter_func():
+        return resp
+
+    async def exit_func(exc_type, exc, tb):
+        return None
+
+    resp.json = MagicMock(side_effect=json_func)
+    resp.__aenter__ = MagicMock(side_effect=enter_func)
+    resp.__aexit__ = MagicMock(side_effect=exit_func)
+    return resp
+
+
 @pytest.fixture(autouse=True)
 def patch_coordinator():
     """Patch DataUpdateCoordinator to prevent background tasks and simplify tests."""
@@ -115,6 +135,39 @@ async def test_coordinator_update_data(hass, mock_config_entry):
         data = await coordinator._async_update_data()
         assert len(data) == 1
         assert data[0]["destination"] == "Test Dest"
+
+
+@pytest.mark.asyncio
+async def test_coordinator_429_counts_as_api_fetch(hass, mock_config_entry):
+    """Test that 429 responses throttle the next local update tick."""
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    coordinator.server_version = "test"
+    coordinator._last_valid_value = [{"destination": "Cached Dest"}]
+
+    with patch_session(side_effect=lambda *_args, **_kwargs: _mock_response(429)):
+        data = await coordinator._async_update_data()
+
+    assert data == [{"destination": "Cached Dest"}]
+    assert coordinator._last_api_fetch > 0
+
+
+@pytest.mark.asyncio
+async def test_coordinator_missing_raw_data_without_fetch_returns_last_valid(
+    hass, mock_config_entry
+):
+    """Test that throttled local ticks do not fetch again without raw cache data."""
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    coordinator.server_version = "test"
+    coordinator._last_api_fetch = dt_util.now().timestamp()
+    coordinator._raw_api_data = None
+    coordinator._last_valid_value = [{"destination": "Cached Dest"}]
+
+    with patch_session(
+        side_effect=lambda *_args, **_kwargs: pytest.fail("Unexpected API fetch")
+    ):
+        data = await coordinator._async_update_data()
+
+    assert data == [{"destination": "Cached Dest"}]
 
 
 @pytest.mark.asyncio
