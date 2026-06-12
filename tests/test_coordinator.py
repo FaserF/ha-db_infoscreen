@@ -22,19 +22,9 @@ def _mock_response(status=200, data=None):
     """Create a minimal async context manager response."""
     resp = MagicMock()
     resp.status = status
-
-    async def json_func():
-        return data if data is not None else {}
-
-    async def enter_func():
-        return resp
-
-    async def exit_func(exc_type, exc, tb):
-        return None
-
-    resp.json = MagicMock(side_effect=json_func)
-    resp.__aenter__ = MagicMock(side_effect=enter_func)
-    resp.__aexit__ = MagicMock(side_effect=exit_func)
+    resp.json = AsyncMock(return_value=data if data is not None else {})
+    resp.__aenter__ = AsyncMock(return_value=resp)
+    resp.__aexit__ = AsyncMock(return_value=None)
     return resp
 
 
@@ -158,6 +148,7 @@ async def test_coordinator_missing_raw_data_without_fetch_returns_last_valid(
     """Test that throttled local ticks do not fetch again without raw cache data."""
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
     coordinator.server_version = "test"
+    coordinator._api_update_interval = 60
     coordinator._last_api_fetch = dt_util.now().timestamp()
     coordinator._raw_api_data = None
     coordinator._last_valid_value = [{"destination": "Cached Dest"}]

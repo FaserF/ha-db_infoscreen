@@ -738,7 +738,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     if err.status == 429:
                         self._last_api_fetch = now.timestamp()
                         _LOGGER.warning(
-                            "Rate limit hit for %s (429 Too Many Requests). skipping retries.",
+                            "Rate limit hit for %s (429 Too Many Requests). Skipping retries.",
                             self.fetch_url,
                         )
                         return self._last_valid_value or []
