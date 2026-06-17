@@ -242,9 +242,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 # Availability check
                 valid = await self._validate_server_url(url)
                 if not valid:
-                    if server_type == SERVER_TYPE_OFFICIAL:
+                    if (
+                        server_type == SERVER_TYPE_OFFICIAL
+                        or "finalrewind" in url.lower()
+                    ):
                         errors["base"] = "cannot_connect_official"
-                    elif server_type == SERVER_TYPE_FASERF:
+                    elif (
+                        server_type == SERVER_TYPE_FASERF or "fabiseitz" in url.lower()
+                    ):
                         errors["base"] = "cannot_connect_faserf"
                     else:
                         errors["base"] = "cannot_connect"
@@ -984,9 +989,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
                 valid = await async_verify_server(self.hass, url)
                 if not valid:
-                    if server_type == SERVER_TYPE_OFFICIAL:
+                    if (
+                        server_type == SERVER_TYPE_OFFICIAL
+                        or "finalrewind" in url.lower()
+                    ):
                         errors["base"] = "cannot_connect_official"
-                    elif server_type == SERVER_TYPE_FASERF:
+                    elif (
+                        server_type == SERVER_TYPE_FASERF or "fabiseitz" in url.lower()
+                    ):
                         errors["base"] = "cannot_connect_faserf"
                     else:
                         errors["base"] = "cannot_connect"

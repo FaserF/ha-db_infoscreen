@@ -108,11 +108,57 @@ def simple_serializer(obj: Any) -> Any:
     raise TypeError(f"Type {type(obj)} not serializable")
 
 
+async def async_get_autocomplete_path(hass: HomeAssistant, base_url: str) -> str:
+    """Dynamically discover the autocomplete.js path from the server's homepage HTML."""
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+    default_path = "/dyn/v110/autocomplete.js"
+    cache_key = f"db_infoscreen_autocomplete_path_{base_url}"
+
+    if cache_key in hass.data:
+        return str(hass.data[cache_key])
+
+    try:
+        session = async_get_clientsession(hass)
+        # Use a realistic User-Agent
+        headers = {
+            "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
+        }
+        async with async_timeout.timeout(10):
+            async with session.get(base_url, headers=headers) as response:
+                if response.status == 200:
+                    html = await response.text()
+                    # Search for autocomplete.js in src attribute
+                    match = re.search(
+                        r'src=["\']([^"\']*autocomplete\.js[^"\']*)["\']', html
+                    )
+                    if match:
+                        path = match.group(1)
+                        if not path.startswith("/"):
+                            path = f"/{path}"
+                        hass.data[cache_key] = path
+                        _LOGGER.debug(
+                            "Dynamically discovered autocomplete path for %s: %s",
+                            base_url,
+                            path,
+                        )
+                        return path
+    except Exception as e:
+        _LOGGER.warning(
+            "Failed to dynamically discover autocomplete path for %s, using fallback: %s",
+            base_url,
+            e,
+        )
+
+    return default_path
+
+
 async def async_verify_server(hass: HomeAssistant, base_url: str) -> bool:
     """Verify that a server is reachable and specifically a DBF instance."""
     from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-    station_url = f"{base_url}{STATION_AUTOCOMPLETE_PATH}"
+    autocomplete_path = await async_get_autocomplete_path(hass, base_url)
+    station_url = f"{base_url}{autocomplete_path}"
     _LOGGER.debug("Verifying server at %s", station_url)
 
     # Use a realistic User-Agent to avoid being blocked by simple scrapers/rate-limiters
@@ -160,7 +206,8 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
     from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
     now = datetime.now(timezone.utc)
-    station_url = f"{base_url}{STATION_AUTOCOMPLETE_PATH}"
+    autocomplete_path = await async_get_autocomplete_path(hass, base_url)
+    station_url = f"{base_url}{autocomplete_path}"
 
     # Use a per-server cache key to avoid mixing stations from different providers
     server_slug = re.sub(r"[^a-zA-Z0-9]", "_", base_url)
