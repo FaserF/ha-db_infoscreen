@@ -145,6 +145,7 @@ async def test_coordinator_429_counts_as_api_fetch(hass, mock_config_entry):
 async def test_coordinator_429_exception_counts_as_api_fetch(hass, mock_config_entry):
     """Test that 429 exception (aiohttp.ClientResponseError) throttled updates."""
     import aiohttp
+
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
     coordinator.server_version = "test"
     coordinator._last_valid_value = [{"destination": "Cached Dest"}]
@@ -162,7 +163,6 @@ async def test_coordinator_429_exception_counts_as_api_fetch(hass, mock_config_e
 
     assert data == [{"destination": "Cached Dest"}]
     assert coordinator._last_api_fetch > 0
-
 
 
 @pytest.mark.asyncio
