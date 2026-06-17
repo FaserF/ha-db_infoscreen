@@ -1,7 +1,7 @@
 """Shared test helpers."""
 
 from contextlib import contextmanager
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, AsyncMock, patch
 import custom_components.db_infoscreen as db_mod
 
 
@@ -13,22 +13,10 @@ def patch_session(mock_data=None, side_effect=None):
     def create_mock_response(data):
         resp = MagicMock()
         resp.status = 200
-
-        async def json_func():
-            return data
-
-        resp.json = MagicMock(side_effect=json_func)
-
+        resp.json = AsyncMock(return_value=data)
         resp.raise_for_status = MagicMock()
-
-        async def enter_func():
-            return resp
-
-        async def exit_func(exc_type, exc, tb):
-            return None
-
-        resp.__aenter__ = MagicMock(side_effect=enter_func)
-        resp.__aexit__ = MagicMock(side_effect=exit_func)
+        resp.__aenter__ = AsyncMock(return_value=resp)
+        resp.__aexit__ = AsyncMock(return_value=None)
         return resp
 
     # 2. Setup the session mock

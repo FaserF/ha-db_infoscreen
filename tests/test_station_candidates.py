@@ -20,26 +20,19 @@ async def test_async_get_station_candidates_json_success(hass: HomeAssistant) ->
     mock_response.headers = {"Content-Type": "application/json"}
 
     # Mock json() as an async function
-    async def json_side_effect():
-        return {
+    mock_response.json = AsyncMock(
+        return_value={
             "candidates": [
                 {"name": "Berlin Hbf", "code": "8011160"},
                 {"name": "Berlin Zoologischer Garten", "code": "8010406"},
             ]
         }
-
-    mock_response.json = MagicMock(side_effect=json_side_effect)
+    )
 
     # Mock text() as an async function to avoid returning MagicMocks
-    async def text_side_effect():
-        return ""
+    mock_response.text = AsyncMock(return_value="")
 
-    mock_response.text = MagicMock(side_effect=text_side_effect)
-
-    async def enter_side_effect():
-        return mock_response
-
-    mock_response.__aenter__ = MagicMock(side_effect=enter_side_effect)
+    mock_response.__aenter__ = AsyncMock(return_value=mock_response)
     mock_response.__aexit__ = AsyncMock(return_value=None)
 
     mock_session.get.return_value = mock_response
@@ -66,21 +59,14 @@ async def test_async_get_station_candidates_direct_match(hass: HomeAssistant) ->
     mock_response.headers = {"Content-Type": "application/json"}
 
     # Mock json() for direct match
-    async def json_side_effect():
-        return {"departures": [], "station": {"name": "Berlin Hbf"}}
-
-    mock_response.json = MagicMock(side_effect=json_side_effect)
+    mock_response.json = AsyncMock(
+        return_value={"departures": [], "station": {"name": "Berlin Hbf"}}
+    )
 
     # Mock text()
-    async def text_side_effect():
-        return "Abfahrtstafel"
+    mock_response.text = AsyncMock(return_value="Abfahrtstafel")
 
-    mock_response.text = MagicMock(side_effect=text_side_effect)
-
-    async def enter_side_effect():
-        return mock_response
-
-    mock_response.__aenter__ = MagicMock(side_effect=enter_side_effect)
+    mock_response.__aenter__ = AsyncMock(return_value=mock_response)
     mock_response.__aexit__ = AsyncMock(return_value=None)
 
     mock_session.get.return_value = mock_response
@@ -114,22 +100,14 @@ async def test_async_get_station_candidates_html_fallback(hass: HomeAssistant) -
         resp.status = status
         resp.headers = {"Content-Type": content_type}
 
-        async def text_func() -> str:
-            return text or ""
+        resp.text = AsyncMock(return_value=text or "")
 
-        resp.text = MagicMock(side_effect=text_func)
+        if json_err:
+            resp.json = AsyncMock(side_effect=json_err)
+        else:
+            resp.json = AsyncMock(return_value=json_data or {})
 
-        async def json_func() -> dict:
-            if json_err:
-                raise json_err
-            return json_data or {}
-
-        resp.json = MagicMock(side_effect=json_func)
-
-        async def enter_func() -> MagicMock:
-            return resp
-
-        resp.__aenter__ = MagicMock(side_effect=enter_func)
+        resp.__aenter__ = AsyncMock(return_value=resp)
         resp.__aexit__ = AsyncMock(return_value=None)
         return resp
 
@@ -229,8 +207,7 @@ async def test_async_get_station_candidates_dot_encoding(hass: HomeAssistant) ->
         await async_get_station_candidates(
             hass, "http://localhost", "Margaretastr.", "KVB"
         )
-        
+
         # Check that the first requested URL encoded "Margaretastr." as "Margaretastr%2E"
         called_url = mock_session.get.call_args_list[0][0][0]
         assert "Margaretastr%2E.json" in called_url
-
