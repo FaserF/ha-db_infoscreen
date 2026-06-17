@@ -18,6 +18,14 @@ jobs:
             const issue = context.payload.issue;
             const labels = issue.labels.map(l => l.name);
             let body = "Hi @" + issue.user.login + ", thanks for opening this issue! 👋\n\n";
+
+            const issueBody = issue.body || "";
+            if (issueBody.includes("FaserF Server (dbf.fabiseitz.de)")) {
+              body += "⚠️ **FaserF Server Note:**\nThe DBF FaserF Server is privately hosted by @FaserF and 100% uptime cannot be guaranteed. If the server is currently offline or unreachable, I will investigate the issue, but it is strongly recommended to self-host a DBF server or use my Home Assistant App (Add-On) for self-hosting.\n\n";
+            } else if (issueBody.includes("Official Server (dbf.finalrewind.org)")) {
+              body += "⚠️ **Official Server Note:**\nIf the official server is currently offline or unreachable, please refer to this GitHub issue for more information: https://github.com/FaserF/ha-db_infoscreen/issues/122. It is strongly recommended to self-host a DBF server or use my Home Assistant App (Add-On) for self-hosting.\n\n";
+            }
+
             const maintainerNote = "\n\n---\n*Please note: I maintain this integration in my free time as a hobby project. I'll do my best to look into this soon, but feedback speed may vary depending on my availability.*";
 
             if (labels.includes('bug')) {
@@ -44,3 +52,4 @@ jobs:
               repo: context.repo.repo,
               body: body
             });
+

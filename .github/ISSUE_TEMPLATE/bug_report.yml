@@ -118,6 +118,20 @@ body:
         - ZVV  
         - mobiliteit
         - Other
+  - type: dropdown
+    id: server_type
+    validations:
+      required: false
+    attributes:
+      label: Which server are you using? (optional)
+      description: |
+        Please specify the server you are using for API requests.
+      options:
+        - "Official Server (dbf.finalrewind.org)"
+        - "FaserF Server (dbf.fabiseitz.de)"
+        - "Homeassistant App (Add-On) (local)"
+        - "custom (custom)"
+
   - type: markdown
     attributes:
       value: |

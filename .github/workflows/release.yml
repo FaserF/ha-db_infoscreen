@@ -1,24 +1,35 @@
+---
 name: Release
 
-on:
+"on":
   workflow_dispatch:
     inputs:
       release_type:
-        description: 'Release Type'
+        description: "Type of release (stable, beta, nightly)"
         required: true
+        default: "beta"
         type: choice
         options:
           - stable
           - beta
           - nightly
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-release
+  cancel-in-progress: true
+
 jobs:
-  release:
-    name: Create Release
+  versioning:
+    name: Determine Version
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
-      packages: write
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      tag: ${{ steps.get_version.outputs.tag }}
+      is_prerelease: ${{ steps.get_version.outputs.is_prerelease }}
+      release_body: ${{ steps.get_version.outputs.release_body }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -27,58 +38,388 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.14'
+          python-version: "3.13"
 
       - name: Calculate Version
-        id: version
+        id: get_version
+        shell: pwsh
+        env:
+          RELEASE_TYPE: ${{ inputs.release_type }}
+          REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          NEW_VERSION=$(python .github/scripts/version_manager.py bump --type ${{ inputs.release_type }})
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          $type = $env:RELEASE_TYPE
+          $repo = $env:REPO.ToLower()
+          $owner = if (![string]::IsNullOrEmpty($env:OWNER)) { $env:OWNER.ToLower() } else { $repo.Split('/')[0] }
+          $repo_name = if (![string]::IsNullOrEmpty($env:REPO_NAME)) { $env:REPO_NAME.ToLower() } else { $repo.Split('/')[1] }
 
-      - name: Create Release Tag
-        if: inputs.release_type != 'nightly'
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git commit -am "chore(release): bump version to ${{ steps.version.outputs.version }}"
-          git tag v${{ steps.version.outputs.version }}
-          git push origin v${{ steps.version.outputs.version }}
-          git push origin main
+          # 1. Get next version via version_manager.py dry run (just query it by calculation)
+          # We run version_manager.py bump to get the version, but we will discard modifications in this job
+          $version = python .github/scripts/version_manager.py bump --type $type
+          git checkout -- VERSION custom_components/db_infoscreen/manifest.json 2>$null || true
+          
+          Write-Host "Calculated Version: $version"
+          $tag = "v$version"
+          $is_prerelease = if ($type -eq "stable") { "false" } else { "true" }
 
-      - name: 📝 Find Previous Tag
-        id: pre_tag
-        run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
+          # Extract base version without suffixes (e.g. 2026.5.3 from 2026.5.3b1)
+          $base_version = $version
+          if ($version -match '^(\d+\.\d+\.\d+)') {
+            $base_version = $matches[1]
+          }
 
-      - name: 📝 Generate Changelog
-        if: inputs.release_type != 'nightly'
+          # Determine changelog base tag (previous release tag to diff against)
+          $changelog_from = ""
+          $changelog_label = "initial release — full history"
+
+          # Fallback to git tags for finding the previous release
+          $latest_tag = git tag -l "[0-9]*" "v[0-9]*" --sort=-v:refname | Where-Object { $_ -match '^v?\d+\.\d+\.\d+(?:(?:b|-dev|-nightly)\d+)?$' } | Select-Object -First 1
+
+          if ($type -eq "stable") {
+            $stableTag = git tag -l --sort=-v:refname 2>$null |
+              Where-Object { $_ -match '^v?\d+\.\d+\.\d+$' } |
+              Select-Object -First 1
+            if ($stableTag) {
+              $changelog_from = $stableTag
+              $changelog_label = "since last stable release (``$stableTag``)"
+            }
+          } elseif ($type -eq "beta") {
+            $prevBeta = git tag -l "v${base_version}b*" "v${base_version}-beta*" --sort=-v:refname 2>$null |
+              Select-Object -First 1
+            if ($prevBeta) {
+              $changelog_from = $prevBeta
+              $changelog_label = "since previous beta (``$prevBeta``)"
+            } else {
+              $stableTag = git tag -l --sort=-v:refname 2>$null |
+                Where-Object { $_ -match '^v?\d+\.\d+\.\d+$' } |
+                Select-Object -First 1
+              if ($stableTag) {
+                $changelog_from = $stableTag
+                $changelog_label = "since last stable release (``$stableTag``) — first beta of $base_version"
+              }
+            }
+          } else {
+            if ($latest_tag) {
+              $changelog_from = $latest_tag
+              $changelog_label = "since ``$latest_tag``"
+            }
+          }
+
+          Write-Host "Changelog range start tag: '$changelog_from' ($changelog_label)"
+
+          # Count commits
+          $totalCommitCount = 0
+          try {
+            $countRange = if ($changelog_from) { "${changelog_from}..HEAD" } else { "HEAD" }
+            $totalCommitCount = [int](git rev-list --count $countRange 2>$null)
+          } catch { $totalCommitCount = 0 }
+
+          # Generate Changelog
+          $changelogMd = ""
+          $changelogScript = Join-Path $PWD "scripts/generate_changelog.ps1"
+          if (Test-Path $changelogScript) {
+            try {
+              $clArgs = @{
+                FromTag      = $changelog_from
+                TotalCommits = [string]$totalCommitCount
+                Repo         = $repo
+              }
+              $changelogLines = & pwsh -NoProfile -NonInteractive -File $changelogScript @clArgs 2>$null
+              $changelogMd = if ($changelogLines) { $changelogLines -join "`n" } else { "_No categorised changes detected._" }
+            } catch {
+              $changelogMd = "_Changelog could not be generated automatically. See commit history._"
+            }
+          } else {
+            $changelogMd = "_Changelog script not found._"
+          }
+
+          # Channel decorations
+          $channelBadge = switch ($type) {
+            "stable"  { "![Stable](https://img.shields.io/badge/channel-stable-brightgreen?style=flat-square)" }
+            "beta"    { "![Beta](https://img.shields.io/badge/channel-beta-orange?style=flat-square)" }
+            default   { "![Nightly](https://img.shields.io/badge/channel-nightly-blue?style=flat-square)" }
+          }
+
+          # Analyze diff impact
+          $diffRange = if ($changelog_from) { "${changelog_from}..HEAD" } else { "HEAD" }
+          $changedFiles = @()
+          try {
+            $changedFiles = git diff --name-only $diffRange 2>$null
+          } catch {}
+
+          $totalFiles = if ($changedFiles) { $changedFiles.Count } else { 0 }
+          $integrationCount = 0; $translationCount = 0; $ciCount = 0; $docsCount = 0; $testCount = 0
+
+          foreach ($f in $changedFiles) {
+            if ($f -match '^custom_components/db_infoscreen/translations/') { $translationCount++ }
+            elseif ($f -match '^custom_components/') { $integrationCount++ }
+            elseif ($f -match '^tests/') { $testCount++ }
+            elseif ($f -match '^\.github/' -or $f -match '^scripts/') { $ciCount++ }
+            elseif ($f -match '^docs/' -or $f -match '\.md$') { $docsCount++ }
+          }
+
+          $breakingCount = 0
+          try {
+            $logMsgs = git log $diffRange --format=%B 2>$null
+            if ($logMsgs) {
+              $breakingCount = ($logMsgs | Where-Object { $_ -match '\bBREAKING CHANGE\b|\bBREAKING:\b|^[a-zA-Z]+!:' }).Count
+            }
+          } catch {}
+
+          # Determine Risk Severity
+          $severity = "Standard"
+          $alertType = "NOTE"
+          $preamble = "This release introduces minor updates."
+
+          if ($breakingCount -gt 0) {
+            $severity = "Critical"
+            $alertType = "CAUTION"
+            $preamble = "This release contains **$breakingCount breaking change(s)**! Please review changes carefully."
+          } elseif ($integrationCount -gt 10) {
+            $severity = "High"
+            $alertType = "WARNING"
+            $preamble = "This release contains significant modifications to integration files. Verify operation in a test environment."
+          }
+
+          if ($type -ne "stable") {
+            $preamble = "ℹ️ **This is a $type build.** It contains preview features for testing.<br><br>" + $preamble
+          }
+
+          # Format Impact Summary
+          $impactSummary = [System.Collections.Generic.List[string]]::new()
+          if ($totalFiles -gt 0) {
+            if ($integrationCount -gt 0) { $pct = [math]::Round(($integrationCount / $totalFiles) * 100); $impactSummary.Add("⚙️ Core ($integrationCount files · $pct%)") }
+            if ($translationCount -gt 0) { $pct = [math]::Round(($translationCount / $totalFiles) * 100); $impactSummary.Add("🗣️ Translations ($translationCount files · $pct%)") }
+            if ($testCount -gt 0) { $pct = [math]::Round(($testCount / $totalFiles) * 100); $impactSummary.Add("🧪 Tests ($testCount files · $pct%)") }
+            if ($ciCount -gt 0) { $pct = [math]::Round(($ciCount / $totalFiles) * 100); $impactSummary.Add("🚀 CI/CD ($ciCount files · $pct%)") }
+            if ($docsCount -gt 0) { $pct = [math]::Round(($docsCount / $totalFiles) * 100); $impactSummary.Add("📖 Docs ($docsCount files · $pct%)") }
+          }
+          $impactStr = if ($impactSummary.Count -gt 0) { $impactSummary -join "  ·  " } else { "No codebase changes detected." }
+
+          # Build Risk Warning Note
+          $noteParts = [System.Collections.Generic.List[string]]::new()
+          $noteParts.Add("> [!$alertType]")
+          $noteParts.Add("> **Release Risk: $severity**")
+          $noteParts.Add("> $preamble")
+          $noteParts.Add(">")
+          $noteParts.Add("> **Affected areas:** $impactStr")
+          $prereleaseNote = "`n" + ($noteParts -join "`n") + "`n"
+
+          # Assemble release body
+          $releasedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm') + " UTC"
+          $bodyParts = [System.Collections.Generic.List[string]]::new()
+          $bodyParts.Add("# DB-Infoscreen $version  $channelBadge")
+          $bodyParts.Add("")
+          $bodyParts.Add($prereleaseNote)
+          $bodyParts.Add("## 📋 What's Changed")
+          $bodyParts.Add("")
+          
+          if ($totalCommitCount -ge 15) {
+            $bodyParts.Add("<details>")
+            $bodyParts.Add("<summary>Click to expand full changelog</summary>")
+            $bodyParts.Add("")
+          }
+          $bodyParts.Add($changelogMd)
+          if ($totalCommitCount -ge 15) {
+            $bodyParts.Add("")
+            $bodyParts.Add("</details>")
+          }
+          $bodyParts.Add("")
+          $bodyParts.Add("## 🛠️ Installation")
+          $bodyParts.Add("")
+          $bodyParts.Add("### Via HACS (Home Assistant Community Store)")
+          $bodyParts.Add("1. Search for **db-infoscreen** in the HACS integrations panel.")
+          $bodyParts.Add("2. Choose **Download**.")
+          $bodyParts.Add("3. Restart Home Assistant.")
+          $bodyParts.Add("")
+          $bodyParts.Add("### Manual Installation")
+          $bodyParts.Add("1. Download `db_infoscreen.zip` from the assets below.")
+          $bodyParts.Add("2. Extract the archive into your Home Assistant custom integration directory (usually `config/custom_components/`).")
+          $bodyParts.Add("3. Restart Home Assistant.")
+          $bodyParts.Add("")
+          $bodyParts.Add("---")
+          $bodyParts.Add("")
+          $bodyParts.Add("## 📊 Release Details")
+          $bodyParts.Add("")
+          $bodyParts.Add("| | |")
+          $bodyParts.Add("|---|---|")
+          $bodyParts.Add("| **Version** | ``$version`` |")
+          $bodyParts.Add("| **Channel** | $type |")
+          $bodyParts.Add("| **Released** | $releasedAt |")
+          $bodyParts.Add("| **Commits included** | $totalCommitCount — $changelog_label |")
+          $bodyParts.Add("")
+          $bodyParts.Add("---")
+          $bodyParts.Add("")
+          $bodyParts.Add("*📖 [Documentation](https://faserf.github.io/ha-db_infoscreen/)  ·  🐛 [Report an Issue](https://github.com/$repo/issues/new/choose)  ·  📦 [All Releases](https://github.com/$repo/releases)*")
+          
+          $body = $bodyParts -join "`n"
+          $body | Out-File -FilePath "release_body.md" -Encoding utf8
+
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "is_prerelease=$is_prerelease" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+          $delimiter = [System.Guid]::NewGuid().ToString("N")
+          "release_body<<$delimiter" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          $body | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          $delimiter | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Upload Release Body
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-body
+          path: release_body.md
+
+      - name: Prepare Initial Draft Body
+        shell: pwsh
         run: |
-          python .github/scripts/changelog_builder.py \
-            --from-tag "${{ steps.pre_tag.outputs.tag }}" \
-            --repo-url "https://github.com/${{ github.repository }}" \
-            --output "CHANGELOG_BODY.md"
+          $body = Get-Content release_body.md -Raw
+          $draftBody = $body + "`n`n---`n🔄 **Release Progress**: Version determined. Syncing repository files...`n"
+          $draftBody | Out-File -FilePath initial_draft_body.md -Encoding utf8
+
+      - name: Check and Delete Existing Draft Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        shell: pwsh
+        run: |
+          $repo = $env:REPO
+          $tag = "${{ steps.get_version.outputs.tag }}"
+          $releases = gh api "repos/$repo/releases" | ConvertFrom-Json -ErrorAction SilentlyContinue
+          $release = $releases | Where-Object { $_.tag_name -eq $tag -or $_.name -eq "Release ${{ steps.get_version.outputs.version }}" } | Select-Object -First 1
+          if ($release) {
+            if ($release.draft -eq $true) {
+              gh api -X DELETE "repos/$repo/releases/$($release.id)"
+              git push --delete origin $tag 2>$null || true
+            }
+          }
+
+      - name: Create Initial Draft Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag }}
+          name: Release ${{ steps.get_version.outputs.version }}
+          body_path: initial_draft_body.md
+          prerelease: ${{ steps.get_version.outputs.is_prerelease == 'true' }}
+          draft: true
+          generate_release_notes: false
+
+  sync-version:
+    name: Sync Repository Version
+    needs: versioning
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Configure Git and pull latest
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin ${{ github.ref_name }}
+
+      - name: Update Files
+        shell: pwsh
+        env:
+          NEW_VERSION: ${{ needs.versioning.outputs.version }}
+        run: |
+          python .github/scripts/version_manager.py bump --type ${{ inputs.release_type }}
+
+      - name: Commit and Push
+        run: |
+          git add -f VERSION
+          git add custom_components/db_infoscreen/manifest.json
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: release version ${{ needs.versioning.outputs.version }} [skip ci]"
+            git push origin HEAD:${{ github.ref_name }} || (git pull --rebase origin ${{ github.ref_name }} && git push origin HEAD:${{ github.ref_name }})
+          fi
+
+      - name: Download Release Body
+        uses: actions/download-artifact@v4
+        with:
+          name: release-body
+
+      - name: Update Draft Status (Zipping Integration)
+        shell: pwsh
+        run: |
+          $body = Get-Content release_body.md -Raw
+          $draftBody = $body + "`n`n---`n🔄 **Release Progress**: Repository version synced. Creating release assets...`n"
+          $draftBody | Out-File -FilePath updated_draft_body.md -Encoding utf8
+
+      - name: Update Draft Release on GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.versioning.outputs.tag }}
+          name: Release ${{ needs.versioning.outputs.version }}
+          body_path: updated_draft_body.md
+          prerelease: ${{ needs.versioning.outputs.is_prerelease == 'true' }}
+          draft: true
+          generate_release_notes: false
+
+  gh-release:
+    needs: [versioning, sync-version]
+    if: always() && needs.versioning.result == 'success' && needs.sync-version.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: 📦 Zip Component
-        if: inputs.release_type != 'nightly'
         run: |
           cd custom_components
           zip -r ../db_infoscreen.zip db_infoscreen
           cd ..
 
-      - name: Create Release Notes
-        uses: softprops/action-gh-release@v3
-        if: inputs.release_type != 'nightly'
+      - name: Download Release Body Artifact
+        uses: actions/download-artifact@v4
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: Release ${{ steps.version.outputs.version }}
-          body_path: CHANGELOG_BODY.md
-          prerelease: ${{ inputs.release_type == 'beta' }}
-          files: db_infoscreen.zip
+          name: release-body
 
-      - name: Post-Release Dev Bump
-        if: inputs.release_type != 'nightly'
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.versioning.outputs.tag }}
+          name: Release ${{ needs.versioning.outputs.version }}
+          body_path: release_body.md
+          prerelease: ${{ needs.versioning.outputs.is_prerelease == 'true' }}
+          draft: false
+          generate_release_notes: false
+          files: |
+            db_infoscreen.zip
+
+  cleanup-release:
+    needs: [versioning, sync-version, gh-release]
+    if: always() && needs.versioning.result == 'success' && (needs.sync-version.result == 'failure' || needs.gh-release.result == 'failure' || cancelled())
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Delete Draft Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        shell: pwsh
         run: |
-          NEW_DEV=$(python .github/scripts/version_manager.py bump --type dev)
-          git commit -am "chore(dev): bump to $NEW_DEV"
-          git push origin main
+          $repo = $env:REPO
+          $tag = "${{ needs.versioning.outputs.tag }}"
+          $releases = gh api "repos/$repo/releases" | ConvertFrom-Json -ErrorAction SilentlyContinue
+          $release = $releases | Where-Object { $_.tag_name -eq $tag } | Select-Object -First 1
+          if ($release -and $release.draft -eq $true) {
+            gh api -X DELETE "repos/$repo/releases/$($release.id)"
+            gh release delete $tag --yes --cleanup-tag 2>$null || true
+          }
