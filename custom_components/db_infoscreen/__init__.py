@@ -676,12 +676,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         if self.server_version is None:
             await self.async_fetch_server_version()
 
-        do_api_fetch = False
-        if (
-            self._raw_api_data is None
-            or now.timestamp() - self._last_api_fetch >= self._api_update_interval
-        ):
-            do_api_fetch = True
+        do_api_fetch = (
+            now.timestamp() - self._last_api_fetch >= self._api_update_interval
+        )
 
         if not do_api_fetch:
             _LOGGER.debug(
@@ -692,6 +689,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 ),
             )
             data = self._raw_api_data
+            if data is None:
+                return self._last_valid_value or []
         elif self.fetch_url in RESPONSE_CACHE:
             timestamp, cached_data = RESPONSE_CACHE[self.fetch_url]
             if now - timestamp < CACHE_TTL:
@@ -719,6 +718,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         self.fetch_url, timeout=aiohttp.ClientTimeout(total=30)
                     ) as response:
                         if response.status == 429:
+                            self._last_api_fetch = now.timestamp()
                             _LOGGER.warning(
                                 "Rate limit hit for %s (429 Too Many Requests). Skipping retries for this cycle.",
                                 self.fetch_url,
@@ -738,8 +738,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         break  # Success, exit retry loop
                 except aiohttp.ClientResponseError as err:
                     if err.status == 429:
+                        self._last_api_fetch = now.timestamp()
                         _LOGGER.warning(
-                            "Rate limit hit for %s (429 Too Many Requests). skipping retries.",
+                            "Rate limit hit for %s (429 Too Many Requests). Skipping retries.",
                             self.fetch_url,
                         )
                         return self._last_valid_value or []
