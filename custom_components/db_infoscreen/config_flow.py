@@ -77,7 +77,9 @@ def _generate_entry_title(data: dict) -> str:
     return " ".join(title_parts)
 
 
-async def async_validate_station_on_url(hass, server_url: str, station: str, data_source: str) -> dict:
+async def async_validate_station_on_url(
+    hass, server_url: str, station: str, data_source: str
+) -> dict:
     """
     Validate that the station can be reached with the given data source on the specified server URL.
     Returns {"valid": True} or {"valid": False, "error": "description"}
@@ -149,14 +151,14 @@ async def async_validate_station_on_url(hass, server_url: str, station: str, dat
     except Exception as e:
         _LOGGER.error("Validation request failed: %s", e)
         is_german = getattr(hass.config, "language", "en") == "de"
-        
+
         # Check if server is FaserF or Official
         is_private = False
         for priv_url in [SERVER_URL_OFFICIAL, SERVER_URL_FASERF]:
             if priv_url.lower() in server_url.lower():
                 is_private = True
                 break
-                
+
         if is_private:
             if is_german:
                 err_msg = (
@@ -798,9 +800,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         Validate that the station can be reached with the given data source.
         Returns {"valid": True} or {"valid": False, "error": "description"}
         """
-        return await async_validate_station_on_url(self.hass, self.server_url, station, data_source)
-
-
+        return await async_validate_station_on_url(
+            self.hass, self.server_url, station, data_source
+        )
 
     async def _validate_server_url(self, url: str) -> bool:
         """Verify that the server is reachable and looks like a DBF instance."""
@@ -1007,7 +1009,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                                         CONF_SERVER_TYPE,
                                         default=server_type,
                                     ): vol.In(
-                                        [SERVER_TYPE_CUSTOM, SERVER_TYPE_OFFICIAL, SERVER_TYPE_FASERF]
+                                        [
+                                            SERVER_TYPE_CUSTOM,
+                                            SERVER_TYPE_OFFICIAL,
+                                            SERVER_TYPE_FASERF,
+                                        ]
                                     ),
                                     vol.Optional(
                                         CONF_SERVER_URL,
@@ -1190,7 +1196,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                                 ): cv.boolean,
                                 vol.Optional(
                                     CONF_DROP_LATE_TRAINS,
-                                    default=user_input.get(CONF_DROP_LATE_TRAINS, False),
+                                    default=user_input.get(
+                                        CONF_DROP_LATE_TRAINS, False
+                                    ),
                                 ): cv.boolean,
                                 vol.Optional(
                                     CONF_PAST_60_MINUTES,

@@ -88,6 +88,7 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Installation: installation.md
+  - Self-Hosting: self-hosting.md
   - Configuration: configuration.md
   - Station Search: station-search.md
   - Data Sources: data-sources.md

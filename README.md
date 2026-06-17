@@ -33,14 +33,23 @@ The `db-infoscreen` integration provides detailed **departure times** and train 
   <img src="docs/images/sensor.png" alt="Departure Board" width="600px">
 </div>
 
-## 🏠 Home Assistant App (Add-on)
+## 🐳 Self-Hosting the DBF Backend
 
-This integration is best used with the **DBF (DB-Infoscreen) App**. While the integration can fetch data from public APIs, running your own local instance via the add-on provides more reliability and a dedicated Web UI.
+For a reliable and unrestricted setup, it is highly recommended to host your own **DBF (DB-Fahrplan / db-fakedisplay)** backend API.
 
-- **[DBF Add-on Repository](https://github.com/FaserF/hassio-addons/tree/master/dbf)**
-- **Features**: Dedicated departure board UI, automated wagon order updates, and self-hosted API.
+### Why Self-Host?
+* **No Sensor Limits**: Bypasses the default **30-sensor limit** enforced on the public API to protect public infrastructure.
+* **No Rate Limits or IP Bans**: Avoids the strict public API rate limits (30 requests/min total, 1 request/station/min).
+* **Improved Performance**: Faster updates as queries stay on your local network.
 
----
+### Hosting Options
+* **Home Assistant Add-on**: [DBF Add-on Repository](https://github.com/FaserF/hassio-addons/tree/master/dbf) – simple one-click install for Home Assistant OS.
+* **Docker Container**: [derf/db-fakedisplay](https://github.com/derf/db-fakedisplay) – run via Docker on Unraid, Synology, or any container host: `docker run -d -p 8092:8092 derf/db-fakedisplay:latest`.
+
+### Data Sources & Rate Limits
+Even when self-hosted, the backend fetches real-time train data directly from official APIs (like Deutsche Bahn IRIS-TTS and local transit HAFAS endpoints). Because these endpoints are designed to scale, a private home instance querying every few minutes will not trigger upstream rate limits or bans.
+
+For detailed setup instructions, see the **[Self-Hosting Documentation](https://faserf.github.io/ha-db_infoscreen/self-hosting/)**.
 
 ## ✨ Features
 
