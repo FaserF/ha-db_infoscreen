@@ -297,7 +297,7 @@ jobs:
           }
 
       - name: Create Initial Draft Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.get_version.outputs.tag }}
           name: Release ${{ steps.get_version.outputs.version }}
@@ -358,7 +358,7 @@ jobs:
           $draftBody | Out-File -FilePath updated_draft_body.md -Encoding utf8
 
       - name: Update Draft Release on GitHub
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.versioning.outputs.tag }}
           name: Release ${{ needs.versioning.outputs.version }}
@@ -391,7 +391,7 @@ jobs:
           name: release-body
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.versioning.outputs.tag }}
           name: Release ${{ needs.versioning.outputs.version }}
