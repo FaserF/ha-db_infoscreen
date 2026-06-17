@@ -227,8 +227,11 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
     _LOGGER.debug("Downloading station list from %s", station_url)
     try:
         session = async_get_clientsession(hass)
+        headers = {
+            "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
+        }
         async with async_timeout.timeout(10):
-            async with session.get(station_url) as response:
+            async with session.get(station_url, headers=headers) as response:
                 response.raise_for_status()
                 content = await response.text()
 
@@ -338,10 +341,12 @@ async def async_get_station_candidates(
         # Clean up double question marks or ampersands
         url = url.replace("??", "?").replace("?&", "?").replace("&&", "&").rstrip("?&")
         _LOGGER.debug("Trying candidate lookup: %s", url)
-
         try:
+            headers = {
+                "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
+            }
             async with async_timeout.timeout(10):
-                async with session.get(url) as response:
+                async with session.get(url, headers=headers) as response:
                     content_type = response.headers.get("Content-Type", "")
 
                     if "text/html" in content_type or response.status in [

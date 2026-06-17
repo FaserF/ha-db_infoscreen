@@ -556,8 +556,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         try:
             # Try the suggested workaround endpoint
             about_url = f"{self._base_url}/_about.json"
+            headers = {
+                "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
+            }
             async with async_timeout.timeout(10):
-                async with session.get(about_url, allow_redirects=True) as response:
+                async with session.get(
+                    about_url, headers=headers, allow_redirects=True
+                ) as response:
                     if response.status < 500:
                         data = await response.json()
                         if isinstance(data, dict):
@@ -714,8 +719,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
             for attempt in range(max_retries + 1):
                 try:
+                    headers = {
+                        "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
+                    }
                     async with session.get(
-                        self.fetch_url, timeout=aiohttp.ClientTimeout(total=30)
+                        self.fetch_url,
+                        headers=headers,
+                        timeout=aiohttp.ClientTimeout(total=30),
                     ) as response:
                         if response.status == 429:
                             self._last_api_fetch = now.timestamp()
@@ -1637,8 +1647,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 import aiohttp
 
                 session = async_get_clientsession(self.hass)
+                headers = {
+                    "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
+                }
                 async with session.get(
-                    url, timeout=aiohttp.ClientTimeout(total=10)
+                    url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)
                 ) as response:
                     # Handle both sync and async raise_for_status for better test compatibility
                     response.raise_for_status()

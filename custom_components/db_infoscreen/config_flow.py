@@ -111,8 +111,11 @@ async def async_validate_station_on_url(
         import aiohttp
 
         session = async_get_clientsession(hass)
+        headers = {
+            "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
+        }
         async with session.get(
-            url, params=params, timeout=aiohttp.ClientTimeout(total=30)
+            url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=30)
         ) as response:
             if response.status == 200:
                 data = await response.json()
@@ -304,7 +307,18 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 if data_source == "IRIS-TTS":
                     stations = await async_get_stations(self.hass, self.server_url)
                     if not stations:
-                        errors["base"] = "cannot_connect"
+                        if (
+                            self.server_type == SERVER_TYPE_OFFICIAL
+                            or "finalrewind" in self.server_url.lower()
+                        ):
+                            errors["base"] = "cannot_connect_official"
+                        elif (
+                            self.server_type == SERVER_TYPE_FASERF
+                            or "fabiseitz" in self.server_url.lower()
+                        ):
+                            errors["base"] = "cannot_connect_faserf"
+                        else:
+                            errors["base"] = "cannot_connect"
                     else:
                         matches = find_station_matches(stations, station_query)
                         if not matches:
