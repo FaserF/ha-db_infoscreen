@@ -77,6 +77,108 @@ def _generate_entry_title(data: dict) -> str:
     return " ".join(title_parts)
 
 
+async def async_validate_station_on_url(hass, server_url: str, station: str, data_source: str) -> dict:
+    """
+    Validate that the station can be reached with the given data source on the specified server URL.
+    Returns {"valid": True} or {"valid": False, "error": "description"}
+    """
+    from urllib.parse import quote
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+    from .const import DATA_SOURCE_MAP, SERVER_URL_OFFICIAL, SERVER_URL_FASERF
+
+    # Clean station name
+    station_str: str = str(station)
+    # Remove any trailing provider suffix like (MVV) or (IRIS-TTS)
+    station_str = re.sub(r"\s+\([^)]+\)$", "", station_str).strip()
+
+    station_cleaned = " ".join(station_str.split())
+    encoded_station = quote(station_cleaned, safe="-:")
+    if encoded_station.endswith("."):
+        encoded_station = encoded_station[:-1] + "%2E"
+
+    url = f"{server_url}/{encoded_station}.json"
+
+    params: dict[str, str] = {}
+    if data_source in DATA_SOURCE_MAP:
+        key, value = DATA_SOURCE_MAP[data_source].split("=")
+        params[key] = value
+    elif data_source == "hafas=1":
+        params["hafas"] = "1"
+
+    try:
+        import aiohttp
+
+        session = async_get_clientsession(hass)
+        async with session.get(
+            url, params=params, timeout=aiohttp.ClientTimeout(total=30)
+        ) as response:
+            if response.status == 200:
+                data = await response.json()
+                if "error" in data:
+                    return {
+                        "valid": False,
+                        "error": data.get("error", "Unknown API error"),
+                    }
+                if "departures" not in data and "arrivals" not in data:
+                    is_german = getattr(hass.config, "language", "en") == "de"
+                    if is_german:
+                        err_msg = f"Keine Abfahrtsdaten für '{station}' mit Datenquelle '{data_source}' gefunden. Bitte prüfe Stationsname und Datenquelle."
+                    else:
+                        err_msg = f"No departure data found for '{station}' with data source '{data_source}'. Please check the station name and data source."
+                    return {
+                        "valid": False,
+                        "error": err_msg,
+                    }
+                return {"valid": True}
+            elif response.status == 300:
+                return {
+                    "valid": False,
+                    "ambiguous": True,
+                    "error": f"Station '{station}' is ambiguous (Status 300).",
+                }
+            elif response.status == 404:
+                return {
+                    "valid": False,
+                    "error": f"Station '{station}' not found. Please check the spelling or try a different data source.",
+                }
+            else:
+                return {
+                    "valid": False,
+                    "error": f"API returned status {response.status}. Please try again later.",
+                }
+    except Exception as e:
+        _LOGGER.error("Validation request failed: %s", e)
+        is_german = getattr(hass.config, "language", "en") == "de"
+        
+        # Check if server is FaserF or Official
+        is_private = False
+        for priv_url in [SERVER_URL_OFFICIAL, SERVER_URL_FASERF]:
+            if priv_url.lower() in server_url.lower():
+                is_private = True
+                break
+                
+        if is_private:
+            if is_german:
+                err_msg = (
+                    "Verbindung zum Server fehlgeschlagen. Der FaserF/Official Server ist ein "
+                    "privat gehosteter Server. Eine 24/7-Verfügbarkeit kann nicht garantiert "
+                    "werden, es wird jedoch versucht. Fehler: "
+                )
+            else:
+                err_msg = (
+                    "Connection to server failed. The FaserF/Official server is a privately "
+                    "hosted server. 24/7 availability cannot be guaranteed, but we try. "
+                    "Error: "
+                )
+            return {"valid": False, "error": f"{err_msg}{str(e)}"}
+        else:
+            if is_german:
+                err_msg = "Verbindung zum API-Server fehlgeschlagen: "
+            else:
+                err_msg = "Could not connect to API server: "
+            return {"valid": False, "error": f"{err_msg}{str(e)}"}
+
+
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
     """
     Handle the initial configuration and setup wizard for DB Infoscreen.
@@ -138,7 +240,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 # Availability check
                 valid = await self._validate_server_url(url)
                 if not valid:
-                    errors["base"] = "cannot_connect"
+                    if server_type == SERVER_TYPE_OFFICIAL:
+                        errors["base"] = "cannot_connect_official"
+                    elif server_type == SERVER_TYPE_FASERF:
+                        errors["base"] = "cannot_connect_faserf"
+                    else:
+                        errors["base"] = "cannot_connect"
                 else:
                     self.server_url = url
                     self.server_type = server_type
@@ -691,71 +798,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         Validate that the station can be reached with the given data source.
         Returns {"valid": True} or {"valid": False, "error": "description"}
         """
-        from urllib.parse import quote
-        from homeassistant.helpers.aiohttp_client import async_get_clientsession
-        from .const import DATA_SOURCE_MAP
+        return await async_validate_station_on_url(self.hass, self.server_url, station, data_source)
 
-        # Clean station name
-        station_str: str = str(station)
-        # Remove any trailing provider suffix like (MVV) or (IRIS-TTS)
-        station_str = re.sub(r"\s+\([^)]+\)$", "", station_str).strip()
 
-        station_cleaned = " ".join(station_str.split())
-        encoded_station = quote(station_cleaned, safe="-:")
-        if encoded_station.endswith("."):
-            encoded_station = encoded_station[:-1] + "%2E"
-
-        base_url = self.server_url
-        url = f"{base_url}/{encoded_station}.json"
-
-        params: dict[str, str] = {}
-        if data_source in DATA_SOURCE_MAP:
-            key, value = DATA_SOURCE_MAP[data_source].split("=")
-            params[key] = value
-        elif data_source == "hafas=1":
-            params["hafas"] = "1"
-
-        try:
-            import aiohttp
-
-            session = async_get_clientsession(self.hass)
-            async with session.get(
-                url, params=params, timeout=aiohttp.ClientTimeout(total=30)
-            ) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    if "error" in data:
-                        return {
-                            "valid": False,
-                            "error": data.get("error", "Unknown API error"),
-                        }
-                    if "departures" not in data and "arrivals" not in data:
-                        return {
-                            "valid": False,
-                            "error": f"No departure data found for '{station}' with data source '{data_source}'. Please check the station name and data source.",
-                        }
-                    return {"valid": True}
-                elif response.status == 300:
-                    return {
-                        "valid": False,
-                        "ambiguous": True,
-                        "error": f"Station '{station}' is ambiguous (Status 300).",
-                    }
-                elif response.status == 404:
-                    return {
-                        "valid": False,
-                        "error": f"Station '{station}' not found. Please check the spelling or try a different data source.",
-                    }
-                else:
-                    return {
-                        "valid": False,
-                        "error": f"API returned status {response.status}. Please try again later.",
-                    }
-        except Exception as e:
-            _LOGGER.error("Validation request failed: %s", e)
-            return {"valid": False, "error": f"Could not connect to API: {str(e)}"}
-
-        return {"valid": False, "error": "Unknown verification error"}
 
     async def _validate_server_url(self, url: str) -> bool:
         """Verify that the server is reachable and looks like a DBF instance."""
@@ -937,11 +982,48 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
                 valid = await async_verify_server(self.hass, url)
                 if not valid:
-                    errors["base"] = "cannot_connect"
+                    if server_type == SERVER_TYPE_OFFICIAL:
+                        errors["base"] = "cannot_connect_official"
+                    elif server_type == SERVER_TYPE_FASERF:
+                        errors["base"] = "cannot_connect_faserf"
+                    else:
+                        errors["base"] = "cannot_connect"
                 else:
-                    # Update options
-                    user_input[CONF_SERVER_URL] = url
-                    return await self._async_save_options(user_input)
+                    # Validate that the configured station is reachable on the new server URL
+                    station_raw = self._get_config_value(CONF_STATION)
+                    ds_raw = self._get_config_value(CONF_DATA_SOURCE, "IRIS-TTS")
+                    data_source = normalize_data_source(ds_raw)
+
+                    validation_result = await async_validate_station_on_url(
+                        self.hass, url, station_raw, data_source
+                    )
+                    if not validation_result["valid"]:
+                        errors["base"] = "station_invalid"
+                        return self.async_show_form(
+                            step_id="server_options",
+                            data_schema=vol.Schema(
+                                {
+                                    vol.Required(
+                                        CONF_SERVER_TYPE,
+                                        default=server_type,
+                                    ): vol.In(
+                                        [SERVER_TYPE_CUSTOM, SERVER_TYPE_OFFICIAL, SERVER_TYPE_FASERF]
+                                    ),
+                                    vol.Optional(
+                                        CONF_SERVER_URL,
+                                        default=url,
+                                    ): cv.string,
+                                }
+                            ),
+                            errors={"base": "station_invalid"},
+                            description_placeholders={
+                                "error_detail": validation_result["error"]
+                            },
+                        )
+                    else:
+                        # Update options
+                        user_input[CONF_SERVER_URL] = url
+                        return await self._async_save_options(user_input)
 
         return self.async_show_form(
             step_id="server_options",
@@ -1069,7 +1151,62 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_advanced_options(self, user_input=None):
         """Handle advanced options."""
+        errors = {}
         if user_input is not None:
+            new_data_source = user_input.get(CONF_DATA_SOURCE)
+            if new_data_source:
+                station_raw = self._get_config_value(CONF_STATION)
+                url = self._get_config_value(CONF_SERVER_URL, "")
+                data_source = normalize_data_source(new_data_source)
+
+                validation_result = await async_validate_station_on_url(
+                    self.hass, url, station_raw, data_source
+                )
+                if not validation_result["valid"]:
+                    errors["base"] = "station_invalid"
+                    return self.async_show_form(
+                        step_id="advanced_options",
+                        data_schema=vol.Schema(
+                            {
+                                vol.Optional(
+                                    CONF_DEDUPLICATE_DEPARTURES,
+                                    default=user_input.get(
+                                        CONF_DEDUPLICATE_DEPARTURES, False
+                                    ),
+                                ): cv.boolean,
+                                vol.Optional(
+                                    CONF_DEDUPLICATE_KEY,
+                                    default=user_input.get(
+                                        CONF_DEDUPLICATE_KEY, DEFAULT_DEDUPLICATE_KEY
+                                    ),
+                                ): cv.string,
+                                vol.Optional(
+                                    CONF_KEEP_ROUTE,
+                                    default=user_input.get(CONF_KEEP_ROUTE, False),
+                                ): cv.boolean,
+                                vol.Optional(
+                                    CONF_KEEP_ENDSTATION,
+                                    default=user_input.get(CONF_KEEP_ENDSTATION, False),
+                                ): cv.boolean,
+                                vol.Optional(
+                                    CONF_DROP_LATE_TRAINS,
+                                    default=user_input.get(CONF_DROP_LATE_TRAINS, False),
+                                ): cv.boolean,
+                                vol.Optional(
+                                    CONF_PAST_60_MINUTES,
+                                    default=user_input.get(CONF_PAST_60_MINUTES, False),
+                                ): cv.boolean,
+                                vol.Optional(
+                                    CONF_DATA_SOURCE,
+                                    default=new_data_source,
+                                ): vol.In(DATA_SOURCE_OPTIONS),
+                            }
+                        ),
+                        errors={"base": "station_invalid"},
+                        description_placeholders={
+                            "error_detail": validation_result["error"]
+                        },
+                    )
             return await self._async_save_options(user_input)
 
         return self.async_show_form(
@@ -1110,6 +1247,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     ): vol.In(DATA_SOURCE_OPTIONS),
                 }
             ),
+            errors=errors,
         )
 
     async def async_step_finish(self, user_input=None):

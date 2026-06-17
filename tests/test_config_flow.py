@@ -222,3 +222,35 @@ async def test_options_flow(hass):
     result = await flow.async_step_init()
     assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "init"
+
+
+@pytest.mark.asyncio
+async def test_form_unreachable_servers(hass):
+    """Test error keys returned when official or FaserF servers are unreachable."""
+    from custom_components.db_infoscreen.const import SERVER_TYPE_FASERF
+
+    flow = ConfigFlow()
+    flow.hass = hass
+
+    # Mock show_form
+    flow.async_show_form = MagicMock(
+        side_effect=lambda **kwargs: {
+            "type": FlowResultType.FORM,
+            "step_id": kwargs.get("step_id"),
+            "errors": kwargs.get("errors"),
+        }
+    )
+
+    # Test Official Server Unreachable
+    with patch(
+        "custom_components.db_infoscreen.utils.async_verify_server", return_value=False
+    ):
+        result = await flow.async_step_user({CONF_SERVER_TYPE: SERVER_TYPE_OFFICIAL})
+    assert result["errors"] == {"base": "cannot_connect_official"}
+
+    # Test FaserF Server Unreachable
+    with patch(
+        "custom_components.db_infoscreen.utils.async_verify_server", return_value=False
+    ):
+        result = await flow.async_step_user({CONF_SERVER_TYPE: SERVER_TYPE_FASERF})
+    assert result["errors"] == {"base": "cannot_connect_faserf"}

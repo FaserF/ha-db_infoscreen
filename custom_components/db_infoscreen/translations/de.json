@@ -81,6 +81,8 @@
       "unknown": "Ein unbekannter Fehler ist aufgetreten.",
       "no_stations_found": "Keine passenden Stationen gefunden.",
       "cannot_connect": "Verbindung zum Server fehlgeschlagen oder der Server ist keine gültige DB Infoscreen Instanz. Bitte prüfe die URL und deine Verbindung.",
+      "cannot_connect_official": "Verbindung zum offiziellen Server fehlgeschlagen. Bitte beachte: Der offizielle Server (dbf.finalrewind.org) ist ein privat gehosteter Server. Eine 24/7-Verfügbarkeit kann nicht garantiert werden, es wird jedoch versucht.",
+      "cannot_connect_faserf": "Verbindung zum FaserF-Server fehlgeschlagen. Bitte beachte: Der FaserF-Server (dbf.fabiseitz.de) ist ein privat gehosteter Server. Eine 24/7-Verfügbarkeit kann nicht garantiert werden, es wird jedoch versucht.",
       "invalid_url": "Bitte gib eine gültige URL ein (inkl. http:// oder https://)",
       "station_not_found_warning": "⚠️ Station nicht gefunden! Bitte Schreibweise prüfen oder eine andere Datenquelle versuchen.",
       "station_invalid": "❌ Daten konnten nicht abgerufen werden: {error_detail}",
