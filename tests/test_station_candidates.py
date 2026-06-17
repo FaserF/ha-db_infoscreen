@@ -214,3 +214,23 @@ async def test_async_get_station_candidates_error(hass: HomeAssistant) -> None:
         )
 
         assert candidates == []
+
+
+@pytest.mark.asyncio
+async def test_async_get_station_candidates_dot_encoding(hass: HomeAssistant) -> None:
+    """Test that station names ending with a dot are encoded as %2E."""
+    mock_session = MagicMock()
+    mock_session.get.side_effect = Exception("Stop early")
+
+    with patch(
+        "homeassistant.helpers.aiohttp_client.async_get_clientsession",
+        return_value=mock_session,
+    ):
+        await async_get_station_candidates(
+            hass, "http://localhost", "Margaretastr.", "KVB"
+        )
+        
+        # Check that the first requested URL encoded "Margaretastr." as "Margaretastr%2E"
+        called_url = mock_session.get.call_args_list[0][0][0]
+        assert "Margaretastr%2E.json" in called_url
+

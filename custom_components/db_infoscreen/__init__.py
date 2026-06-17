@@ -456,6 +456,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
         station_cleaned = " ".join(str(self.station).split())
         encoded_station = quote(station_cleaned, safe="-:,")
+        if encoded_station.endswith("."):
+            encoded_station = encoded_station[:-1] + "%2E"
         self._last_valid_value: list[dict[str, Any]] = []
         # Use the server URL from the config entry, fall back to official if missing
         self._base_url = config.get(CONF_SERVER_URL, SERVER_URL_OFFICIAL)
@@ -1613,6 +1615,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         """
         station_cleaned = " ".join(station.split())
         encoded_station = quote(station_cleaned, safe=",-")
+        if encoded_station.endswith("."):
+            encoded_station = encoded_station[:-1] + "%2E"
         url = f"{self._base_url}/{encoded_station}.json"
 
         # Check cache

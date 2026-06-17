@@ -272,6 +272,8 @@ async def async_get_station_candidates(
     # Normalize whitespace
     station = " ".join(str(station).split()).strip()
     encoded_station = quote(station)
+    if encoded_station.endswith("."):
+        encoded_station = encoded_station[:-1] + "%2E"
 
     # We try different lookup patterns to ensure compatibility
     lookups = [

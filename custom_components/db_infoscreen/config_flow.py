@@ -702,6 +702,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         station_cleaned = " ".join(station_str.split())
         encoded_station = quote(station_cleaned, safe="-:")
+        if encoded_station.endswith("."):
+            encoded_station = encoded_station[:-1] + "%2E"
 
         base_url = self.server_url
         url = f"{base_url}/{encoded_station}.json"
