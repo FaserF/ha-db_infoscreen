@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base"
+    "config:recommended"
   ],
   "customManagers": [
     {
@@ -42,9 +42,9 @@
     }
   ],
   "pip_requirements": {
-    "fileMatch": [
-      "^requirements.*\\.txt$",
-      "^docs/requirements\\.txt$"
+    "managerFilePatterns": [
+      "/^requirements.*\\.txt$/",
+      "/^docs/requirements\\.txt$/"
     ]
   },
   "github-actions": {
