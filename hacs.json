@@ -1,15 +1,17 @@
 {
-    "name": "db-infoscreen",
-    "render_readme": true,
-    "country": [
-        "DE",
-        "AT",
-        "CH",
-        "DK",
-        "IE",
-        "LU",
-        "PL",
-        "SE",
-        "US"
-    ]
+  "name": "db-infoscreen",
+  "render_readme": true,
+  "country": [
+    "DE",
+    "AT",
+    "CH",
+    "DK",
+    "IE",
+    "LU",
+    "PL",
+    "SE",
+    "US"
+  ],
+  "zip_release": true,
+  "filename": "db_infoscreen.zip"
 }
