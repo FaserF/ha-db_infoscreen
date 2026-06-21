@@ -120,16 +120,34 @@ def get_norm_key(msg: str) -> str:
     return n.strip()
 
 
-def get_formatted_item(display: str, hashes: list, repo: str) -> str:
+def get_formatted_item(display: str, hashes: list, repo: str, commit_authors: dict) -> str:
     if hashes:
         links = []
+        attributions = []
         for h in hashes:
             if repo:
                 links.append(f"[{h}](https://github.com/{repo}/commit/{h})")
             else:
                 links.append(f"`{h}`")
+            # Author attribution logic
+            author = commit_authors.get(h, "")
+            # If author is external (not owner/faserf and not github-actions/dependabot/actions/bot/etc)
+            if author:
+                author_lower = author.lower()
+                is_ignored = (
+                    "faserf" in author_lower or
+                    "action" in author_lower or
+                    "bot" in author_lower or
+                    "dependabot" in author_lower or
+                    "fabian" in author_lower or
+                    "seitz" in author_lower
+                )
+                if not is_ignored:
+                    attributions.append(f"thanks to @{author} for this contribution!")
+        
         hash_str = ", ".join(links)
-        return f"{display} ({hash_str})"
+        attr_str = f" — {', '.join(attributions)}" if attributions else ""
+        return f"{display} ({hash_str}){attr_str}"
     return display
 
 
@@ -145,9 +163,9 @@ def main():
     repo = args.repo
 
     if from_tag:
-        git_args = ["git", "log", f"{from_tag}..HEAD", "--pretty=format:%h %s"]
+        git_args = ["git", "log", f"{from_tag}..HEAD", "--pretty=format:%h %an || %s"]
     else:
-        git_args = ["git", "log", "--pretty=format:%h %s", "--max-count=2000"]
+        git_args = ["git", "log", "--pretty=format:%h %an || %s", "--max-count=2000"]
 
     try:
         raw_output = subprocess.check_output(
@@ -157,6 +175,7 @@ def main():
         raw_output = ""
 
     commit_lines = [line.strip() for line in raw_output.splitlines() if line.strip()]
+    commit_authors = {}
 
     try:
         total_raw = int(total_commits) if total_commits else len(commit_lines)
@@ -167,13 +186,25 @@ def main():
     seen_items = {}
 
     for line in commit_lines:
-        match = re.match(r"^([0-9a-fA-F]+)\s+(.*)$", line)
-        if match:
-            commit_hash = match.group(1)
-            msg = match.group(2).strip()
+        author = ""
+        if " || " in line:
+            parts = line.split(" || ", 1)
+            meta, msg = parts[0], parts[1].strip()
+            meta_parts = meta.split(" ", 1)
+            commit_hash = meta_parts[0]
+            if len(meta_parts) > 1:
+                author = meta_parts[1].strip()
         else:
-            commit_hash = ""
-            msg = line.strip()
+            match = re.match(r"^([0-9a-fA-F]+)\s+(.*)$", line)
+            if match:
+                commit_hash = match.group(1)
+                msg = match.group(2).strip()
+            else:
+                commit_hash = ""
+                msg = line.strip()
+
+        if commit_hash and author:
+            commit_authors[commit_hash] = author
 
         if not msg:
             continue
@@ -320,7 +351,7 @@ def main():
         )
         out.append(">")
         for item in buckets["breaking"]:
-            formatted = get_formatted_item(item["display"], item["hashes"], repo)
+            formatted = get_formatted_item(item["display"], item["hashes"], repo, commit_authors)
             out.append(f"> - {formatted}")
         out.append("")
 
@@ -340,7 +371,7 @@ def main():
         if collapse:
             for i in range(MAX_PER_SECTION):
                 formatted = get_formatted_item(
-                    bucket[i]["display"], bucket[i]["hashes"], repo
+                    bucket[i]["display"], bucket[i]["hashes"], repo, commit_authors
                 )
                 out.append(f"- {formatted}")
             remaining = len(bucket) - MAX_PER_SECTION
@@ -350,14 +381,14 @@ def main():
             out.append("")
             for i in range(MAX_PER_SECTION, len(bucket)):
                 formatted = get_formatted_item(
-                    bucket[i]["display"], bucket[i]["hashes"], repo
+                    bucket[i]["display"], bucket[i]["hashes"], repo, commit_authors
                 )
                 out.append(f"- {formatted}")
             out.append("")
             out.append("</details>")
         else:
             for item in bucket:
-                formatted = get_formatted_item(item["display"], item["hashes"], repo)
+                formatted = get_formatted_item(item["display"], item["hashes"], repo, commit_authors)
                 out.append(f"- {formatted}")
         out.append("")
 
