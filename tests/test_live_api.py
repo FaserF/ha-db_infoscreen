@@ -17,7 +17,7 @@ from custom_components.db_infoscreen.binary_sensor import (
 from custom_components.db_infoscreen.calendar import DBInfoScreenCalendar
 
 # Make sure pytest-socket knows we need sockets for these tests
-pytestmark = pytest.mark.allow_sockets
+pytestmark = [pytest.mark.allow_sockets, pytest.mark.enable_socket]
 
 
 def _enable_socket_temporarily():
@@ -35,6 +35,13 @@ def _enable_socket_temporarily():
         HASocketBlockedError.instances.clear()
     except ImportError:
         pass
+
+
+@pytest.fixture(autouse=True)
+def auto_enable_socket():
+    """Automatically enable socket for every test in this module."""
+    _enable_socket_temporarily()
+    yield
 
 
 async def check_server_status() -> tuple[bool, str]:
