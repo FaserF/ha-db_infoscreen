@@ -26,20 +26,19 @@ def clean_and_update_template(file_path, integration_version, ha_version):
     # 1. Update Home Assistant Version placeholder
     # Look for placeholder: 2025.x.x or similar in HA version field description or placeholder
     content = re.sub(
-        r"(placeholder:\s*['"]?)\d{4}\.\d{1,2}\.\d{1,2}(['"]?)",
+        r"(placeholder:\s*['\"])20\d{2}\.\d{1,2}\.\d{1,2}(['\"])",
         f"\\g<1>{ha_version}\\g<2>",
         content
     )
     
     # 2. Update Integration Version placeholder to the new version
     content = re.sub(
-        r"(placeholder:\s*['"]?)v?\d+\.\d+\.\d+[^'"\s]*(['"]?)",
+        r"(placeholder:\s*['\"])v?\d+\.\d+\.\d+[^'\"]*(['\"])",
         f"\\g<1>{integration_version}\\g<2>",
         content
     )
 
     # 3. Privacy/Datenschutz Filter: Check for sensitive fields and strip them or add privacy warning.
-    # Scan for keys, zones, domains, URLs, tokens
     lines = content.splitlines()
     new_lines = []
     skip_mode = False
@@ -56,10 +55,7 @@ def clean_and_update_template(file_path, integration_version, ha_version):
                 skip_mode = False
         
         # Check if this line defines a potentially sensitive input field we should remove/modify
-        # e.g., cf_zone, api_key, api_token, domain, zone, host, ip_address, phone_number
         if "- type: input" in line or "- type: textarea" in line:
-            # Look ahead a few lines to check the id or label
-            is_sensitive = False
             field_id = ""
             label_text = ""
             for j in range(1, 10):
@@ -70,11 +66,11 @@ def clean_and_update_template(file_path, integration_version, ha_version):
                 if next_indent <= indent:
                     break
                 if "id:" in next_line:
-                    field_id = next_line.split("id:")[-1].strip().strip("'"")
+                    field_id = next_line.split("id:")[-1].strip().strip("'\"")
                 if "label:" in next_line:
-                    label_text = next_line.split("label:")[-1].strip().strip("'"")
+                    label_text = next_line.split("label:")[-1].strip().strip("'\"")
             
-            # Identify fields to remove (e.g. domain/zone keys)
+            # Identify fields to remove
             sensitive_ids = {"cf_zone", "api_key", "api_token", "token", "password", "phone_number", "phone"}
             sensitive_labels = {"api key", "api token", "password", "token", "private key", "phone number", "phone"}
             
@@ -83,13 +79,6 @@ def clean_and_update_template(file_path, integration_version, ha_version):
                 skip_mode = True
                 skip_indent = indent
                 continue
-        
-        # Modify description of URL/IP fields to warn about privacy
-        if "label:" in line:
-            label_lower = line.lower()
-            if any(k in label_lower for k in ["domain", "host", "ip address", "url", "instance", "address"]):
-                # Add warning in description if description block follows
-                pass
         
         if "description:" in line:
             desc_lower = line.lower()
