@@ -254,3 +254,81 @@ async def test_form_unreachable_servers(hass):
     ):
         result = await flow.async_step_user({CONF_SERVER_TYPE: SERVER_TYPE_FASERF})
     assert result["errors"] == {"base": "cannot_connect_faserf"}
+
+
+@pytest.mark.asyncio
+async def test_hassio_discovery_already_installed(hass):
+    """Test Hass.io discovery flow when addon is already installed."""
+    flow = ConfigFlow()
+    flow.hass = hass
+
+    # Mock show_form
+    flow.async_show_form = MagicMock(
+        side_effect=lambda **kwargs: {
+            "type": FlowResultType.FORM,
+            "step_id": kwargs.get("step_id"),
+        }
+    )
+
+    addon_info = MagicMock()
+    mock_addon_manager = AsyncMock()
+    mock_addon_manager.async_get_addon_info.return_value = addon_info
+
+    with patch(
+        "homeassistant.components.hassio.is_hassio", return_value=True, create=True
+    ), patch.object(
+        flow, "_async_get_addon_manager", return_value=mock_addon_manager
+    ), patch(
+        "homeassistant.components.hassio.AddonState", create=True
+    ) as mock_state, patch.object(
+        flow, "_async_prefill_addon_info", new_callable=AsyncMock
+    ) as mock_prefill:
+
+        mock_state.NOT_INSTALLED = "not_installed"
+        addon_info.state = "installed"
+        flow.context = {}
+
+        result = await flow.async_step_user(None)
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "user"
+    mock_prefill.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_hassio_discovery_not_installed(hass):
+    """Test Hass.io discovery flow when addon is not installed."""
+    flow = ConfigFlow()
+    flow.hass = hass
+
+    # Mock show_form
+    flow.async_show_form = MagicMock(
+        side_effect=lambda **kwargs: {
+            "type": FlowResultType.FORM,
+            "step_id": kwargs.get("step_id"),
+        }
+    )
+
+    addon_info = MagicMock()
+    mock_addon_manager = AsyncMock()
+    mock_addon_manager.async_get_addon_info.return_value = addon_info
+
+    with patch(
+        "homeassistant.components.hassio.is_hassio", return_value=True, create=True
+    ), patch.object(
+        flow, "_async_get_addon_manager", return_value=mock_addon_manager
+    ), patch(
+        "homeassistant.components.hassio.AddonState", create=True
+    ) as mock_state:
+
+        mock_state.NOT_INSTALLED = "not_installed"
+        addon_info.state = "not_installed"
+        flow.context = {}
+
+        result = await flow.async_step_user(None)
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "hassio_confirm"
+
+
+

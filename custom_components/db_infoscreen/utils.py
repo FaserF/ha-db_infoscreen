@@ -225,7 +225,7 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
 
     from homeassistant.helpers.storage import Store
     storage_key = f"db_infoscreen_stations_{server_slug}"
-    store = Store(hass, 1, storage_key)
+    store: Store[dict[str, Any]] = Store(hass, 1, storage_key)
 
     try:
         stored_data = await store.async_load()

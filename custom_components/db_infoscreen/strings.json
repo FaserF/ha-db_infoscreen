@@ -74,6 +74,10 @@
           "via_stations": "Filter by Via Stations",
           "via_stations_logic": "Via Station Search Logic"
         }
+      },
+      "hassio_confirm": {
+        "title": "Install official Add-on",
+        "description": "Do you want to install the official DBF (DB-Infoscreen) Add-on? This is the recommended way to run a local server on Home Assistant OS."
       }
     },
     "error": {
@@ -86,7 +90,8 @@
       "station_not_found_warning": "⚠️ Station not found! Please verify spelling or try a different data source.",
       "station_invalid": "❌ Could not retrieve data for this station. {error_detail}",
       "station_ambiguous": "⚠️ The station name is ambiguous. Please be more specific or check the selected Data Source.",
-      "station_validation_failed": "Station validation failed. Please check your settings and try again."
+      "station_validation_failed": "Station validation failed. Please check your settings and try again.",
+      "addon_install_error": "Failed to install the DBF (DB-Infoscreen) Add-on. Please check the Supervisor logs."
     },
     "abort": {
       "already_configured": "This station is already configured.",
@@ -128,7 +133,10 @@
           "cache_ttl": "Cache TTL (seconds)",
           "offset": "Offset (HH:MM)",
           "walk_time": "Walk Time to Station (minutes)",
-          "paused": "Pause periodic updates (Stop data fetching)"
+          "paused": "Pause periodic updates (Stop data fetching)",
+          "calendar_event_duration": "Calendar Event Duration (minutes)",
+          "calendar_only_favorites": "Calendar: Only include favorite trains",
+          "calendar_only_delayed": "Calendar: Only include delayed trains"
         }
       },
       "server_options": {

@@ -58,10 +58,15 @@ from .const import (
     CONF_EXCLUDE_CANCELLED,
     CONF_SHOW_OCCUPANCY,
     CONF_FAVORITE_TRAINS,
+    CONF_WALK_TIME,
     CONF_SERVER_TYPE,
     CONF_SERVER_URL,
     CONF_CACHE_TTL,
     DEFAULT_CACHE_TTL,
+    CONF_CALENDAR_EVENT_DURATION,
+    DEFAULT_CALENDAR_EVENT_DURATION,
+    CONF_CALENDAR_ONLY_FAVORITES,
+    CONF_CALENDAR_ONLY_DELAYED,
     SERVER_TYPE_CUSTOM,
     SERVER_TYPE_OFFICIAL,
     SERVER_TYPE_FASERF,
@@ -414,6 +419,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         self.watched_trips: dict[str, dict[str, Any]] = {}
         self.tracked_connections: dict[str, dict[str, Any]] = {}
         self.departure_history: dict[str, Any] = {}
+        self.station_messages: list[dict[str, Any]] = []
+        self.raw_elevator_issues: list[str] = []
         self.hide_low_delay: bool = bool(config.get(CONF_HIDE_LOW_DELAY, False))
         self.detailed: bool = bool(config.get(CONF_DETAILED, False))
         self.past_60_minutes: bool = bool(config.get(CONF_PAST_60_MINUTES, False))
@@ -446,6 +453,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         self.paused = bool(config.get(CONF_PAUSED, False))
         self.via_stations_logic = config.get(CONF_VIA_STATIONS_LOGIC, "OR")
         self.admode = config.get(CONF_ADMODE, "preferred departure")
+        self.walk_time = int(config.get(CONF_WALK_TIME, 0))
+        self.calendar_event_duration = int(
+            config.get(CONF_CALENDAR_EVENT_DURATION, DEFAULT_CALENDAR_EVENT_DURATION)
+        )
+        self.calendar_only_favorites = bool(config.get(CONF_CALENDAR_ONLY_FAVORITES, False))
+        self.calendar_only_delayed = bool(config.get(CONF_CALENDAR_ONLY_DELAYED, False))
         self.cache_ttl = timedelta(
             seconds=int(config.get(CONF_CACHE_TTL, DEFAULT_CACHE_TTL))
         )
@@ -829,7 +842,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         self._consecutive_errors = 0
         self._last_successful_update = now
         self._stale_issue_raised = False
-        repairs.clear_all_issues_for_entry(self.hass, self.config_entry.entry_id)
+        if self.config_entry:
+            repairs.clear_all_issues_for_entry(self.hass, self.config_entry.entry_id)
         # --- PRE-PROCESSING: Parse time for all departures ---
         departures_with_time = []
         # Use a deep copy to avoid modifying the cached/mock objects in-place
@@ -963,6 +977,89 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 "Deduplication complete. Remaining departures: %d",
                 len(departures_to_process),
             )
+
+        # --- EXTRACT MESSAGES & DISTURBANCES ---
+        station_messages_list = []
+        seen_messages = set()
+        raw_elevator_issues_list = []
+        seen_elevator_issues = set()
+
+        for departure in departures_to_process:
+            train_name = departure.get("train", "")
+            messages = departure.get("messages", {})
+            if isinstance(messages, dict):
+                for msg_type, msg_list in messages.items():
+                    if isinstance(msg_list, list):
+                        for m in msg_list:
+                            msg_text = ""
+                            if isinstance(m, dict):
+                                msg_text = m.get("text", "")
+                            elif isinstance(m, str):
+                                msg_text = m
+                            
+                            if msg_text:
+                                msg_key = (msg_text, msg_type, train_name)
+                                if msg_key not in seen_messages:
+                                    seen_messages.add(msg_key)
+                                    station_messages_list.append({
+                                        "text": msg_text,
+                                        "type": msg_type,
+                                        "train": train_name,
+                                    })
+                                
+                                # Process for elevator/escalator issues
+                                lower_text = msg_text.lower()
+                                keywords = ["aufzug", "aufzüge", "fahrstuhl", "lift", "rolltreppe"]
+                                if any(k in lower_text for k in keywords):
+                                    working_keywords = [
+                                        "in betrieb",
+                                        "ok",
+                                        "behoben",
+                                        "funktioniert wieder",
+                                        "verfügbar",
+                                    ]
+                                    if not any(wk in lower_text for wk in working_keywords):
+                                        if msg_text not in seen_elevator_issues:
+                                            seen_elevator_issues.add(msg_text)
+                                            raw_elevator_issues_list.append(msg_text)
+            elif isinstance(messages, list):
+                for m in messages:
+                    msg_text = ""
+                    msg_type = "general"
+                    if isinstance(m, dict):
+                        msg_text = m.get("text", "")
+                        msg_type = m.get("type", "general")
+                    elif isinstance(m, str):
+                        msg_text = m
+                    
+                    if msg_text:
+                        msg_key = (msg_text, msg_type, train_name)
+                        if msg_key not in seen_messages:
+                            seen_messages.add(msg_key)
+                            station_messages_list.append({
+                                "text": msg_text,
+                                "type": msg_type,
+                                "train": train_name,
+                            })
+                        
+                        # Process for elevator/escalator issues
+                        lower_text = msg_text.lower()
+                        keywords = ["aufzug", "aufzüge", "fahrstuhl", "lift", "rolltreppe"]
+                        if any(k in lower_text for k in keywords):
+                            working_keywords = [
+                                "in betrieb",
+                                "ok",
+                                "behoben",
+                                "funktioniert wieder",
+                                "verfügbar",
+                            ]
+                            if not any(wk in lower_text for wk in working_keywords):
+                                if msg_text not in seen_elevator_issues:
+                                    seen_elevator_issues.add(msg_text)
+                                    raw_elevator_issues_list.append(msg_text)
+
+        self.station_messages = station_messages_list
+        self.raw_elevator_issues = raw_elevator_issues_list
 
         # --- MAIN FILTERING AND PROCESSING ---
         filtered_departures: list[dict[str, Any]] = []

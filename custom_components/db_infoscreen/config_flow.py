@@ -18,6 +18,10 @@ from .const import (
     MAX_SENSORS,
     CONF_CACHE_TTL,
     DEFAULT_CACHE_TTL,
+    CONF_CALENDAR_EVENT_DURATION,
+    DEFAULT_CALENDAR_EVENT_DURATION,
+    CONF_CALENDAR_ONLY_FAVORITES,
+    CONF_CALENDAR_ONLY_DELAYED,
     CONF_HIDE_LOW_DELAY,
     CONF_DETAILED,
     CONF_PAST_60_MINUTES,
@@ -57,6 +61,11 @@ from .const import (
 from .utils import async_get_stations, find_station_matches, normalize_whitespace
 
 _LOGGER = logging.getLogger(__name__)
+
+ADDON_STABLE_SLUG = "7da084a7_dbf"
+ADDON_DEV_SLUG = "local_dbf"
+ADDON_NAME = "DBF (DB-Infoscreen)"
+DEFAULT_PORT = 8092
 
 
 def _generate_entry_title(data: dict) -> str:
@@ -215,12 +224,40 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         self.station_query: str = ""
         self.data_source: str = "IRIS-TTS"
         self._station_map: dict[str, str] = {}
+        self.discovery_info: dict[str, Any] = {}
 
     async def async_step_user(self, user_input=None):
         """
         Handle the first step: Server Selection.
         """
+        # Check if we are running in Hass.io
+        is_hassio_env = False
+        try:
+            from homeassistant.components.hassio import is_hassio
+
+            is_hassio_env = is_hassio(self.hass)
+        except (ImportError, AttributeError):
+            _LOGGER.debug("Hass.io component not found or is_hassio missing")
+
+        if (
+            user_input is None
+            and is_hassio_env
+            and not self.context.get("hassio_checked")
+            and not self.discovery_info.get(CONF_SERVER_URL)
+        ):
+            try:
+                self._context["hassio_checked"] = True
+            except (AttributeError, TypeError):
+                try:
+                    self.context["hassio_checked"] = True
+                except (AttributeError, TypeError):
+                    pass
+            return await self.async_step_hassio()
+
         errors = {}
+
+        suggested_url = self.discovery_info.get(CONF_SERVER_URL, "")
+        suggested_type = self.discovery_info.get(CONF_SERVER_TYPE, SERVER_TYPE_CUSTOM)
 
         if user_input is not None:
             server_type = user_input.get(CONF_SERVER_TYPE)
@@ -263,16 +300,19 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     self.server_type = server_type
                     return await self.async_step_station_search()
 
+        schema_fields = {
+            vol.Required(CONF_SERVER_TYPE, default=suggested_type): vol.In(
+                [SERVER_TYPE_CUSTOM, SERVER_TYPE_OFFICIAL, SERVER_TYPE_FASERF]
+            ),
+        }
+        if suggested_url:
+            schema_fields[vol.Optional(CONF_SERVER_URL, default=suggested_url)] = cv.string
+        else:
+            schema_fields[vol.Optional(CONF_SERVER_URL)] = cv.string
+
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_SERVER_TYPE, default=SERVER_TYPE_CUSTOM): vol.In(
-                        [SERVER_TYPE_CUSTOM, SERVER_TYPE_OFFICIAL, SERVER_TYPE_FASERF]
-                    ),
-                    vol.Optional(CONF_SERVER_URL): cv.string,
-                }
-            ),
+            data_schema=vol.Schema(schema_fields),
             errors=errors,
         )
 
@@ -838,6 +878,84 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Return the options flow handler."""
         return OptionsFlowHandler(config_entry)
 
+    async def _async_get_addon_manager(self, slug: str) -> Any:
+        """Return the addon manager."""
+        try:
+            from homeassistant.components.hassio import AddonManager
+
+            return AddonManager(self.hass, _LOGGER, slug, ADDON_NAME)
+        except (ImportError, AttributeError):
+            return None
+
+    async def async_step_hassio(self, _user_input: dict[str, Any] | None = None):
+        """Handle Hass.io discovery."""
+        try:
+            from homeassistant.components.hassio import AddonState
+        except (ImportError, AttributeError):
+            return await self.async_step_user()
+
+        # Check if either stable or dev is installed
+        for slug in [ADDON_STABLE_SLUG, ADDON_DEV_SLUG]:
+            addon_manager = await self._async_get_addon_manager(slug)
+            if addon_manager is None:
+                continue
+            addon_info = await addon_manager.async_get_addon_info()
+            if addon_info.state != AddonState.NOT_INSTALLED:
+                # Already installed, pre-fill info and go to user step
+                await self._async_prefill_addon_info(slug)
+                return await self.async_step_user()
+
+        # Neither installed, ask user
+        return await self.async_step_hassio_confirm()
+
+    async def _async_prefill_addon_info(self, slug: str) -> None:
+        """Pre-fill addon info from Supervisor."""
+        addon_manager = await self._async_get_addon_manager(slug)
+        try:
+            addon_info = await addon_manager.async_get_addon_info()
+            # Supervisor hostnames use hyphens, slugs might use underscores
+            host = slug.replace("_", "-")
+            port = DEFAULT_PORT
+
+            if addon_info.network:
+                # Find port for 8092 (internal)
+                for internal, external in addon_info.network.items():
+                    if internal.startswith(f"{DEFAULT_PORT}/"):
+                        port = external
+                        break
+
+            self.discovery_info[CONF_SERVER_URL] = f"http://{host}:{port}"
+            self.discovery_info[CONF_SERVER_TYPE] = SERVER_TYPE_CUSTOM
+            _LOGGER.debug("Pre-filled addon info: %s", self.discovery_info)
+        except Exception as e:
+            _LOGGER.warning("Could not pre-fill addon info: %s", e)
+
+    async def async_step_hassio_confirm(self, user_input: dict[str, Any] | None = None):
+        """Confirm installation of the official addon."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            # Install stable addon
+            slug = ADDON_STABLE_SLUG
+            addon_manager = await self._async_get_addon_manager(slug)
+            try:
+                await addon_manager.async_install_addon()
+                await addon_manager.async_start_addon()
+            except Exception as e:
+                _LOGGER.error("Failed to install DBF addon (%s): %s", slug, e)
+                errors["base"] = "addon_install_error"
+                return self.async_show_form(
+                    step_id="hassio_confirm",
+                    errors=errors,
+                )
+            # After installation, pre-fill info
+            await self._async_prefill_addon_info(slug)
+            return await self.async_step_user()
+
+        return self.async_show_form(
+            step_id="hassio_confirm",
+            description_placeholders={"addon_name": ADDON_NAME},
+        )
+
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
     """
@@ -979,6 +1097,20 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_WALK_TIME,
                         default=self._get_config_value(CONF_WALK_TIME, 0),
                     ): cv.positive_int,
+                    vol.Optional(
+                        CONF_CALENDAR_EVENT_DURATION,
+                        default=self._get_config_value(
+                            CONF_CALENDAR_EVENT_DURATION, DEFAULT_CALENDAR_EVENT_DURATION
+                        ),
+                    ): cv.positive_int,
+                    vol.Optional(
+                        CONF_CALENDAR_ONLY_FAVORITES,
+                        default=self._get_config_value(CONF_CALENDAR_ONLY_FAVORITES, False),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_CALENDAR_ONLY_DELAYED,
+                        default=self._get_config_value(CONF_CALENDAR_ONLY_DELAYED, False),
+                    ): cv.boolean,
                 }
             ),
         )

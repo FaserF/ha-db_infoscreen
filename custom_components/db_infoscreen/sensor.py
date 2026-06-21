@@ -250,6 +250,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
             "attribution": attribution,
             "is_paused": getattr(self.coordinator, "paused", False),
             "via_stations_logic": getattr(self.coordinator, "via_stations_logic", "OR"),
+            "station_messages": getattr(self.coordinator, "station_messages", []),
         }
 
         if self.enable_text_view:

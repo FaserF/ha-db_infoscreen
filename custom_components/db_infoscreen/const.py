@@ -46,6 +46,10 @@ CONF_EXCLUDE_CANCELLED = "exclude_cancelled"
 CONF_FAVORITE_TRAINS = "favorite_trains"
 CONF_WALK_TIME = "walk_time"
 CONF_PAUSED = "paused"
+CONF_CALENDAR_EVENT_DURATION = "calendar_event_duration"
+CONF_CALENDAR_ONLY_FAVORITES = "calendar_only_favorites"
+CONF_CALENDAR_ONLY_DELAYED = "calendar_only_delayed"
+DEFAULT_CALENDAR_EVENT_DURATION = 5
 
 TRAIN_TYPE_MAPPING = {
     "S": "s_bahn",
