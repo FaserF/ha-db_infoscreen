@@ -136,6 +136,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git reset --hard HEAD
           git pull --rebase origin ${{ github.ref_name }}
 
       - name: Update Files
@@ -245,6 +246,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git reset --hard HEAD
           git pull --rebase origin ${{ github.ref_name }}
           NEW_DEV=$(python .github/scripts/version_manager.py bump --type dev --level patch)
           if ! git diff --quiet; then
