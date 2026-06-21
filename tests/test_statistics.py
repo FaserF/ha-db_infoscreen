@@ -127,9 +127,9 @@ async def test_update_history_avv_line_field(real_coordinator):
     real_coordinator._update_history(departures)
 
     history = real_coordinator.departure_history
-    assert len(history) == 3, (
-        f"Expected 3 entries, got {len(history)}: {list(history.keys())}"
-    )
+    assert (
+        len(history) == 3
+    ), f"Expected 3 entries, got {len(history)}: {list(history.keys())}"
 
     # Verify delay and cancellation were normalised correctly
     values = list(history.values())
