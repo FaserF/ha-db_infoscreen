@@ -217,11 +217,36 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
         last_update = hass.data[update_key]
         if now - last_update < CACHE_DURATION:
             _LOGGER.debug(
-                "Using cached station list for %s (age: %s)",
+                "Using in-memory cached station list for %s (age: %s)",
                 base_url,
                 now - last_update,
             )
             return hass.data[data_key]
+
+    from homeassistant.helpers.storage import Store
+    storage_key = f"db_infoscreen_stations_{server_slug}"
+    store = Store(hass, 1, storage_key)
+
+    try:
+        stored_data = await store.async_load()
+    except Exception as store_err:
+        _LOGGER.warning("Failed to load station cache for %s: %s", base_url, store_err)
+        stored_data = None
+
+    if stored_data and "stations" in stored_data and "last_update" in stored_data:
+        try:
+            last_update = datetime.fromisoformat(stored_data["last_update"])
+            if now - last_update < CACHE_DURATION:
+                hass.data[data_key] = stored_data["stations"]
+                hass.data[update_key] = last_update
+                _LOGGER.debug(
+                    "Using persistent cached station list for %s (age: %s)",
+                    base_url,
+                    now - last_update,
+                )
+                return stored_data["stations"]
+        except (ValueError, TypeError) as format_err:
+            _LOGGER.warning("Malformed persistent cache timestamp for %s: %s", base_url, format_err)
 
     _LOGGER.debug("Downloading station list from %s", station_url)
     try:
@@ -245,6 +270,13 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
                     stations = json.loads(json_str)
                     hass.data[data_key] = stations
                     hass.data[update_key] = now
+                    try:
+                        await store.async_save({
+                            "stations": stations,
+                            "last_update": now.isoformat()
+                        })
+                    except Exception as save_err:
+                        _LOGGER.warning("Failed to save station cache for %s: %s", base_url, save_err)
                     _LOGGER.debug("Parsed and cached %d stations", len(stations))
                     return stations
                 else:
