@@ -17,7 +17,6 @@ def get_latest_ha_version():
         return "2026.6.2"
 
 def get_service_version(repo_name):
-    # Dynamically fetch service versions if applicable
     headers = {'User-Agent': 'Mozilla/5.0'}
     
     if repo_name == "ha-openwrt":
@@ -61,14 +60,14 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
     
     # 1. Update Home Assistant Version placeholder
     content = re.sub(
-        r"(placeholder:\s*['\"])20\d{2}\.\d{1,2}\.\d{1,2}(['\"])",
+        r"(placeholder:\s*['\"]?(?:e\.g\.\s*)?)20\d{2}\.\d{1,2}\.\d{1,2}(['\"]?)",
         f"\\g<1>{ha_version}\\g<2>",
         content
     )
     
     # 2. Update Integration Version placeholder to the new version
     content = re.sub(
-        r"(placeholder:\s*['\"])v?\d+\.\d+\.\d+[^'\"]*(['\"])",
+        r"(placeholder:\s*['\"]?(?:e\.g\.\s*)?v?)\d+\.\d+\.\d+[^'\"]*?(['\"]?)",
         f"\\g<1>{integration_version}\\g<2>",
         content
     )
@@ -77,31 +76,28 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
     service_version = get_service_version(repo_name)
     if service_version:
         if repo_name == "ha-openwrt":
-            # Update openwrt_version placeholder (e.g. 23.05.0 or 25.12.0)
             content = re.sub(
-                r"(id:\s*openwrt_version.*?placeholder:\s*['\"]e\.g\.\s*)\d+\.\d+\.\d+(['\"])",
+                r"(id:\s*openwrt_version.*?placeholder:\s*['\"]?(?:e\.g\.\s*)?)\d+\.\d+\.\d+(['\"]?)",
                 f"\\g<1>{service_version}\\g<2>",
                 content,
                 flags=re.DOTALL
             )
         elif repo_name == "hass-valetudo":
-            # Update valetudo_version placeholder
             content = re.sub(
-                r"(id:\s*valetudo_version.*?placeholder:\s*['\"]e\.g\.\s*)\d+\.\d+\.\d+(['\"])",
+                r"(id:\s*valetudo_version.*?placeholder:\s*['\"]?(?:e\.g\.\s*)?)\d+\.\d+\.\d+(['\"]?)",
                 f"\\g<1>{service_version}\\g<2>",
                 content,
                 flags=re.DOTALL
             )
         elif repo_name == "ha-NintendoSwitchCFW":
-            # Update atmosphere_version placeholder
             content = re.sub(
-                r"(id:\s*atmosphere_version.*?placeholder:\s*['\"]e\.g\.\s*Atmosphere\s*)\d+\.\d+\.\d+(['\"])",
+                r"(id:\s*atmosphere_version.*?placeholder:\s*['\"]?(?:e\.g\.\s*Atmosphere\s*)?)\d+\.\d+\.\d+(['\"]?)",
                 f"\\g<1>{service_version}\\g<2>",
                 content,
                 flags=re.DOTALL
             )
 
-    # 4. Privacy/Datenschutz Filter: Check for sensitive fields and strip them or add privacy warning.
+    # 4. Privacy/Datenschutz Filter
     lines = content.splitlines()
     new_lines = []
     skip_mode = False
