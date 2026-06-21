@@ -56,6 +56,13 @@ Refine which trains are shown on your dashboard.
     -   `False` (Default): Cancelled trains stay in the list (marked as `isCancelled: true`).
 -   **Favorite Trains**: A comma-separated list of specific train names (e.g., `ICE 123, RE 5`) to filter the board for commuters.
 
+### :material-calendar-range: Calendar Options {: #calendar-options }
+Configure the integrated departure calendar.
+
+-   **Calendar Event Duration**: The duration of the created calendar events (default: 15 minutes).
+-   **Calendar: Only include favorite trains**: Only generate calendar events for trains in your **Favorite Trains** list.
+-   **Calendar: Only include delayed trains**: Only generate calendar events for trains that are delayed.
+
 ### :material-monitor-dashboard: Display Options {: #display-options }
 Control how data is presented in Home Assistant entities.
 

@@ -16,6 +16,7 @@ The primary sensor that displays the next departure time.
 | `station` | Configured station name |
 | `last_updated` | Last successful data refresh |
 | `is_paused` | Whether updates are currently paused |
+| `station_messages` | Consolidated list of active messages/disturbances for the station |
 | `attribution` | Data source URL |
 
 **Attributes per Departure:**
@@ -197,6 +198,7 @@ Three binary sensors are automatically created to provide quick status indicator
 
 - `issues` - List of specific issue messages (e.g. "Aufzug zu Gleis 1 defekt")
 - `issue_count` - Number of active issues
+- `defective_facilities` - Detailed list of defective facility objects with keys: `facility_type`, `platform`, `text`, `status`
 
 ---
 
