@@ -24,6 +24,7 @@ def mock_config_entry():
         CONF_NEXT_DEPARTURES: 5,
     }
     entry.entry_id = "mock_entry_id"
+    entry.async_on_unload = MagicMock()
     return entry
 
 

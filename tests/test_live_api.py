@@ -16,6 +16,9 @@ from custom_components.db_infoscreen.binary_sensor import (
 )
 from custom_components.db_infoscreen.calendar import DBInfoScreenCalendar
 
+# Make sure pytest-socket knows we need sockets for these tests
+pytestmark = pytest.mark.allow_sockets
+
 
 async def check_server_status() -> tuple[bool, str]:
     """Check if dbf.fabiseitz.de is reachable and returns valid data."""
