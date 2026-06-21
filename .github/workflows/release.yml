@@ -13,6 +13,19 @@ name: Release
           - stable
           - beta
           - nightly
+      bump_level:
+        description: "Bump Level (SemVer only: major, minor, patch)"
+        required: false
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      version_override:
+        description: "Manually override new version (e.g. 1.2.3 or 2026.6.2b1). Leave empty to use automatic calculation."
+        required: false
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-release
@@ -45,6 +58,8 @@ jobs:
         shell: bash
         env:
           RELEASE_TYPE: ${{ inputs.release_type }}
+          BUMP_LEVEL: ${{ inputs.bump_level }}
+          VERSION_OVERRIDE: ${{ inputs.version_override }}
           REPO: ${{ github.repository }}
           OWNER: ${{ github.repository_owner }}
           REPO_NAME: ${{ github.event.repository.name }}
@@ -114,7 +129,7 @@ jobs:
       - name: Update Files
         shell: bash
         run: |
-          python .github/scripts/version_manager.py bump --type ${{ inputs.release_type }}
+          python .github/scripts/version_manager.py bump --type ${{ inputs.release_type }} --level ${{ inputs.bump_level }} --override "${{ inputs.version_override }}"
 
       - name: Commit and Push
         run: |

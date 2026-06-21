@@ -72,7 +72,13 @@ def write_version(v, manifest_path=None):
             f.write(content)
 
 
-def calculate_version(rtype, level="patch", curr=None, now=None):
+def calculate_version(rtype, level="patch", curr=None, now=None, override=None):
+    if override:
+        # Strip leading 'v' if present to normalize
+        if override.lower().startswith('v'):
+            override = override[1:]
+        return override
+
     if now is None:
         now = datetime.datetime.now()
     if curr is None:
@@ -154,11 +160,16 @@ def main():
     bump_parser.add_argument(
         "--level", choices=["major", "minor", "patch"], default="patch"
     )
+    bump_parser.add_argument(
+        "--override", default=None
+    )
 
     args = p.parse_args()
 
     if args.command == "bump":
-        new_v = calculate_version(args.type, args.level)
+        # Handle empty string override values from workflow inputs
+        override_val = args.override if args.override and args.override.strip() else None
+        new_v = calculate_version(args.type, args.level, override=override_val)
         write_version(new_v)
         print(new_v)
 
