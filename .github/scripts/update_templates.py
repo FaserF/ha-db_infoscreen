@@ -17,40 +17,50 @@ def get_latest_ha_version():
         print(f"Error fetching HA version: {e}")
         return "2026.6.2"
 
+
 def get_service_version(repo_name):
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    
+    headers = {"User-Agent": "Mozilla/5.0"}
+
     if repo_name == "ha-openwrt":
         try:
-            req = urllib.request.Request("https://sysupgrade.openwrt.org/api/v1/latest", headers=headers)
+            req = urllib.request.Request(
+                "https://sysupgrade.openwrt.org/api/v1/latest", headers=headers
+            )
             with urllib.request.urlopen(req, timeout=5) as response:
-                data = json.loads(response.read().decode('utf-8'))
-                return data['latest'][0]
+                data = json.loads(response.read().decode("utf-8"))
+                return data["latest"][0]
         except Exception as e:
             print(f"Error fetching OpenWrt version: {e}")
             return "25.12.4"
-            
+
     elif repo_name == "hass-valetudo":
         try:
-            req = urllib.request.Request("https://api.github.com/repos/Hypfer/Valetudo/releases/latest", headers=headers)
+            req = urllib.request.Request(
+                "https://api.github.com/repos/Hypfer/Valetudo/releases/latest",
+                headers=headers,
+            )
             with urllib.request.urlopen(req, timeout=5) as response:
-                data = json.loads(response.read().decode('utf-8'))
-                return data['tag_name'].lstrip('v')
+                data = json.loads(response.read().decode("utf-8"))
+                return data["tag_name"].lstrip("v")
         except Exception as e:
             print(f"Error fetching Valetudo version: {e}")
             return "2026.6.0"
-            
+
     elif repo_name == "ha-NintendoSwitchCFW":
         try:
-            req = urllib.request.Request("https://api.github.com/repos/Atmosphere-NX/Atmosphere/releases/latest", headers=headers)
+            req = urllib.request.Request(
+                "https://api.github.com/repos/Atmosphere-NX/Atmosphere/releases/latest",
+                headers=headers,
+            )
             with urllib.request.urlopen(req, timeout=5) as response:
-                data = json.loads(response.read().decode('utf-8'))
-                return data['tag_name'].lstrip('v')
+                data = json.loads(response.read().decode("utf-8"))
+                return data["tag_name"].lstrip("v")
         except Exception as e:
             print(f"Error fetching Atmosphere version: {e}")
             return "1.8.0"
-            
+
     return None
+
 
 def clean_and_update_template(file_path, integration_version, ha_version, repo_name):
     if not os.path.exists(file_path):
@@ -58,26 +68,26 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
 
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
-    
+
     original_content = content
-    
+
     # 1. Update Home Assistant Version placeholder
     content = re.sub(
         r"(id:\s*ha_version.*?placeholder:\s*['\"]?(?:e\.g\.\s*)?)20\d{2}\.\d{1,2}\.\d{1,2}(['\"]?)",
         f"\\g<1>{ha_version}\\g<2>",
         content,
-        flags=re.DOTALL
+        flags=re.DOTALL,
     )
 
     # 2. Update Integration Version placeholder to the new version
     if not integration_version.startswith("v") and "." in integration_version:
         integration_version = "v" + integration_version
-        
+
     content = re.sub(
         r"(id:\s*integration_version.*?placeholder:\s*['\"]?(?:e\.g\.\s*)?)v?\d+\.\d+\.\d+[^'\"]*?(['\"]?)",
         f"\\g<1>{integration_version}\\g<2>",
         content,
-        flags=re.DOTALL
+        flags=re.DOTALL,
     )
 
     # 3. Update Service/Firmware Version placeholders dynamically if relevant
@@ -88,21 +98,21 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
                 r"(id:\s*openwrt_version.*?placeholder:\s*['\"]?(?:e\.g\.\s*)?)\d+\.\d+\.\d+(['\"]?)",
                 f"\\g<1>{service_version}\\g<2>",
                 content,
-                flags=re.DOTALL
+                flags=re.DOTALL,
             )
         elif repo_name == "hass-valetudo":
             content = re.sub(
                 r"(id:\s*valetudo_version.*?placeholder:\s*['\"]?(?:e\.g\.\s*)?)\d+\.\d+\.\d+(['\"]?)",
                 f"\\g<1>{service_version}\\g<2>",
                 content,
-                flags=re.DOTALL
+                flags=re.DOTALL,
             )
         elif repo_name == "ha-NintendoSwitchCFW":
             content = re.sub(
                 r"(id:\s*atmosphere_version.*?placeholder:\s*['\"]?(?:e\.g\.\s*Atmosphere\s*)?)\d+\.\d+\.\d+(['\"]?)",
                 f"\\g<1>{service_version}\\g<2>",
                 content,
-                flags=re.DOTALL
+                flags=re.DOTALL,
             )
 
     # 4. Privacy/Datenschutz Filter
@@ -119,7 +129,7 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
                 continue
             else:
                 skip_mode = False
-        
+
         if "- type: input" in line or "- type: textarea" in line:
             field_id = ""
             label_text = ""
@@ -178,7 +188,7 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
         new_lines.append(line)
 
     updated_content = "\n".join(new_lines) + "\n"
-    
+
     if updated_content != original_content:
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(updated_content)
@@ -192,14 +202,20 @@ if __name__ == "__main__":
         version = "v" + version
 
     ha_version = get_latest_ha_version()
-    repo_name = os.path.basename(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-    print(f"Updating templates for {repo_name} with Integration Version: {version}, HA Version: {ha_version}")
-    
+    repo_name = os.path.basename(
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    )
+    print(
+        f"Updating templates for {repo_name} with Integration Version: {version}, HA Version: {ha_version}"
+    )
+
     template_dir = ".github/ISSUE_TEMPLATE"
     if os.path.exists(template_dir):
         for filename in os.listdir(template_dir):
             if filename.endswith(".yml") or filename.endswith(".yaml"):
                 path = os.path.join(template_dir, filename)
-                changed = clean_and_update_template(path, version, ha_version, repo_name)
+                changed = clean_and_update_template(
+                    path, version, ha_version, repo_name
+                )
                 if changed:
                     print(f"Updated: {path}")
