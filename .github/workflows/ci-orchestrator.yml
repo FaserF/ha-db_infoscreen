@@ -69,7 +69,7 @@ jobs:
         run: |
           if [ -d tests ]; then
             DOMAIN=$(python -c "import json, glob; print(json.load(open(glob.glob('custom_components/*/manifest.json')[0]))['domain'])")
-            pytest --cov="custom_components.$DOMAIN" --cov-report=xml
+            PYTHONPATH=. pytest --cov="custom_components.$DOMAIN" --cov-report=xml
           else
             echo "No tests directory found, skipping."
             echo "<?xml version='1.0' ?><coverage></coverage>" > coverage.xml
