@@ -20,8 +20,24 @@ from custom_components.db_infoscreen.calendar import DBInfoScreenCalendar
 pytestmark = pytest.mark.allow_sockets
 
 
+def _enable_socket_temporarily():
+    """Bypass pytest-socket blocking during these tests."""
+    try:
+        import pytest_socket
+        pytest_socket.enable_socket()
+    except (ImportError, AttributeError):
+        pass
+    try:
+        # Also clean HASocketBlockedError instances from pytest-homeassistant-custom-component
+        from pytest_homeassistant_custom_component.plugins import HASocketBlockedError
+        HASocketBlockedError.instances.clear()
+    except ImportError:
+        pass
+
+
 async def check_server_status() -> tuple[bool, str]:
     """Check if dbf.fabiseitz.de is reachable and returns valid data."""
+    _enable_socket_temporarily()
     try:
         # Use a standard session with custom User-Agent to verify access
         headers = {"User-Agent": "Mozilla/5.0"}
@@ -46,6 +62,7 @@ async def check_server_status() -> tuple[bool, str]:
 @pytest.fixture(name="live_coordinator")
 async def live_coordinator_fixture(hass: HomeAssistant):
     """Fixture to provide a coordinator connected to the live API, or skip if down."""
+    _enable_socket_temporarily()
     reachable, reason = await check_server_status()
     if not reachable:
         warnings.warn(
@@ -54,6 +71,13 @@ async def live_coordinator_fixture(hass: HomeAssistant):
             )
         )
         pytest.skip(f"dbf.fabiseitz.de is not available ({reason})")
+
+    # Clear any recorded HASocketBlockedError again
+    try:
+        from pytest_homeassistant_custom_component.plugins import HASocketBlockedError
+        HASocketBlockedError.instances.clear()
+    except ImportError:
+        pass
 
     entry = MagicMock()
     entry.entry_id = "live_test_entry"
