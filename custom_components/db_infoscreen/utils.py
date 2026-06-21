@@ -5,7 +5,6 @@ import json
 import re
 import difflib
 import asyncio
-import async_timeout
 from urllib.parse import quote, unquote
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
@@ -124,7 +123,7 @@ async def async_get_autocomplete_path(hass: HomeAssistant, base_url: str) -> str
         headers = {
             "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
         }
-        async with async_timeout.timeout(10):
+        async with asyncio.timeout(10):
             async with session.get(base_url, headers=headers) as response:
                 if response.status == 200:
                     html = await response.text()
@@ -169,7 +168,7 @@ async def async_verify_server(hass: HomeAssistant, base_url: str) -> bool:
     try:
         session = async_get_clientsession(hass)
         # Bumping timeout to 12s for the official server which can be slow
-        async with async_timeout.timeout(12):
+        async with asyncio.timeout(12):
             async with session.get(station_url, headers=headers) as response:
                 # We expect 200 and some content containing 'stations='
                 _LOGGER.debug(
@@ -230,7 +229,7 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
         headers = {
             "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
         }
-        async with async_timeout.timeout(10):
+        async with asyncio.timeout(10):
             async with session.get(station_url, headers=headers) as response:
                 response.raise_for_status()
                 content = await response.text()
@@ -345,7 +344,7 @@ async def async_get_station_candidates(
             headers = {
                 "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
             }
-            async with async_timeout.timeout(10):
+            async with asyncio.timeout(10):
                 async with session.get(url, headers=headers) as response:
                     content_type = response.headers.get("Content-Type", "")
 
@@ -434,9 +433,12 @@ async def async_get_station_candidates(
                                             "name", station
                                         )
                                     return [{"name": official_name, "code": station}]
-                        except Exception:
-                            # Re-check text if JSON fail just in case
-                            pass
+                        except Exception as json_err:
+                            _LOGGER.debug(
+                                "Failed to parse JSON response for station %s: %s",
+                                station,
+                                json_err,
+                            )
 
         except Exception as e:
             _LOGGER.debug("Lookup failed for %s: %s", url, e)

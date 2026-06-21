@@ -1,10 +1,16 @@
-"""Global fixtures and mocks for db_infoscreen integration tests."""
-
 import sys
 import os
 import types
 from unittest.mock import MagicMock, AsyncMock
 import pytest
+
+# Prevent pytest-socket from blocking local loopback on Windows
+if os.name == "nt":
+    try:
+        import pytest_socket
+        pytest_socket.disable_socket = lambda *args, **kwargs: None
+    except ImportError:
+        pass
 
 # Try to import pytest-homeassistant-custom-component
 import importlib.util

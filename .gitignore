@@ -27,3 +27,6 @@ init_diff.txt
 *out*.txt
 *err*.txt
 /scratch
+/__pycache__
+fcntl.py
+resource.py
