@@ -1,40 +1,64 @@
-name: Feature request
-description: Suggest an idea for this integration
-title: '[Feature Request]: '
-labels:
-- enhancement
+name: Feature Request
+description: Suggest an idea or enhancement for the Deutsche Bahn Infoscreen integration
+title: '[Feature]: '
+labels: ['enhancement', 'triage']
 assignees:
-- FaserF
+  - FaserF
 body:
-- type: markdown
-  attributes:
-    value: |
-      This feature request request form is for feature requests only!
+  - type: markdown
+    attributes:
+      value: |
+        ## Before submitting
+        - 🔍 Search [existing feature requests](https://github.com/FaserF/ha-db_infoscreen/issues?q=label%3Aenhancement) to avoid duplicates
+        - 📖 Check the [documentation](https://github.com/FaserF/ha-db_infoscreen/blob/master/README.md)
+        - 🔗 View the integration: [![Open your Home Assistant instance and show the db_infoscreen integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=db_infoscreen)
 
-      If you have a bug or issue request, please use the bug report template!
-- type: textarea
-  validations:
-    required: true
-  attributes:
-    label: The request
-    description: A clear and concise description of what you want to happen.
-- type: markdown
-  attributes:
-    value: '## Environment
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Description
+      description: Is your feature request related to a problem? Describe it clearly.
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
 
-      '
-- type: markdown
-  attributes:
-    value: '# Details
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: A clear and concise description of what you want to happen.
+    validations:
+      required: true
 
-      '
-- type: textarea
-  attributes:
-    label: Is your feature request related to a problem?
-    render: txt
-    description: A clear and concise description of what the problem is. Ex. I'm always
-      frustrated when [...]
-- type: textarea
-  attributes:
-    label: Additional information
-    description: If you have any additional information for us, use the field below.
+  - type: dropdown
+    id: feature_area
+    attributes:
+      label: Feature Area
+      description: Which area of the integration does this feature relate to?
+      options:
+        - Departure / arrival display
+        - Train type filtering
+        - Platform information
+        - Delay / cancellation tracking
+        - Station search
+        - Custom API endpoint support
+        - Sensor / entity improvements
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe any alternative solutions or features you've considered.
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or examples about the feature request here.
+    validations:
+      required: false

@@ -1,161 +1,144 @@
-name: Report an issue
-description: Report an issue with the db-infoscreen Integration
+name: Bug Report
+description: Report a bug with the Deutsche Bahn Infoscreen integration
 title: '[Bug]: '
-labels:
-- bug
+labels: ['bug', 'triage']
 assignees:
-- FaserF
+  - FaserF
 body:
-- type: markdown
-  attributes:
-    value: |
-      This issue form is for reporting bugs only!
+  - type: markdown
+    attributes:
+      value: |
+        ## Before submitting
+        - 🔍 Search [existing issues](https://github.com/FaserF/ha-db_infoscreen/issues) to avoid duplicates
+        - 📖 Check the [documentation](https://github.com/FaserF/ha-db_infoscreen/blob/master/README.md)
+        - 🔗 View the integration: [![Open your Home Assistant instance and show the db_infoscreen integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=db_infoscreen)
 
-      If you have a feature or enhancement request, please use the feature request template!
-- type: textarea
-  validations:
-    required: true
-  attributes:
-    label: The problem
-    description: Describe the issue you are experiencing here. Provide a clear and
-      concise description of what the problem is.
-- type: markdown
-  attributes:
-    value: '## Environment
+  - type: input
+    id: integration_version
+    attributes:
+      label: Integration Version
+      description: Which version of ha-db_infoscreen are you running? (HACS or integration page)
+      placeholder: e.g. v1.2.0
+    validations:
+      required: true
 
-      '
-- type: input
-  id: version
-  validations:
-    required: true
-  attributes:
-    label: What version of Home Assistant Core has the issue?
-    placeholder: core-
-    description: |
-      Can be found in: [Settings -> About](https://my.home-assistant.io/redirect/info/).
-      [![Open your Home Assistant instance and show your Home Assistant version information.](https://my.home-assistant.io/badges/info.svg)](https://my.home-assistant.io/redirect/info/)
-- type: dropdown
-  validations:
-    required: true
-  attributes:
-    label: What type of installation are you running?
-    description: |
-      Can be found in: [Settings -> About](https://my.home-assistant.io/redirect/info/).
-      [![Open your Home Assistant instance and show your Home Assistant version information.](https://my.home-assistant.io/badges/info.svg)](https://my.home-assistant.io/redirect/info/)
-    options:
-    - Home Assistant OS
-    - Home Assistant Container
-    - Home Assistant Supervised
-    - Home Assistant Core
-- type: input
-  id: version_integration
-  validations:
-    required: true
-  attributes:
-    label: What version of this Integration has the issue?
-    placeholder: null
-    description: 'The version from the release page you are using. Latest version
-      can be found here: https://github.com/FaserF/ha-db_infoscreen/releases/latest
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant Version
+      description: |
+        [![Open your Home Assistant instance and show your Home Assistant version information.](https://my.home-assistant.io/badges/info.svg)](https://my.home-assistant.io/redirect/info/)
+      placeholder: e.g. 2025.6.0
+    validations:
+      required: true
 
-      '
-- type: input
-  id: station_name
-  validations:
-    required: false
-  attributes:
-    label: If possible, please provide the station name you were using.
-    placeholder: null
-    description: 'If you dont want to share this due to data privacy, please leave
-      this field empty. You can also provide another station name where you can reproduce
-      the issue.
+  - type: dropdown
+    id: ha_install_type
+    attributes:
+      label: Home Assistant Installation Type
+      description: |
+        Can be found in: [![Open your Home Assistant instance and show your Home Assistant version information.](https://my.home-assistant.io/badges/info.svg)](https://my.home-assistant.io/redirect/info/)
+      options:
+        - Home Assistant OS
+        - Home Assistant Container
+        - Home Assistant Supervised
+        - Home Assistant Core
+    validations:
+      required: true
 
-      '
-- type: dropdown
-  id: data_source
-  validations:
-    required: true
-  attributes:
-    label: What data source are you using (usually IRIS-TTS)?
-    description: 'Please provide the data source you are using. Initially you had
-      to choose one in the config flow data_source while setting up the integration.
+  - type: input
+    id: station_name
+    attributes:
+      label: Station Name
+      description: Which station are you using? (helps narrow down API issues — leave blank for privacy)
+      placeholder: e.g. München Hbf, Berlin Hbf, Frankfurt(Main)Hbf
+    validations:
+      required: false
 
-      '
-    options:
-    - IRIS-TTS
-    - hafas=1
-    - MVV
-    - ÖBB
-    - BSVG
-    - DING
-    - KVV
-    - LinzAG
-    - NVBW
-    - NWL
-    - VGN
-    - VMV
-    - VRN
-    - VRR
-    - VRR2
-    - VRR3
-    - VVO
-    - VVS
-    - bwegt
-    - AVV
-    - BART
-    - BLS
-    - BVG
-    - CMTA
-    - DSB
-    - IE
-    - KVB
-    - NAHSH
-    - NASA
-    - NVV
-    - RMV
-    - RSAG
-    - Resrobot
-    - STV
-    - SaarVV
-    - TPG
-    - VBB
-    - VBN
-    - VMT
-    - VOS
-    - ZVV
-    - mobiliteit
-    - Other
-- type: dropdown
-  id: server_type
-  validations:
-    required: false
-  attributes:
-    label: Which server are you using? (optional)
-    description: 'Please specify the server you are using for API requests.
+  - type: dropdown
+    id: api_endpoint
+    attributes:
+      label: API Endpoint
+      description: Which API endpoint is the integration configured to use?
+      options:
+        - dbf.fabiseitz.de (default)
+        - Custom self-hosted instance
+    validations:
+      required: false
 
-      '
-    options:
-    - Official Server (dbf.finalrewind.org)
-    - FaserF Server (dbf.fabiseitz.de)
-    - Homeassistant App (Add-On) (local)
-    - custom (custom)
-- type: markdown
-  attributes:
-    value: '# Details
+  - type: dropdown
+    id: departure_type
+    attributes:
+      label: Departure Type
+      description: What departure type is configured in the integration?
+      options:
+        - Departures
+        - Arrivals
+        - Both
+    validations:
+      required: false
 
-      '
-- type: textarea
-  attributes:
-    label: Example YAML snippet
-    description: |
-      If applicable, please provide an example piece of YAML that can help reproduce this problem.
-      This can be from an automation, script, scene or configuration.
-    render: yaml
-- type: textarea
-  attributes:
-    label: Anything in the logs that might be useful for us?
-    description: For example, error message, or stack traces.
-    render: txt
-- type: textarea
-  attributes:
-    label: Additional information
-    description: If you have any additional information for us, use the field below.
+  - type: input
+    id: num_departures
+    attributes:
+      label: Number of Departures Configured
+      description: How many departures are you displaying in your sensor configuration?
+      placeholder: e.g. 10
+    validations:
+      required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Step-by-step instructions to reproduce the behavior.
+      placeholder: |
+        1. Configure station '...'
+        2. Set departure type to '...'
+        3. Observe sensor state / error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: |
+        Download diagnostics from the integration page and paste here (very helpful!):
+        [![Open your Home Assistant instance and show the db_infoscreen integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=db_infoscreen)
+      render: json
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: |
+        Enable debug logging and paste relevant log lines here.
+        Add to `configuration.yaml`:
+        ```yaml
+        logger:
+          default: warning
+          logs:
+            custom_components.db_infoscreen: debug
+        ```
+      render: shell
+    validations:
+      required: true
