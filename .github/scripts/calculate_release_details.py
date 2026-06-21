@@ -180,7 +180,7 @@ def main():
     elif integration_count > 8:
         severity = "High"
         alert_type = "WARNING"
-        preamble = "This release contains major code updates to the integration components. Testing in a sandbox environment is recommended."
+        preamble = "This release contains significant changes to core features. Please verify integration behavior after updating."
     elif integration_count > 2 or translation_count > 5:
         severity = "Medium"
         alert_type = "TIP"
