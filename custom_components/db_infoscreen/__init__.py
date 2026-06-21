@@ -824,6 +824,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         self._consecutive_errors = 0
         self._last_successful_update = now
         self._stale_issue_raised = False
+        repairs.clear_all_issues_for_entry(self.hass, self.config_entry.entry_id)
         # --- PRE-PROCESSING: Parse time for all departures ---
         departures_with_time = []
         # Use a deep copy to avoid modifying the cached/mock objects in-place
