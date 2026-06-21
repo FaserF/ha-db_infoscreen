@@ -49,10 +49,7 @@ def main():
         if os.path.exists("docs"):
             docs_url = f"https://{owner}.github.io/{repo_name}/"
         else:
-            if repo:
-                docs_url = f"https://github.com/{repo}"
-            else:
-                docs_url = f"https://github.com/faserf/{repo_name}"
+            docs_url = f"https://github.com/{repo}" if repo else f"https://github.com/faserf/{repo_name}"
 
     # Calculate version via version_manager
     bump_args = [
@@ -122,10 +119,7 @@ def main():
 
     # Count commits
     total_commit_count = 0
-    if changelog_from:
-        count_range = f"{changelog_from}..HEAD"
-    else:
-        count_range = "HEAD"
+    count_range = f"{changelog_from}..HEAD" if changelog_from else "HEAD"
 
     commit_count_raw = run_git(["rev-list", "--count", count_range])
     if commit_count_raw.isdigit():

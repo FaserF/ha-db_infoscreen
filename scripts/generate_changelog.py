@@ -204,10 +204,7 @@ def main():
                 bucket = TYPE_MAP[raw_type]
 
             desc_cap = desc[0].upper() + desc[1:] if desc else desc
-            if raw_scope:
-                display = f"**{raw_scope}:** {desc_cap}"
-            else:
-                display = desc_cap
+            display = f"**{raw_scope}:** {desc_cap}" if raw_scope else desc_cap
         else:
             display = msg[0].upper() + msg[1:] if msg else msg
             msg_lower = msg.lower()
