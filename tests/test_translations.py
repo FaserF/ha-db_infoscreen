@@ -121,9 +121,9 @@ def test_translations_consistency(translations_path, strings_path):
                 )
 
         assert not missing_keys, f"Missing keys in {filename}: {missing_keys}"
-        assert (
-            not mismatched_placeholders
-        ), f"Placeholder mismatch in {filename}: {mismatched_placeholders}"
+        assert not mismatched_placeholders, (
+            f"Placeholder mismatch in {filename}: {mismatched_placeholders}"
+        )
 
 
 def test_config_flow_keys_in_strings(config_flow_path, strings_path):
@@ -144,18 +144,18 @@ def test_config_flow_keys_in_strings(config_flow_path, strings_path):
 
     for key in set(error_keys):
         full_key = f"config.error.{key}"
-        assert (
-            full_key in flat_strings
-        ), f"Error key '{key}' from config_flow.py missing in strings.json"
+        assert full_key in flat_strings, (
+            f"Error key '{key}' from config_flow.py missing in strings.json"
+        )
 
     # Find abort reasons
     # return self.async_abort(reason="already_configured")
     abort_reasons = re.findall(r'self\.async_abort\(reason="([^"]+)"\)', content)
     for reason in set(abort_reasons):
         full_key = f"config.abort.{reason}"
-        assert (
-            full_key in flat_strings
-        ), f"Abort reason '{reason}' from config_flow.py missing in strings.json"
+        assert full_key in flat_strings, (
+            f"Abort reason '{reason}' from config_flow.py missing in strings.json"
+        )
 
     # Find step IDs
     # step_id="user"
@@ -173,9 +173,9 @@ def test_config_flow_keys_in_strings(config_flow_path, strings_path):
         if step in ["init"] and f"options.step.{step}.title" in flat_strings:
             found = True
 
-        assert (
-            found
-        ), f"Step ID '{step}' from config_flow.py missing title in strings.json"
+        assert found, (
+            f"Step ID '{step}' from config_flow.py missing title in strings.json"
+        )
 
 
 def test_sensor_translation_keys(sensor_files, strings_path):
@@ -201,9 +201,9 @@ def test_sensor_translation_keys(sensor_files, strings_path):
                     found = True
                     break
 
-            assert (
-                found
-            ), f"Translation key '{key}' from {os.path.basename(file_path)} missing in strings.json"
+            assert found, (
+                f"Translation key '{key}' from {os.path.basename(file_path)} missing in strings.json"
+            )
 
 
 async def test_extra_translation_sections(strings_path, en_path, de_path):
@@ -232,19 +232,19 @@ async def test_extra_translation_sections(strings_path, en_path, de_path):
     )
     if state_strings:
         for type_key in train_types_keys:
-            assert (
-                type_key in state_strings
-            ), f"Missing strings.json translation for train_type {type_key} in state block"
+            assert type_key in state_strings, (
+                f"Missing strings.json translation for train_type {type_key} in state block"
+            )
             assert type_key in en.get("entity", {}).get("sensor", {}).get(
                 "departures", {}
-            ).get(
-                "state", {}
-            ), f"Missing EN translation for train_type {type_key} in state block"
+            ).get("state", {}), (
+                f"Missing EN translation for train_type {type_key} in state block"
+            )
             assert type_key in de.get("entity", {}).get("sensor", {}).get(
                 "departures", {}
-            ).get(
-                "state", {}
-            ), f"Missing DE translation for train_type {type_key} in state block"
+            ).get("state", {}), (
+                f"Missing DE translation for train_type {type_key} in state block"
+            )
 
 
 async def test_all_translation_keys_referenced():
@@ -281,9 +281,9 @@ async def test_all_translation_keys_referenced():
 
     for action_key in set(action_matches):
         if action_key in ["retry", "report", "change_source", "remove", "try_again"]:
-            assert (
-                action_key in translated_options
-            ), f"Action key '{action_key}' from repairs.py missing in 'selector.repair_action.options' within strings.json"
+            assert action_key in translated_options, (
+                f"Action key '{action_key}' from repairs.py missing in 'selector.repair_action.options' within strings.json"
+            )
 
     # 2. Check train type keys used in const.py
     const_path = os.path.join(
@@ -309,9 +309,9 @@ async def test_all_translation_keys_referenced():
             .keys()
         )
         for key in keys:
-            assert (
-                key in valid_types
-            ), f"Train type key '{key}' from const.py missing in strings.json['entity']['sensor']['departures']['state']"
+            assert key in valid_types, (
+                f"Train type key '{key}' from const.py missing in strings.json['entity']['sensor']['departures']['state']"
+            )
 
 
 async def test_translation_schema_compliance(strings_path, en_path, de_path):
@@ -327,16 +327,16 @@ async def test_translation_schema_compliance(strings_path, en_path, de_path):
             # Rule 1: 'data' blocks in any flow step must contain ONLY strings (no nested dicts)
             if trace.endswith(".data"):
                 for key, value in obj.items():
-                    assert isinstance(
-                        value, str
-                    ), f"Schema Violation in {os.path.basename(path)}: '{trace}.{key}' must be a string, but got {type(value).__name__} (Dicts in 'data' blocks are forbidden)"
+                    assert isinstance(value, str), (
+                        f"Schema Violation in {os.path.basename(path)}: '{trace}.{key}' must be a string, but got {type(value).__name__} (Dicts in 'data' blocks are forbidden)"
+                    )
 
             # Rule 2: 'options' blocks are NOT ALLOWED in flow steps (caught by hassfest)
             # They must be in the top-level 'selector' block instead
             if trace.endswith(".step.init") or trace.endswith(".step.user"):
-                assert (
-                    "options" not in obj
-                ), f"Schema Violation in {os.path.basename(path)}: '{trace}.options' is forbidden. Flow step options must be moved to the root 'selector' block."
+                assert "options" not in obj, (
+                    f"Schema Violation in {os.path.basename(path)}: '{trace}.options' is forbidden. Flow step options must be moved to the root 'selector' block."
+                )
 
             for key, value in obj.items():
                 check_schema(value, f"{trace}.{key}" if trace else key)
@@ -349,6 +349,6 @@ async def test_translation_schema_compliance(strings_path, en_path, de_path):
             state_attrs = entity_sensor[sensor_id].get("state_attributes", {})
             for attr_id in state_attrs:
                 val = state_attrs[attr_id]
-                assert not isinstance(
-                    val, dict
-                ), f"Schema Violation in {os.path.basename(path)}: 'entity.sensor.{sensor_id}.state_attributes.{attr_id}' is a dictionary. Custom attribute values must be moved to the 'state' block."
+                assert not isinstance(val, dict), (
+                    f"Schema Violation in {os.path.basename(path)}: 'entity.sensor.{sensor_id}.state_attributes.{attr_id}' is a dictionary. Custom attribute values must be moved to the 'state' block."
+                )

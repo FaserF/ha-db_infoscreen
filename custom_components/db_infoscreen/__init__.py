@@ -531,6 +531,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=config_entry,
             name=f"DB-Infoscreen {self.station}",
             update_interval=local_calc_interval,
         )
