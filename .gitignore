@@ -31,3 +31,6 @@ init_diff.txt
 fcntl.py
 resource.py
 /MagicMock
+/test_config/custom_components/__pycache__
+/test_config/custom_components/db_infoscreen/__pycache__
+/test_config
