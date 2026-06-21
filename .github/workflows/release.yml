@@ -59,7 +59,7 @@ jobs:
           # We run version_manager.py bump to get the version, but we will discard modifications in this job
           $version = python .github/scripts/version_manager.py bump --type $type
           git checkout -- VERSION custom_components/db_infoscreen/manifest.json 2>$null || true
-          
+
           Write-Host "Calculated Version: $version"
           $tag = "v$version"
           $is_prerelease = if ($type -eq "stable") { "false" } else { "true" }
@@ -169,18 +169,22 @@ jobs:
           } catch {}
 
           # Determine Risk Severity
-          $severity = "Standard"
+          $severity = "Low"
           $alertType = "NOTE"
-          $preamble = "This release introduces minor updates."
+          $preamble = "This release introduces minor updates and code improvements."
 
           if ($breakingCount -gt 0) {
             $severity = "Critical"
             $alertType = "CAUTION"
-            $preamble = "This release contains **$breakingCount breaking change(s)**! Please review changes carefully."
-          } elseif ($integrationCount -gt 10) {
+            $preamble = "This release contains **$breakingCount breaking change(s)**! Please review the changelog carefully before updating."
+          } elseif ($integrationCount -gt 8) {
             $severity = "High"
             $alertType = "WARNING"
-            $preamble = "This release contains significant modifications to integration files. Verify operation in a test environment."
+            $preamble = "This release contains major code updates to the integration components. Testing in a sandbox environment is recommended."
+          } elseif ($integrationCount -gt 2 -or $translationCount -gt 5) {
+            $severity = "Medium"
+            $alertType = "TIP"
+            $preamble = "This release contains standard updates and feature enhancements to the integration logic or translations."
           }
 
           if ($type -ne "stable") {
@@ -215,31 +219,7 @@ jobs:
           $bodyParts.Add($prereleaseNote)
           $bodyParts.Add("## 📋 What's Changed")
           $bodyParts.Add("")
-          
-          if ($totalCommitCount -ge 15) {
-            $bodyParts.Add("<details>")
-            $bodyParts.Add("<summary>Click to expand full changelog</summary>")
-            $bodyParts.Add("")
-          }
           $bodyParts.Add($changelogMd)
-          if ($totalCommitCount -ge 15) {
-            $bodyParts.Add("")
-            $bodyParts.Add("</details>")
-          }
-          $bodyParts.Add("")
-          $bodyParts.Add("## 🛠️ Installation")
-          $bodyParts.Add("")
-          $bodyParts.Add("### Via HACS (Home Assistant Community Store)")
-          $bodyParts.Add("1. Search for **db-infoscreen** in the HACS integrations panel.")
-          $bodyParts.Add("2. Choose **Download**.")
-          $bodyParts.Add("3. Restart Home Assistant.")
-          $bodyParts.Add("")
-          $bodyParts.Add("### Manual Installation")
-          $bodyParts.Add("1. Download `db_infoscreen.zip` from the assets below.")
-          $bodyParts.Add("2. Extract the archive into your Home Assistant custom integration directory (usually `config/custom_components/`).")
-          $bodyParts.Add("3. Restart Home Assistant.")
-          $bodyParts.Add("")
-          $bodyParts.Add("---")
           $bodyParts.Add("")
           $bodyParts.Add("## 📊 Release Details")
           $bodyParts.Add("")
@@ -253,7 +233,7 @@ jobs:
           $bodyParts.Add("---")
           $bodyParts.Add("")
           $bodyParts.Add("*📖 [Documentation](https://faserf.github.io/ha-db_infoscreen/)  ·  🐛 [Report an Issue](https://github.com/$repo/issues/new/choose)  ·  📦 [All Releases](https://github.com/$repo/releases)*")
-          
+
           $body = $bodyParts -join "`n"
           $body | Out-File -FilePath "release_body.md" -Encoding utf8
 
