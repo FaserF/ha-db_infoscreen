@@ -1,13 +1,13 @@
 {
   "domain": "db_infoscreen",
   "name": "db-infoscreen",
+  "after_dependencies": [
+    "hassio"
+  ],
   "codeowners": [
     "@FaserF"
   ],
   "config_flow": true,
-  "after_dependencies": [
-    "hassio"
-  ],
   "documentation": "https://faserf.github.io/ha-db_infoscreen/",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/FaserF/ha-db_infoscreen/issues",
