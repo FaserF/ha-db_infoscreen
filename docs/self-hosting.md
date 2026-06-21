@@ -30,7 +30,25 @@ If you run Home Assistant OS or Supervised, you can install the DBF App as a loc
   3. Add `https://github.com/FaserF/hassio-addons`.
   4. Find **DBF (DB-Infoscreen)** in the list and click **Install**.
   5. Start the add-on.
-  6. Configure the integration to use your local IP/port (e.g., `http://192.168.1.50:8092`) as the **Custom API URL** in the integration settings.
+
+#### Ingress Support
+The add-on fully supports Home Assistant Ingress. You can access the DB-Infoscreen web interface directly inside your Home Assistant UI by clicking **Open Web UI** on the add-on page or adding it to your sidebar.
+
+#### Configuration Options
+You can configure the add-on via the **Configuration** tab:
+
+- **`workers`**: (Default `2`) Number of worker processes for the hypnotoad web server. Increase if you have many simultaneous users.
+- **`log_level`**: (Default `info`) Set the logging detail level. Possible values: `debug`, `info`, `warning`, `error`, `fatal`.
+- **`imprint_name`** / **`imprint_address`**: Configures the imprint information shown on the web interface footer.
+- **`privacy_policy_url`**: Configures a link to your external privacy policy if required.
+
+#### 🧩 Automatic Integration Management & Synchronization
+When this add-on starts, it automatically manages the **DB Infoscreen Integration** for you:
+1. **Detection**: It checks if the `db_infoscreen` custom component is installed in your `/config/custom_components/` directory.
+2. **Auto-Install/Update**: If the integration is missing or a newer release exists on GitHub, the add-on will automatically download and install/update the custom component files.
+3. **Notification**: If the integration was updated or installed, a persistent notification will appear on your Home Assistant dashboard, prompting you to restart Home Assistant.
+
+To set up the integration to use this add-on's API, configure it in Home Assistant under **Settings > Devices & Services** with your local URL (e.g. `http://127.0.0.1:8092` or your router's IP if accessing externally).
 
 ### 2. Docker (Recommended for Container/Unraid setups)
 
