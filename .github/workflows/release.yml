@@ -249,6 +249,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git reset --hard HEAD
           git pull --rebase origin ${{ github.ref_name }}
+          git fetch --tags
           NEW_DEV=$(python .github/scripts/version_manager.py bump --type dev --level patch)
           if ! git diff --quiet; then
             git commit -am "chore(dev): bump to $NEW_DEV [skip ci]"
