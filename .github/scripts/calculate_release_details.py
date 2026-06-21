@@ -67,11 +67,7 @@ def main():
     if version_override and version_override.strip():
         bump_args += ["--override", version_override.strip()]
 
-    version = (
-        subprocess.check_output(bump_args)
-        .decode("utf-8")
-        .strip()
-    )
+    version = subprocess.check_output(bump_args).decode("utf-8").strip()
 
     # Revert version bump change in manifest file (since versioning job only calculates it, sync-version actually writes it)
     run_git(["checkout", "--", manifest_path])
