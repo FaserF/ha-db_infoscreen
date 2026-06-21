@@ -60,16 +60,21 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
     
     # 1. Update Home Assistant Version placeholder
     content = re.sub(
-        r"(placeholder:\s*['\"]?(?:e\.g\.\s*)?)20\d{2}\.\d{1,2}\.\d{1,2}(['\"]?)",
+        r"(id:\s*ha_version.*?placeholder:\s*['\"]?(?:e\.g\.\s*)?)20\d{2}\.\d{1,2}\.\d{1,2}(['\"]?)",
         f"\\g<1>{ha_version}\\g<2>",
-        content
+        content,
+        flags=re.DOTALL
     )
     
     # 2. Update Integration Version placeholder to the new version
+    if not integration_version.startswith("v") and "." in integration_version:
+        integration_version = "v" + integration_version
+        
     content = re.sub(
-        r"(placeholder:\s*['\"]?(?:e\.g\.\s*)?v?)\d+\.\d+\.\d+[^'\"]*?(['\"]?)",
+        r"(id:\s*integration_version.*?placeholder:\s*['\"]?(?:e\.g\.\s*)?)v?\d+\.\d+\.\d+[^'\"]*?(['\"]?)",
         f"\\g<1>{integration_version}\\g<2>",
-        content
+        content,
+        flags=re.DOTALL
     )
 
     # 3. Update Service/Firmware Version placeholders dynamically if relevant
