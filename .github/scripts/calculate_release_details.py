@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-import json
 import os
 import re
 import subprocess
-import sys
 from datetime import datetime
 
 
@@ -21,12 +19,6 @@ def run_git(args):
 def main():
     rtype = os.environ.get("RELEASE_TYPE", "beta")
     repo = os.environ.get("REPO", "").lower()
-    owner = os.environ.get("OWNER", "").lower() or (
-        repo.split("/")[0] if "/" in repo else ""
-    )
-    repo_name = os.environ.get("REPO_NAME", "").lower() or (
-        repo.split("/")[1] if "/" in repo else ""
-    )
 
     # Calculate version
     version = (
