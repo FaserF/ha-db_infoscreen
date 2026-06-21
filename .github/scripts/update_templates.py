@@ -5,13 +5,14 @@ import sys
 import urllib.request
 import json
 
+
 def get_latest_ha_version():
     try:
         url = "https://pypi.org/pypi/homeassistant/json"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=5) as response:
-            data = json.loads(response.read().decode('utf-8'))
-            return data['info']['version']
+            data = json.loads(response.read().decode("utf-8"))
+            return data["info"]["version"]
     except Exception as e:
         print(f"Error fetching HA version: {e}")
         return "2026.6.2"
@@ -54,7 +55,7 @@ def get_service_version(repo_name):
 def clean_and_update_template(file_path, integration_version, ha_version, repo_name):
     if not os.path.exists(file_path):
         return False
-    
+
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
     
@@ -67,7 +68,7 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
         content,
         flags=re.DOTALL
     )
-    
+
     # 2. Update Integration Version placeholder to the new version
     if not integration_version.startswith("v") and "." in integration_version:
         integration_version = "v" + integration_version
@@ -109,10 +110,10 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
     new_lines = []
     skip_mode = False
     skip_indent = 0
-    
+
     for i, line in enumerate(lines):
         indent = len(line) - len(line.lstrip())
-        
+
         if skip_mode:
             if indent > skip_indent:
                 continue
@@ -133,25 +134,49 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
                     field_id = next_line.split("id:")[-1].strip().strip("'\"")
                 if "label:" in next_line:
                     label_text = next_line.split("label:")[-1].strip().strip("'\"")
-            
+
             # Identify fields to remove
-            sensitive_ids = {"cf_zone", "api_key", "api_token", "token", "password", "phone_number", "phone"}
-            sensitive_labels = {"api key", "api token", "password", "token", "private key", "phone number", "phone"}
-            
-            if field_id.lower() in sensitive_ids or any(sl in label_text.lower() for sl in sensitive_labels):
+            sensitive_ids = {
+                "cf_zone",
+                "api_key",
+                "api_token",
+                "token",
+                "password",
+                "phone_number",
+                "phone",
+            }
+            sensitive_labels = {
+                "api key",
+                "api token",
+                "password",
+                "token",
+                "private key",
+                "phone number",
+                "phone",
+            }
+
+            if field_id.lower() in sensitive_ids or any(
+                sl in label_text.lower() for sl in sensitive_labels
+            ):
                 print(f"Removing sensitive field: id={field_id}, label={label_text}")
                 skip_mode = True
                 skip_indent = indent
                 continue
-        
+
         if "description:" in line:
             desc_lower = line.lower()
-            if any(k in desc_lower for k in ["domain", "host", "ip address", "url", "instance", "address"]):
+            if any(
+                k in desc_lower
+                for k in ["domain", "host", "ip address", "url", "instance", "address"]
+            ):
                 if "not share" not in desc_lower and "private" not in desc_lower:
-                    line = line.rstrip() + " (Do NOT share sensitive passwords, credentials, or public API keys. Use example.com or 192.168.1.1 instead.)"
-                    
+                    line = (
+                        line.rstrip()
+                        + " (Do NOT share sensitive passwords, credentials, or public API keys. Use example.com or 192.168.1.1 instead.)"
+                    )
+
         new_lines.append(line)
-        
+
     updated_content = "\n".join(new_lines) + "\n"
     
     if updated_content != original_content:
@@ -160,11 +185,12 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
         return True
     return False
 
+
 if __name__ == "__main__":
     version = sys.argv[1] if len(sys.argv) > 1 else "v1.0.0"
     if not version.startswith("v") and "." in version:
         version = "v" + version
-    
+
     ha_version = get_latest_ha_version()
     repo_name = os.path.basename(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
     print(f"Updating templates for {repo_name} with Integration Version: {version}, HA Version: {ha_version}")
