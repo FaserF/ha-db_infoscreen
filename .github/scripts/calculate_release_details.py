@@ -49,7 +49,11 @@ def main():
         if os.path.exists("docs"):
             docs_url = f"https://{owner}.github.io/{repo_name}/"
         else:
-            docs_url = f"https://github.com/{repo}" if repo else f"https://github.com/faserf/{repo_name}"
+            docs_url = (
+                f"https://github.com/{repo}"
+                if repo
+                else f"https://github.com/faserf/{repo_name}"
+            )
 
     # Calculate version via version_manager
     bump_args = [
