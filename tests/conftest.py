@@ -376,6 +376,10 @@ def hass():
         }
     )
 
+    async def async_add_executor_job(target, *args, **kwargs):
+        return target(*args, **kwargs)
+    mock_hass.async_add_executor_job = async_add_executor_job
+
     mock_hass.config_entries.async_entries.return_value = []
     mock_hass.data = {"integrations": {}, "custom_components": {}}
     return mock_hass

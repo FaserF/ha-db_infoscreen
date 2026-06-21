@@ -320,7 +320,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                         else:
                             errors["base"] = "cannot_connect"
                     else:
-                        matches = find_station_matches(stations, station_query)
+                        matches = await self.hass.async_add_executor_job(
+                            find_station_matches, stations, station_query
+                        )
                         if not matches:
                             self.found_stations = [f"{station_query} (Manual Entry)"]
                             self.no_match = True

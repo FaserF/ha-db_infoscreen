@@ -387,7 +387,9 @@ async def async_get_station_candidates(
                             )
                             or response.status == 300
                         ):
-                            candidates = parse_dbf_multiple_choices(text)
+                            candidates = await hass.async_add_executor_job(
+                                parse_dbf_multiple_choices, text
+                            )
                             if candidates:
                                 return candidates
 
