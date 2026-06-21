@@ -39,9 +39,9 @@ def main():
 
     with open(manifest_path, "r", encoding="utf-8") as f:
         manifest = json.load(f)
-    
+
     friendly_name = manifest.get("name", domain)
-    
+
     # Dynamic documentation URL logic
     docs_url = manifest.get("documentation")
     if not docs_url:
@@ -56,12 +56,20 @@ def main():
     # Calculate version via version_manager
     version = (
         subprocess.check_output(
-            ["python", ".github/scripts/version_manager.py", "bump", "--type", rtype, "--level", bump_level]
+            [
+                "python",
+                ".github/scripts/version_manager.py",
+                "bump",
+                "--type",
+                rtype,
+                "--level",
+                bump_level,
+            ]
         )
         .decode("utf-8")
         .strip()
     )
-    
+
     # Revert version bump change in manifest file (since versioning job only calculates it, sync-version actually writes it)
     run_git(["checkout", "--", manifest_path])
 
