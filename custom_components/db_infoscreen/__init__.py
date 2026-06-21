@@ -60,6 +60,8 @@ from .const import (
     CONF_FAVORITE_TRAINS,
     CONF_SERVER_TYPE,
     CONF_SERVER_URL,
+    CONF_CACHE_TTL,
+    DEFAULT_CACHE_TTL,
     SERVER_TYPE_CUSTOM,
     SERVER_TYPE_OFFICIAL,
     SERVER_TYPE_FASERF,
@@ -444,6 +446,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         self.paused = bool(config.get(CONF_PAUSED, False))
         self.via_stations_logic = config.get(CONF_VIA_STATIONS_LOGIC, "OR")
         self.admode = config.get(CONF_ADMODE, "preferred departure")
+        self.cache_ttl = timedelta(
+            seconds=int(config.get(CONF_CACHE_TTL, DEFAULT_CACHE_TTL))
+        )
         raw_update_interval = config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
         update_interval = int(max(raw_update_interval, MIN_UPDATE_INTERVAL))
         self._api_update_interval = update_interval * 60
@@ -675,7 +680,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         now = dt_util.now()
 
         # Periodic cleanup of global cache
-        prune_response_cache(RESPONSE_CACHE, CACHE_TTL)
+        prune_response_cache(RESPONSE_CACHE, self.cache_ttl)
 
         # Fetch server version if we don't have it yet
         if self.server_version is None:
@@ -698,7 +703,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 return self._last_valid_value or []
         elif self.fetch_url in RESPONSE_CACHE:
             timestamp, cached_data = RESPONSE_CACHE[self.fetch_url]
-            if now - timestamp < CACHE_TTL:
+            if now - timestamp < self.cache_ttl:
                 _LOGGER.debug("Using globally cached response for %s", self.fetch_url)
                 data = copy.deepcopy(cached_data)
                 self._raw_api_data = data
@@ -1634,7 +1639,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         # Check cache
         if url in RESPONSE_CACHE:
             timestamp, cached_data = RESPONSE_CACHE[url]
-            if dt_util.now() - timestamp < CACHE_TTL:
+            if dt_util.now() - timestamp < self.cache_ttl:
                 _LOGGER.debug("Using cached response for cascaded fetch at %s", url)
                 data = copy.deepcopy(cached_data)
             else:

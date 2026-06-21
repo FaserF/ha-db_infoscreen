@@ -11,6 +11,7 @@ from custom_components.db_infoscreen.const import (
     CONF_VIA_STATIONS,
     CONF_PLATFORMS,
     CONF_UPDATE_INTERVAL,
+    CONF_CACHE_TTL,
 )
 
 
@@ -45,7 +46,10 @@ async def test_full_options_lifecycle(hass):
 
     result_save_gen = await hass.config_entries.options.async_configure(
         result_gen["flow_id"],
-        {CONF_UPDATE_INTERVAL: 10},
+        {
+            CONF_UPDATE_INTERVAL: 10,
+            CONF_CACHE_TTL: 45,
+        },
     )
     assert result_save_gen["type"] == FlowResultType.FORM
     # We don't check config_entry.options here as it might not be updated in mock

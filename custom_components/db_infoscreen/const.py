@@ -1,7 +1,9 @@
 DOMAIN = "db_infoscreen"
-GITHUB_ISSUES_URL = "https://github.com/FaserF/ha-db_infoscreen/issues"
+GITHUB_ISSUES_URL: str = "https://github.com/FaserF/ha-db_infoscreen/issues"
 CONF_SERVER_TYPE = "server_type"
 CONF_SERVER_URL = "server_url"
+CONF_CACHE_TTL = "cache_ttl"
+DEFAULT_CACHE_TTL = 55
 SERVER_TYPE_CUSTOM = "custom"
 SERVER_TYPE_OFFICIAL = "official"
 SERVER_TYPE_FASERF = "faserf"

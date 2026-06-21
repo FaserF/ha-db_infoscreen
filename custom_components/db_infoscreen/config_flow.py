@@ -16,6 +16,8 @@ from .const import (
     DEFAULT_UPDATE_INTERVAL,
     DEFAULT_OFFSET,
     MAX_SENSORS,
+    CONF_CACHE_TTL,
+    DEFAULT_CACHE_TTL,
     CONF_HIDE_LOW_DELAY,
     CONF_DETAILED,
     CONF_PAST_60_MINUTES,
@@ -957,6 +959,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_UPDATE_INTERVAL,
                         default=self._get_config_value(
                             CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
+                        ),
+                    ): cv.positive_int,
+                    vol.Optional(
+                        CONF_CACHE_TTL,
+                        default=self._get_config_value(
+                            CONF_CACHE_TTL, DEFAULT_CACHE_TTL
                         ),
                     ): cv.positive_int,
                     vol.Optional(

@@ -30,3 +30,4 @@ init_diff.txt
 /__pycache__
 fcntl.py
 resource.py
+/MagicMock

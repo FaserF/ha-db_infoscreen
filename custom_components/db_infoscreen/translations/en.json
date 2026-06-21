@@ -125,6 +125,7 @@
         "data": {
           "next_departures": "Number of Upcoming Departures",
           "update_interval": "Update Interval (minutes)",
+          "cache_ttl": "Cache TTL (seconds)",
           "offset": "Offset (HH:MM)",
           "walk_time": "Walk Time to Station (minutes)",
           "paused": "Pause periodic updates (Stop data fetching)"

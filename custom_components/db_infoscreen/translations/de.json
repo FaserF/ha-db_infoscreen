@@ -126,6 +126,7 @@
         "data": {
           "next_departures": "Anzahl Abfahrten",
           "update_interval": "Aktualisierungsintervall (Minuten)",
+          "cache_ttl": "Cache-TTL (Sekunden)",
           "offset": "Versatz (HH:MM)",
           "walk_time": "Gehzeit (Minuten)",
           "paused": "Pausiere periodische Updates (Datenabfrage stoppen)"
