@@ -58,6 +58,8 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
     
+    original_content = content
+    
     # 1. Update Home Assistant Version placeholder
     content = re.sub(
         r"(id:\s*ha_version.*?placeholder:\s*['\"]?(?:e\.g\.\s*)?)20\d{2}\.\d{1,2}\.\d{1,2}(['\"]?)",
@@ -152,7 +154,7 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
         
     updated_content = "\n".join(new_lines) + "\n"
     
-    if updated_content != content:
+    if updated_content != original_content:
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(updated_content)
         return True
