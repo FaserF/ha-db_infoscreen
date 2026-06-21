@@ -55,8 +55,6 @@ def get_current_version(manifest_path=None):
 def write_version(v, manifest_path=None):
     if manifest_path is None:
         manifest_path = MANIFEST_FILE
-    with open("VERSION", "w") as f:
-        f.write(v)
     if manifest_path and os.path.exists(manifest_path):
         with open(manifest_path, "r") as f:
             data = json.load(f)

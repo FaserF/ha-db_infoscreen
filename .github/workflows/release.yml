@@ -118,7 +118,6 @@ jobs:
 
       - name: Commit and Push
         run: |
-          git add -f VERSION
           git add custom_components/db_infoscreen/manifest.json
           if ! git diff --staged --quiet; then
             git commit -m "chore: release version ${{ needs.versioning.outputs.version }} [skip ci]"

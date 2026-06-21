@@ -29,7 +29,7 @@ def main():
         .strip()
     )
     run_git(
-        ["checkout", "--", "VERSION", "custom_components/db_infoscreen/manifest.json"]
+        ["checkout", "--", "custom_components/db_infoscreen/manifest.json"]
     )
 
     print(f"Calculated Version: {version}")
