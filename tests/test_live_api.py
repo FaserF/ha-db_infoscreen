@@ -24,12 +24,14 @@ def _enable_socket_temporarily():
     """Bypass pytest-socket blocking during these tests."""
     try:
         import pytest_socket
+
         pytest_socket.enable_socket()
     except (ImportError, AttributeError):
         pass
     try:
         # Also clean HASocketBlockedError instances from pytest-homeassistant-custom-component
         from pytest_homeassistant_custom_component.plugins import HASocketBlockedError
+
         HASocketBlockedError.instances.clear()
     except ImportError:
         pass
@@ -75,6 +77,7 @@ async def live_coordinator_fixture(hass: HomeAssistant):
     # Clear any recorded HASocketBlockedError again
     try:
         from pytest_homeassistant_custom_component.plugins import HASocketBlockedError
+
         HASocketBlockedError.instances.clear()
     except ImportError:
         pass
