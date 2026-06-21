@@ -52,7 +52,7 @@ jobs:
           python .github/scripts/calculate_release_details.py
 
       - name: Upload Release Body
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-body
           path: release_body.md
@@ -126,7 +126,7 @@ jobs:
           fi
 
       - name: Download Release Body
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: release-body
 
@@ -165,7 +165,7 @@ jobs:
           cd ..
 
       - name: Download Release Body Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: release-body
 
