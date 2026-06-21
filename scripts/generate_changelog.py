@@ -120,7 +120,9 @@ def get_norm_key(msg: str) -> str:
     return n.strip()
 
 
-def get_formatted_item(display: str, hashes: list, repo: str, commit_authors: dict) -> str:
+def get_formatted_item(
+    display: str, hashes: list, repo: str, commit_authors: dict
+) -> str:
     if hashes:
         links = []
         attributions = []
@@ -135,16 +137,16 @@ def get_formatted_item(display: str, hashes: list, repo: str, commit_authors: di
             if author:
                 author_lower = author.lower()
                 is_ignored = (
-                    "faserf" in author_lower or
-                    "action" in author_lower or
-                    "bot" in author_lower or
-                    "dependabot" in author_lower or
-                    "fabian" in author_lower or
-                    "seitz" in author_lower
+                    "faserf" in author_lower
+                    or "action" in author_lower
+                    or "bot" in author_lower
+                    or "dependabot" in author_lower
+                    or "fabian" in author_lower
+                    or "seitz" in author_lower
                 )
                 if not is_ignored:
                     attributions.append(f"thanks to @{author} for this contribution!")
-        
+
         hash_str = ", ".join(links)
         attr_str = f" — {', '.join(attributions)}" if attributions else ""
         return f"{display} ({hash_str}){attr_str}"
@@ -351,7 +353,9 @@ def main():
         )
         out.append(">")
         for item in buckets["breaking"]:
-            formatted = get_formatted_item(item["display"], item["hashes"], repo, commit_authors)
+            formatted = get_formatted_item(
+                item["display"], item["hashes"], repo, commit_authors
+            )
             out.append(f"> - {formatted}")
         out.append("")
 
@@ -388,7 +392,9 @@ def main():
             out.append("</details>")
         else:
             for item in bucket:
-                formatted = get_formatted_item(item["display"], item["hashes"], repo, commit_authors)
+                formatted = get_formatted_item(
+                    item["display"], item["hashes"], repo, commit_authors
+                )
                 out.append(f"- {formatted}")
         out.append("")
 
