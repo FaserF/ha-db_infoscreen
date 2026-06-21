@@ -6,21 +6,39 @@ import subprocess
 import sys
 from datetime import datetime
 
+
 def run_git(args):
     try:
-        return subprocess.check_output(["git"] + args, stderr=subprocess.DEVNULL).decode("utf-8").strip()
+        return (
+            subprocess.check_output(["git"] + args, stderr=subprocess.DEVNULL)
+            .decode("utf-8")
+            .strip()
+        )
     except subprocess.CalledProcessError:
         return ""
+
 
 def main():
     rtype = os.environ.get("RELEASE_TYPE", "beta")
     repo = os.environ.get("REPO", "").lower()
-    owner = os.environ.get("OWNER", "").lower() or (repo.split('/')[0] if '/' in repo else "")
-    repo_name = os.environ.get("REPO_NAME", "").lower() or (repo.split('/')[1] if '/' in repo else "")
+    owner = os.environ.get("OWNER", "").lower() or (
+        repo.split("/")[0] if "/" in repo else ""
+    )
+    repo_name = os.environ.get("REPO_NAME", "").lower() or (
+        repo.split("/")[1] if "/" in repo else ""
+    )
 
     # Calculate version
-    version = subprocess.check_output(["python", ".github/scripts/version_manager.py", "bump", "--type", rtype]).decode("utf-8").strip()
-    run_git(["checkout", "--", "VERSION", "custom_components/db_infoscreen/manifest.json"])
+    version = (
+        subprocess.check_output(
+            ["python", ".github/scripts/version_manager.py", "bump", "--type", rtype]
+        )
+        .decode("utf-8")
+        .strip()
+    )
+    run_git(
+        ["checkout", "--", "VERSION", "custom_components/db_infoscreen/manifest.json"]
+    )
 
     print(f"Calculated Version: {version}")
     tag = f"v{version}"
@@ -40,18 +58,18 @@ def main():
     tags = [t.strip() for t in tags_raw.splitlines() if t.strip()]
     latest_tag = ""
     for t in tags:
-        if re.match(r'^v?\d+\.\d+\.\d+(?:(?:b|-dev|-nightly)\d+)?$', t):
+        if re.match(r"^v?\d+\.\d+\.\d+(?:(?:b|-dev|-nightly)\d+)?$", t):
             latest_tag = t
             break
 
     if rtype == "stable":
         for t in tags:
-            if re.match(r'^v?\d+\.\d+\.\d+$', t):
+            if re.match(r"^v?\d+\.\d+\.\d+$", t):
                 changelog_from = t
                 changelog_label = f"since last stable release (`{t}`)"
                 break
     elif rtype == "beta":
-        prev_beta_pat = re.compile(rf'^v?{re.escape(base_version)}(?:b|-beta)\d+$')
+        prev_beta_pat = re.compile(rf"^v?{re.escape(base_version)}(?:b|-beta)\d+$")
         for t in tags:
             if prev_beta_pat.match(t):
                 changelog_from = t
@@ -59,7 +77,7 @@ def main():
                 break
         if not changelog_from:
             for t in tags:
-                if re.match(r'^v?\d+\.\d+\.\d+$', t):
+                if re.match(r"^v?\d+\.\d+\.\d+$", t):
                     changelog_from = t
                     changelog_label = f"since last stable release (`{t}`) — first beta of {base_version}"
                     break
@@ -76,7 +94,7 @@ def main():
         count_range = f"{changelog_from}..HEAD"
     else:
         count_range = "HEAD"
-    
+
     commit_count_raw = run_git(["rev-list", "--count", count_range])
     if commit_count_raw.isdigit():
         total_commit_count = int(commit_count_raw)
@@ -85,14 +103,26 @@ def main():
     changelog_md = ""
     if os.path.exists("scripts/generate_changelog.py"):
         try:
-            changelog_md = subprocess.check_output([
-                "python", "scripts/generate_changelog.py",
-                "--from-tag", changelog_from,
-                "--total-commits", str(total_commit_count),
-                "--repo", repo
-            ]).decode("utf-8").strip()
+            changelog_md = (
+                subprocess.check_output(
+                    [
+                        "python",
+                        "scripts/generate_changelog.py",
+                        "--from-tag",
+                        changelog_from,
+                        "--total-commits",
+                        str(total_commit_count),
+                        "--repo",
+                        repo,
+                    ]
+                )
+                .decode("utf-8")
+                .strip()
+            )
         except Exception:
-            changelog_md = "_Changelog could not be generated automatically. See commit history._"
+            changelog_md = (
+                "_Changelog could not be generated automatically. See commit history._"
+            )
     else:
         changelog_md = "_Changelog script not found._"
 
@@ -102,8 +132,11 @@ def main():
     # Channel decorations
     channel_badge = {
         "stable": "![Stable](https://img.shields.io/badge/channel-stable-brightgreen?style=flat-square)",
-        "beta": "![Beta](https://img.shields.io/badge/channel-beta-orange?style=flat-square)"
-    }.get(rtype, "![Nightly](https://img.shields.io/badge/channel-nightly-blue?style=flat-square)")
+        "beta": "![Beta](https://img.shields.io/badge/channel-beta-orange?style=flat-square)",
+    }.get(
+        rtype,
+        "![Nightly](https://img.shields.io/badge/channel-nightly-blue?style=flat-square)",
+    )
 
     # Analyze diff impact
     diff_range = f"{changelog_from}..HEAD" if changelog_from else "HEAD"
@@ -132,7 +165,7 @@ def main():
     breaking_count = 0
     log_msgs = run_git(["log", diff_range, "--format=%B"])
     for msg in log_msgs.split("\n"):
-        if re.search(r'\bBREAKING CHANGE\b|\bBREAKING:\b|^[a-zA-Z]+!:', msg):
+        if re.search(r"\bBREAKING CHANGE\b|\bBREAKING:\b|^[a-zA-Z]+!:", msg):
             breaking_count += 1
 
     # Determine Risk Severity
@@ -163,7 +196,9 @@ def main():
             impact_summary.append(f"⚙️ Core ({integration_count} files · {pct}%)")
         if translation_count > 0:
             pct = round((translation_count / total_files) * 100)
-            impact_summary.append(f"🗣️ Translations ({translation_count} files · {pct}%)")
+            impact_summary.append(
+                f"🗣️ Translations ({translation_count} files · {pct}%)"
+            )
         if test_count > 0:
             pct = round((test_count / total_files) * 100)
             impact_summary.append(f"🧪 Tests ({test_count} files · {pct}%)")
@@ -173,8 +208,12 @@ def main():
         if docs_count > 0:
             pct = round((docs_count / total_files) * 100)
             impact_summary.append(f"📖 Docs ({docs_count} files · {pct}%)")
-    
-    impact_str = " · ".join(impact_summary) if impact_summary else "No codebase changes detected."
+
+    impact_str = (
+        " · ".join(impact_summary)
+        if impact_summary
+        else "No codebase changes detected."
+    )
 
     prerelease_note = (
         f"\n> [!{alert_type}]\n"
@@ -204,7 +243,7 @@ def main():
         "",
         "---",
         "",
-        f"*📖 [Documentation](https://faserf.github.io/ha-db_infoscreen/)  ·  🐛 [Report an Issue](https://github.com/{repo}/issues/new/choose)  ·  📦 [All Releases](https://github.com/{repo}/releases)*"
+        f"*📖 [Documentation](https://faserf.github.io/ha-db_infoscreen/)  ·  🐛 [Report an Issue](https://github.com/{repo}/issues/new/choose)  ·  📦 [All Releases](https://github.com/{repo}/releases)*",
     ]
 
     body = "\n".join(body_parts)
@@ -220,10 +259,12 @@ def main():
             f.write(f"is_prerelease={is_prerelease}\n")
             # Write multiline output for release_body
             import uuid
+
             delimiter = f"gh_release_{uuid.uuid4().hex}"
             f.write(f"release_body<<{delimiter}\n")
             f.write(body + "\n")
             f.write(f"{delimiter}\n")
+
 
 if __name__ == "__main__":
     main()

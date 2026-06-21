@@ -8,98 +8,115 @@ import sys
 
 # Noise filter — commits matching ANY pattern are silently dropped
 NOISE_PATTERNS = [
-    r'^\s*$',
-    r'^(Update|Aktualisier[et]?|Add|Adds|Adde|Delete|Deletes|Remove|Removes|Rename|Renames|Move|Moves|Fix|Edit|Change|Modify)\s+[\w\-\.\/]+\.\w{1,10}\s*$',
-    r'^Merge (pull request|branch|remote-tracking branch)\b',
-    r'^Merge from\b',
-    r'^(chore|build)(\([^)]*\))?:\s*(bump|release|version)\b',
-    r'^(bump|release)(\s+version)?\s+v?\d',
-    r'^v?\d+\.\d+\.\d+\s*$',
-    r'^\[skip[- ]ci\]',
-    r'^chore: regenerate (manifest|connections|changelog)\b',
-    r'^(auto.?generated?|automated?|bot:)\b',
+    r"^\s*$",
+    r"^(Update|Aktualisier[et]?|Add|Adds|Adde|Delete|Deletes|Remove|Removes|Rename|Renames|Move|Moves|Fix|Edit|Change|Modify)\s+[\w\-\.\/]+\.\w{1,10}\s*$",
+    r"^Merge (pull request|branch|remote-tracking branch)\b",
+    r"^Merge from\b",
+    r"^(chore|build)(\([^)]*\))?:\s*(bump|release|version)\b",
+    r"^(bump|release)(\s+version)?\s+v?\d",
+    r"^v?\d+\.\d+\.\d+\s*$",
+    r"^\[skip[- ]ci\]",
+    r"^chore: regenerate (manifest|connections|changelog)\b",
+    r"^(auto.?generated?|automated?|bot:)\b",
     r'^Revert "Revert',
-    r'^Initial commit\s*$',
-    r'^WIP\b',
-    r'^wip\b',
-    r'^.{1,3}$',
-    r'\[skip[- ]ci\]\s*$',
+    r"^Initial commit\s*$",
+    r"^WIP\b",
+    r"^wip\b",
+    r"^.{1,3}$",
+    r"\[skip[- ]ci\]\s*$",
 ]
 
 # Category order & display labels
-CATEGORY_ORDER = ['breaking', 'feat', 'fix', 'security', 'perf', 'refactor', 'ui', 'docs', 'test', 'ci', 'chore', 'other']
+CATEGORY_ORDER = [
+    "breaking",
+    "feat",
+    "fix",
+    "security",
+    "perf",
+    "refactor",
+    "ui",
+    "docs",
+    "test",
+    "ci",
+    "chore",
+    "other",
+]
 CATEGORY_EMOJI = {
-    'breaking': '💥 Breaking Changes',
-    'feat': '✨ New Features',
-    'fix': '🐛 Bug Fixes',
-    'security': '🔒 Security',
-    'perf': '⚡ Performance',
-    'refactor': '♻️ Code Improvements',
-    'ui': '🎨 UI / Translations',
-    'docs': '📚 Documentation',
-    'test': '🧪 Tests',
-    'ci': '🔄 CI / CD',
-    'chore': '🔧 Maintenance',
-    'other': '📦 Other Changes',
+    "breaking": "💥 Breaking Changes",
+    "feat": "✨ New Features",
+    "fix": "🐛 Bug Fixes",
+    "security": "🔒 Security",
+    "perf": "⚡ Performance",
+    "refactor": "♻️ Code Improvements",
+    "ui": "🎨 UI / Translations",
+    "docs": "📚 Documentation",
+    "test": "🧪 Tests",
+    "ci": "🔄 CI / CD",
+    "chore": "🔧 Maintenance",
+    "other": "📦 Other Changes",
 }
 
 # Conventional commit type → bucket mapping
 TYPE_MAP = {
-    'feat': 'feat',
-    'feature': 'feat',
-    'fix': 'fix',
-    'bugfix': 'fix',
-    'hotfix': 'fix',
-    'security': 'security',
-    'sec': 'security',
-    'perf': 'perf',
-    'optim': 'perf',
-    'refactor': 'refactor',
-    'refact': 'refactor',
-    'ui': 'ui',
-    'style': 'ui',
-    'ux': 'ui',
-    'docs': 'docs',
-    'doc': 'docs',
-    'test': 'test',
-    'tests': 'test',
-    'ci': 'ci',
-    'cd': 'ci',
-    'build': 'ci',
-    'chore': 'chore',
-    'maint': 'chore',
-    'deps': 'chore',
-    'bump': 'chore',
-    'revert': 'fix',
+    "feat": "feat",
+    "feature": "feat",
+    "fix": "fix",
+    "bugfix": "fix",
+    "hotfix": "fix",
+    "security": "security",
+    "sec": "security",
+    "perf": "perf",
+    "optim": "perf",
+    "refactor": "refactor",
+    "refact": "refactor",
+    "ui": "ui",
+    "style": "ui",
+    "ux": "ui",
+    "docs": "docs",
+    "doc": "docs",
+    "test": "test",
+    "tests": "test",
+    "ci": "ci",
+    "cd": "ci",
+    "build": "ci",
+    "chore": "chore",
+    "maint": "chore",
+    "deps": "chore",
+    "bump": "chore",
+    "revert": "fix",
 }
 
 # Scope overrides
 SCOPE_MAP = {
-    'ui': 'ui',
-    'translation': 'ui',
-    'translate': 'ui',
-    'docs': 'docs',
-    'readme': 'docs',
-    'test': 'test',
-    'tests': 'test',
-    'ci': 'ci',
-    'workflow': 'ci',
-    'actions': 'ci',
+    "ui": "ui",
+    "translation": "ui",
+    "translate": "ui",
+    "docs": "docs",
+    "readme": "docs",
+    "test": "test",
+    "tests": "test",
+    "ci": "ci",
+    "workflow": "ci",
+    "actions": "ci",
 }
 
 MAX_PER_SECTION = 15
-NEVER_COLLAPSE = ['breaking', 'security']
+NEVER_COLLAPSE = ["breaking", "security"]
 
 
 def get_norm_key(msg: str) -> str:
     n = msg.lower()
     # Strip conventional commit prefixes
-    n = re.sub(r'^(feat|fix|docs|style|refactor|perf|test|chore|ci|security|build|ui|ux|revert)(\([^)]*\))?(!)?:\s*', '', n)
-    n = re.sub(r'[\.\!\?\,\;\:\"\'`]', '', n)
+    n = re.sub(
+        r"^(feat|fix|docs|style|refactor|perf|test|chore|ci|security|build|ui|ux|revert)(\([^)]*\))?(!)?:\s*",
+        "",
+        n,
+    )
+    n = re.sub(r"[\.\!\?\,\;\:\"\'`]", "", n)
     # Strip common prepositions
-    n = re.sub(r'\b(the|a|an|for|of|in|to|with|from|on|at|by)\b', '', n)
+    n = re.sub(r"\b(the|a|an|for|of|in|to|with|from|on|at|by)\b", "", n)
     # Normalize whitespaces
-    n = re.sub(r'\s+', ' ', n)
+    n = re.sub(r"\s+", " ", n)
     return n.strip()
 
 
@@ -133,12 +150,14 @@ def main():
         git_args = ["git", "log", "--pretty=format:%h %s", "--max-count=2000"]
 
     try:
-        raw_output = subprocess.check_output(git_args, stderr=subprocess.DEVNULL).decode("utf-8", errors="ignore")
+        raw_output = subprocess.check_output(
+            git_args, stderr=subprocess.DEVNULL
+        ).decode("utf-8", errors="ignore")
     except subprocess.CalledProcessError:
         raw_output = ""
 
     commit_lines = [line.strip() for line in raw_output.splitlines() if line.strip()]
-    
+
     try:
         total_raw = int(total_commits) if total_commits else len(commit_lines)
     except ValueError:
@@ -167,11 +186,15 @@ def main():
         display = msg
         is_break = False
 
-        conv_match = re.match(r"^([A-Za-z][A-Za-z0-9_-]*)(\([^)]*\))?(!)?:\s*(.+)$", msg)
+        conv_match = re.match(
+            r"^([A-Za-z][A-Za-z0-9_-]*)(\([^)]*\))?(!)?:\s*(.+)$", msg
+        )
         if conv_match:
             raw_type = conv_match.group(1).lower()
             raw_scope = conv_match.group(2)
-            raw_scope = re.sub(r"[()]", "", raw_scope).lower().strip() if raw_scope else ""
+            raw_scope = (
+                re.sub(r"[()]", "", raw_scope).lower().strip() if raw_scope else ""
+            )
             is_break = bool(conv_match.group(3))
             desc = conv_match.group(4).strip()
 
@@ -188,25 +211,77 @@ def main():
         else:
             display = msg[0].upper() + msg[1:] if msg else msg
             msg_lower = msg.lower()
-            if any(w in msg_lower for w in ["general fix", "small fix", "bug fix", "fixes", "fixed"]):
+            if any(
+                w in msg_lower
+                for w in ["general fix", "small fix", "bug fix", "fixes", "fixed"]
+            ):
                 bucket = "fix"
-            elif any(w in msg_lower for w in ["ci", "linter", "lint fix", "pipeline", "workflow", "github action", "generate_changelog", "changelog"]):
+            elif any(
+                w in msg_lower
+                for w in [
+                    "ci",
+                    "linter",
+                    "lint fix",
+                    "pipeline",
+                    "workflow",
+                    "github action",
+                    "generate_changelog",
+                    "changelog",
+                ]
+            ):
                 bucket = "ci"
-            elif any(w in msg_lower for w in ["update depend", "bump depend", "renovate", "dependency update", "upgrade dep"]):
+            elif any(
+                w in msg_lower
+                for w in [
+                    "update depend",
+                    "bump depend",
+                    "renovate",
+                    "dependency update",
+                    "upgrade dep",
+                ]
+            ):
                 bucket = "chore"
-            elif any(w in msg_lower for w in ["add feature", "added feature", "adds feature", "new feature", "add support"]):
+            elif any(
+                w in msg_lower
+                for w in [
+                    "add feature",
+                    "added feature",
+                    "adds feature",
+                    "new feature",
+                    "add support",
+                ]
+            ):
                 bucket = "feat"
-            elif any(w in msg_lower for w in ["security", "vulnerability", "cve", "auth"]):
+            elif any(
+                w in msg_lower for w in ["security", "vulnerability", "cve", "auth"]
+            ):
                 bucket = "security"
             elif any(w in msg_lower for w in ["perf", "speed", "faster", "optim"]):
                 bucket = "perf"
-            elif "refactor" in msg_lower or "cleanup" in msg_lower or "clean up" in msg_lower or "improve" in msg_lower:
+            elif (
+                "refactor" in msg_lower
+                or "cleanup" in msg_lower
+                or "clean up" in msg_lower
+                or "improve" in msg_lower
+            ):
                 bucket = "refactor"
             elif any(w in msg_lower for w in ["doc", "readme", "wiki", "guide"]):
                 bucket = "docs"
             elif any(w in msg_lower for w in ["test", "spec", "unit test"]):
                 bucket = "test"
-            elif any(w in msg_lower for w in ["ui", "ux", "layout", "style", "theme", "translation", "strings", "lang"]):
+            elif any(
+                w in msg_lower
+                for w in [
+                    "ui",
+                    "ux",
+                    "layout",
+                    "style",
+                    "theme",
+                    "translation",
+                    "strings",
+                    "lang",
+                ]
+            ):
                 bucket = "ui"
 
         norm_key = get_norm_key(display)
@@ -219,7 +294,10 @@ def main():
                 if commit_hash and commit_hash not in existing_break["hashes"]:
                     existing_break["hashes"].append(commit_hash)
             else:
-                break_item = {"display": break_display, "hashes": [commit_hash] if commit_hash else []}
+                break_item = {
+                    "display": break_display,
+                    "hashes": [commit_hash] if commit_hash else [],
+                }
                 seen_items[break_key] = break_item
                 buckets["breaking"].append(break_item)
 
@@ -240,7 +318,9 @@ def main():
     if buckets["breaking"]:
         has_any = True
         out.append("> [!CAUTION]")
-        out.append("> **This release contains breaking changes. Please review before updating.**")
+        out.append(
+            "> **This release contains breaking changes. Please review before updating.**"
+        )
         out.append(">")
         for item in buckets["breaking"]:
             formatted = get_formatted_item(item["display"], item["hashes"], repo)
@@ -262,7 +342,9 @@ def main():
 
         if collapse:
             for i in range(MAX_PER_SECTION):
-                formatted = get_formatted_item(bucket[i]["display"], bucket[i]["hashes"], repo)
+                formatted = get_formatted_item(
+                    bucket[i]["display"], bucket[i]["hashes"], repo
+                )
                 out.append(f"- {formatted}")
             remaining = len(bucket) - MAX_PER_SECTION
             out.append("")
@@ -270,7 +352,9 @@ def main():
             out.append(f"<summary>Show {remaining} more changes…</summary>")
             out.append("")
             for i in range(MAX_PER_SECTION, len(bucket)):
-                formatted = get_formatted_item(bucket[i]["display"], bucket[i]["hashes"], repo)
+                formatted = get_formatted_item(
+                    bucket[i]["display"], bucket[i]["hashes"], repo
+                )
                 out.append(f"- {formatted}")
             out.append("")
             out.append("</details>")
@@ -282,18 +366,22 @@ def main():
 
     if not has_any:
         out.append("> *No categorised changes found in this release.*")
-        out.append("> Most commits were maintenance, dependency updates, or automated changes.")
+        out.append(
+            "> Most commits were maintenance, dependency updates, or automated changes."
+        )
         out.append("")
 
     range_str = f"{from_tag}..HEAD" if from_tag else "all history"
     out.append("---")
 
     if total_raw > 0:
-        out.append(f"*{filtered_count} significant changes from {total_raw} total commits since `{from_tag}`.*")
+        out.append(
+            f"*{filtered_count} significant changes from {total_raw} total commits since `{from_tag}`.*"
+        )
     else:
         out.append(f"*Changelog generated from `{range_str}`.*")
 
-    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stdout.reconfigure(encoding="utf-8")
     print("\n".join(out))
 
 
