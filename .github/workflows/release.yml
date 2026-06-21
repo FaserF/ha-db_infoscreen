@@ -1,7 +1,7 @@
 ---
 name: Release
 
-"on":
+on:
   workflow_dispatch:
     inputs:
       release_type:
@@ -26,6 +26,16 @@ name: Release
         description: "Manually override new version (e.g. 1.2.3 or 2026.6.2b1). Leave empty to use automatic calculation."
         required: false
         type: string
+  push:
+    branches:
+      - main
+      - master
+    paths-ignore:
+      - '**/manifest.json'
+      - '**/translations/**'
+      - 'CHANGELOG.md'
+      - '.github/workflows/issue-orchestrator.yml'
+      - '.github/ISSUE_TEMPLATE/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-release
@@ -57,8 +67,8 @@ jobs:
         id: get_version
         shell: bash
         env:
-          RELEASE_TYPE: ${{ inputs.release_type }}
-          BUMP_LEVEL: ${{ inputs.bump_level }}
+          RELEASE_TYPE: ${{ github.event.inputs.release_type || (contains(github.event.head_commit.message, '[bump-version]') && 'stable' || 'beta') }}
+          BUMP_LEVEL: ${{ github.event.inputs.bump_level || 'patch' }}
           VERSION_OVERRIDE: ${{ inputs.version_override }}
           REPO: ${{ github.repository }}
           OWNER: ${{ github.repository_owner }}
