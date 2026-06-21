@@ -58,6 +58,7 @@ jobs:
           commit_message: "style: auto-fix and format with Ruff [skip ci]"
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          push_options: "--force"
 
       - name: Run Mypy
         run: |
