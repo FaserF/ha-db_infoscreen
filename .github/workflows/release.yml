@@ -44,7 +44,7 @@ concurrency:
 jobs:
   versioning:
     name: Determine Version
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[bump-version]')
+    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && contains(github.event.head_commit.message, '[bump-version]'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -96,12 +96,14 @@ jobs:
           VERSION: ${{ steps.get_version.outputs.version }}
         shell: bash
         run: |
-          # Use gh api to find existing draft release
+          # Find and delete any existing draft release with same tag or title
           release_id=$(gh api "repos/$REPO/releases" --jq '.[] | select(.tag_name=="'$TAG'" or .name=="Release '$VERSION'") | select(.draft==true) | .id')
           if [ -n "$release_id" ]; then
             gh api -X DELETE "repos/$REPO/releases/$release_id"
-            git push --delete origin "$TAG" 2>/dev/null || true
           fi
+          # Also check if the git tag already exists locally or remotely, delete it so we can re-create it
+          git tag -d "$TAG" 2>/dev/null || true
+          git push --delete origin "$TAG" 2>/dev/null || true
 
       - name: Create Initial Draft Release
         env:
