@@ -1,15 +1,22 @@
-frontend:
-- changed-files:
-  - any-glob-to-any-file: '**/*.{js,ts,tsx,jsx,json,css,scss,html}'
+# Add "enhancement" label to PRs modifying feat/* branches
+enhancement:
+  - head-branch: ['^feat/', '^feature/']
 
-backend:
-- changed-files:
-  - any-glob-to-any-file: '**/*.{py,yaml,yml}'
+# Add "bug" label to PRs modifying fix/* branches
+bug:
+  - head-branch: ['^fix/', '^bugfix/']
 
-docker:
-- changed-files:
-  - any-glob-to-any-file: '**/Dockerfile'
-
+# Add "documentation" label
 documentation:
-- changed-files:
-  - any-glob-to-any-file: '**/*.md'
+  - changed-files:
+    - any-glob-to-any-file: ['**/*.md']
+
+# Add "ci" label
+ci:
+  - changed-files:
+    - any-glob-to-any-file: ['.github/**']
+
+# Add "tests" label
+tests:
+  - changed-files:
+    - any-glob-to-any-file: ['tests/**']
