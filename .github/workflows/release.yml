@@ -110,6 +110,7 @@ jobs:
             prerelease_arg="--prerelease"
           fi
           gh release create "$TAG" \
+            --target "${{ github.ref_name }}" \
             --title "Release $VERSION" \
             --notes-file "initial_draft_body.md" \
             --draft \
@@ -191,6 +192,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
 
       - name: 📦 Zip Component
@@ -234,6 +236,7 @@ jobs:
           else
             # Create a brand new release if no draft exists
             gh release create "$TAG" \
+              --target "${{ github.ref_name }}" \
               --title "Release $VERSION" \
               --notes-file "release_body.md" \
               $prerelease_arg \

@@ -270,6 +270,8 @@ def main():
         f"| **Channel** | {rtype} |",
         f"| **Released** | {released_at} |",
         f"| **Commits included** | {total_commit_count} — {changelog_label} |",
+        f"| **Downloads (this release)** | [![Downloads](https://img.shields.io/github/downloads/{owner}/{repo_name}/{tag}/{domain}.zip?style=flat-square&logo=github)](https://github.com/{owner}/{repo_name}/releases/tag/{tag}) |",
+        f"| **Downloads (total)** | [![Downloads](https://img.shields.io/github/downloads/{owner}/{repo_name}/total?style=flat-square&logo=github)](https://github.com/{owner}/{repo_name}/releases) |",
         "",
         "---",
         "",
