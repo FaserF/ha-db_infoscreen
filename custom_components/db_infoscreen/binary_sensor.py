@@ -358,18 +358,20 @@ class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
         for text in issues:
             lower_text = text.lower()
             facility_type = "escalator" if "rolltreppe" in lower_text else "elevator"
-            
+
             platform = None
             match = re.search(r"(?:gleis|bahnsteig)\s*(\d+)", lower_text)
             if match:
                 platform = match.group(1)
-                
-            defective_facilities.append({
-                "facility_type": facility_type,
-                "platform": platform,
-                "text": text,
-                "status": "defective",
-            })
+
+            defective_facilities.append(
+                {
+                    "facility_type": facility_type,
+                    "platform": platform,
+                    "text": text,
+                    "status": "defective",
+                }
+            )
 
         return {
             "issues": issues,

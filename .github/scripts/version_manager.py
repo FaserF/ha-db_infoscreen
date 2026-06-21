@@ -86,21 +86,21 @@ def calculate_version(rtype, curr=None, now=None):
     if rtype == "stable":
         if stype:
             return f"{year}.{month}.{p}"
-        return f"{year}.{month}.0" if new_cyc else f"{year}.{month}.{p+1}"
+        return f"{year}.{month}.0" if new_cyc else f"{year}.{month}.{p + 1}"
     if rtype == "beta":
         if new_cyc:
             return f"{year}.{month}.0b0"
         if stype == "b":
-            return f"{year}.{month}.{p}b{snum+1}"
+            return f"{year}.{month}.{p}b{snum + 1}"
         if stype == "-dev":
             return f"{year}.{month}.{p}b0"
-        return f"{year}.{month}.{p+1}b0"
+        return f"{year}.{month}.{p + 1}b0"
     if rtype in ["dev", "nightly"]:
         if new_cyc:
             return f"{year}.{month}.0-dev0"
         if stype == "-dev":
-            return f"{year}.{month}.{p}-dev{snum+1}"
-        return f"{year}.{month}.{p+1}-dev0"
+            return f"{year}.{month}.{p}-dev{snum + 1}"
+        return f"{year}.{month}.{p + 1}-dev0"
     raise ValueError(f"Unknown type: {rtype}")
 
 

@@ -8,6 +8,7 @@ import pytest
 if os.name == "nt":
     try:
         import pytest_socket
+
         pytest_socket.disable_socket = lambda *args, **kwargs: None
     except ImportError:
         pass
@@ -107,7 +108,7 @@ if not PYTEST_HA_AVAILABLE:
                 name,
                 update_interval=None,
                 update_method=None,
-                request_refresh_debouncer=None
+                request_refresh_debouncer=None,
             ):
                 self.hass = hass
                 self.logger = logger
@@ -378,6 +379,7 @@ def hass():
 
     async def async_add_executor_job(target, *args, **kwargs):
         return target(*args, **kwargs)
+
     mock_hass.async_add_executor_job = async_add_executor_job
 
     mock_hass.config_entries.async_entries.return_value = []

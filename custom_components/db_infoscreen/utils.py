@@ -224,6 +224,7 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
             return hass.data[data_key]
 
     from homeassistant.helpers.storage import Store
+
     storage_key = f"db_infoscreen_stations_{server_slug}"
     store: Store[dict[str, Any]] = Store(hass, 1, storage_key)
 
@@ -246,7 +247,9 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
                 )
                 return stored_data["stations"]
         except (ValueError, TypeError) as format_err:
-            _LOGGER.warning("Malformed persistent cache timestamp for %s: %s", base_url, format_err)
+            _LOGGER.warning(
+                "Malformed persistent cache timestamp for %s: %s", base_url, format_err
+            )
 
     _LOGGER.debug("Downloading station list from %s", station_url)
     try:
@@ -271,12 +274,15 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
                     hass.data[data_key] = stations
                     hass.data[update_key] = now
                     try:
-                        await store.async_save({
-                            "stations": stations,
-                            "last_update": now.isoformat()
-                        })
+                        await store.async_save(
+                            {"stations": stations, "last_update": now.isoformat()}
+                        )
                     except Exception as save_err:
-                        _LOGGER.warning("Failed to save station cache for %s: %s", base_url, save_err)
+                        _LOGGER.warning(
+                            "Failed to save station cache for %s: %s",
+                            base_url,
+                            save_err,
+                        )
                     _LOGGER.debug("Parsed and cached %d stations", len(stations))
                     return stations
                 else:

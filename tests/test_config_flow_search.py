@@ -55,12 +55,14 @@ def create_flow(hass):
 async def test_search_single_result(hass: HomeAssistant) -> None:
     """Test user input resulting in a single unique match."""
     # Patch helper globally (for utils.py) and locally for __init__ (where it's imported at top level)
-    with patch(
-        "homeassistant.helpers.aiohttp_client.async_get_clientsession"
-    ) as mock_get_session_helper, patch(
-        "custom_components.db_infoscreen.__init__.async_get_clientsession"
-    ) as mock_get_session_init:
-
+    with (
+        patch(
+            "homeassistant.helpers.aiohttp_client.async_get_clientsession"
+        ) as mock_get_session_helper,
+        patch(
+            "custom_components.db_infoscreen.__init__.async_get_clientsession"
+        ) as mock_get_session_init,
+    ):
         mock_session = MagicMock()
         mock_response = MagicMock()
         mock_response.status = 200
@@ -100,12 +102,14 @@ async def test_search_single_result(hass: HomeAssistant) -> None:
 
 async def test_search_multiple_results(hass: HomeAssistant) -> None:
     """Test user input resulting in multiple matches, requiring selection."""
-    with patch(
-        "homeassistant.helpers.aiohttp_client.async_get_clientsession"
-    ) as mock_get_session_helper, patch(
-        "custom_components.db_infoscreen.__init__.async_get_clientsession"
-    ) as mock_get_session_init:
-
+    with (
+        patch(
+            "homeassistant.helpers.aiohttp_client.async_get_clientsession"
+        ) as mock_get_session_helper,
+        patch(
+            "custom_components.db_infoscreen.__init__.async_get_clientsession"
+        ) as mock_get_session_init,
+    ):
         mock_session = MagicMock()
         mock_response = MagicMock()
         mock_response.status = 200
@@ -149,12 +153,14 @@ async def test_search_multiple_results(hass: HomeAssistant) -> None:
 
 async def test_manual_entry(hass: HomeAssistant) -> None:
     """Test manual entry path."""
-    with patch(
-        "homeassistant.helpers.aiohttp_client.async_get_clientsession"
-    ) as mock_get_session_helper, patch(
-        "custom_components.db_infoscreen.__init__.async_get_clientsession"
-    ) as mock_get_session_init:
-
+    with (
+        patch(
+            "homeassistant.helpers.aiohttp_client.async_get_clientsession"
+        ) as mock_get_session_helper,
+        patch(
+            "custom_components.db_infoscreen.__init__.async_get_clientsession"
+        ) as mock_get_session_init,
+    ):
         mock_session = MagicMock()
         mock_response = MagicMock()
         mock_response.status = 200

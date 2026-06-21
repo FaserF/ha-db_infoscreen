@@ -142,7 +142,7 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
 
                 # Account for delay in calendar event times
                 actual_departure_time = departure_time + timedelta(minutes=delay_int)
-                
+
                 # Apply walk time buffer before start time
                 actual_start_time = actual_departure_time - timedelta(minutes=walk_time)
                 end_time = actual_departure_time + timedelta(minutes=event_duration)

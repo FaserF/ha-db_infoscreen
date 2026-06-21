@@ -233,9 +233,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         # Check if we are running in Hass.io
         is_hassio_env = False
         try:
-            from homeassistant.components.hassio import is_hassio
+            from homeassistant.components.hassio import is_hassio  # type: ignore
 
-            is_hassio_env = is_hassio(self.hass)
+            is_hassio_env = is_hassio(self.hass)  # type: ignore
         except (ImportError, AttributeError):
             _LOGGER.debug("Hass.io component not found or is_hassio missing")
 
@@ -246,10 +246,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             and not self.discovery_info.get(CONF_SERVER_URL)
         ):
             try:
-                self._context["hassio_checked"] = True
+                self._context["hassio_checked"] = True  # type: ignore
             except (AttributeError, TypeError):
                 try:
-                    self.context["hassio_checked"] = True
+                    self.context["hassio_checked"] = True  # type: ignore
                 except (AttributeError, TypeError):
                     pass
             return await self.async_step_hassio()
@@ -300,13 +300,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     self.server_type = server_type
                     return await self.async_step_station_search()
 
-        schema_fields = {
+        schema_fields: dict[Any, Any] = {
             vol.Required(CONF_SERVER_TYPE, default=suggested_type): vol.In(
                 [SERVER_TYPE_CUSTOM, SERVER_TYPE_OFFICIAL, SERVER_TYPE_FASERF]
             ),
         }
         if suggested_url:
-            schema_fields[vol.Optional(CONF_SERVER_URL, default=suggested_url)] = cv.string
+            schema_fields[vol.Optional(CONF_SERVER_URL, default=suggested_url)] = (
+                cv.string
+            )
         else:
             schema_fields[vol.Optional(CONF_SERVER_URL)] = cv.string
 
@@ -887,7 +889,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         except (ImportError, AttributeError):
             return None
 
-    async def async_step_hassio(self, _user_input: dict[str, Any] | None = None):
+    async def async_step_hassio(self, _user_input: dict[str, Any] | None = None):  # type: ignore[override]
         """Handle Hass.io discovery."""
         try:
             from homeassistant.components.hassio import AddonState
@@ -1100,16 +1102,21 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(
                         CONF_CALENDAR_EVENT_DURATION,
                         default=self._get_config_value(
-                            CONF_CALENDAR_EVENT_DURATION, DEFAULT_CALENDAR_EVENT_DURATION
+                            CONF_CALENDAR_EVENT_DURATION,
+                            DEFAULT_CALENDAR_EVENT_DURATION,
                         ),
                     ): cv.positive_int,
                     vol.Optional(
                         CONF_CALENDAR_ONLY_FAVORITES,
-                        default=self._get_config_value(CONF_CALENDAR_ONLY_FAVORITES, False),
+                        default=self._get_config_value(
+                            CONF_CALENDAR_ONLY_FAVORITES, False
+                        ),
                     ): cv.boolean,
                     vol.Optional(
                         CONF_CALENDAR_ONLY_DELAYED,
-                        default=self._get_config_value(CONF_CALENDAR_ONLY_DELAYED, False),
+                        default=self._get_config_value(
+                            CONF_CALENDAR_ONLY_DELAYED, False
+                        ),
                     ): cv.boolean,
                 }
             ),

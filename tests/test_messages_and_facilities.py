@@ -1,8 +1,9 @@
 from unittest.mock import MagicMock
 import pytest
 from custom_components.db_infoscreen.sensor import DBInfoSensor
-from custom_components.db_infoscreen.binary_sensor import DBInfoScreenElevatorBinarySensor
-from custom_components.db_infoscreen.__init__ import DBInfoScreenCoordinator
+from custom_components.db_infoscreen.binary_sensor import (
+    DBInfoScreenElevatorBinarySensor,
+)
 
 
 @pytest.fixture
@@ -49,7 +50,9 @@ def test_station_messages_sensor_attribute(mock_coordinator, mock_config_entry):
     assert attrs["station_messages"][1]["text"] == "Aufzug Gleis 1 defekt"
 
 
-def test_defective_facilities_binary_sensor_attribute(mock_coordinator, mock_config_entry):
+def test_defective_facilities_binary_sensor_attribute(
+    mock_coordinator, mock_config_entry
+):
     """Test that the elevator binary sensor publishes defective facilities."""
     # Sensor with no platform filter (general)
     sensor_gen = DBInfoScreenElevatorBinarySensor(

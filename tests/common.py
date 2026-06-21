@@ -35,10 +35,10 @@ def patch_session(mock_data=None, side_effect=None):
     mock_session.get = MagicMock(side_effect=get_side_effect)
 
     # Patch in both the component and the HA source
-    with patch.object(db_mod, "async_get_clientsession") as p1, patch(
-        "homeassistant.helpers.aiohttp_client.async_get_clientsession"
-    ) as p2:
-
+    with (
+        patch.object(db_mod, "async_get_clientsession") as p1,
+        patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as p2,
+    ):
         p1.return_value = mock_session
         p2.return_value = mock_session
 

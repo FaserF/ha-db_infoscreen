@@ -55,12 +55,15 @@ async def test_form_create_entry(hass):
     assert result1["step_id"] == "station_search"
 
     # 1. Search Step
-    with patch(
-        "custom_components.db_infoscreen.config_flow.async_get_stations",
-        return_value=["München Hbf"],
-    ), patch(
-        "custom_components.db_infoscreen.config_flow.find_station_matches",
-        return_value=["München Hbf"],
+    with (
+        patch(
+            "custom_components.db_infoscreen.config_flow.async_get_stations",
+            return_value=["München Hbf"],
+        ),
+        patch(
+            "custom_components.db_infoscreen.config_flow.find_station_matches",
+            return_value=["München Hbf"],
+        ),
     ):
         # The search query is now processed by async_step_station_search
         result2 = await flow.async_step_station_search({CONF_STATION: "München Hbf"})
@@ -152,14 +155,16 @@ async def test_form_multiple_matches(hass):
         await flow.async_step_user({CONF_SERVER_TYPE: SERVER_TYPE_OFFICIAL})
 
     # Search for something ambiguous
-    with patch(
-        "custom_components.db_infoscreen.config_flow.async_get_stations",
-        return_value=["München Hbf", "München Ost"],
-    ), patch(
-        "custom_components.db_infoscreen.config_flow.find_station_matches",
-        return_value=["München Hbf", "München Ost"],
+    with (
+        patch(
+            "custom_components.db_infoscreen.config_flow.async_get_stations",
+            return_value=["München Hbf", "München Ost"],
+        ),
+        patch(
+            "custom_components.db_infoscreen.config_flow.find_station_matches",
+            return_value=["München Hbf", "München Ost"],
+        ),
     ):
-
         result2 = await flow.async_step_station_search({CONF_STATION: "München"})
 
     assert result2["type"] == FlowResultType.FORM
@@ -188,14 +193,16 @@ async def test_form_no_matches_manual_override(hass):
     ):
         await flow.async_step_user({CONF_SERVER_TYPE: SERVER_TYPE_OFFICIAL})
 
-    with patch(
-        "custom_components.db_infoscreen.config_flow.async_get_stations",
-        return_value=["Berlin Hbf"],
-    ), patch(
-        "custom_components.db_infoscreen.config_flow.find_station_matches",
-        return_value=[],
+    with (
+        patch(
+            "custom_components.db_infoscreen.config_flow.async_get_stations",
+            return_value=["Berlin Hbf"],
+        ),
+        patch(
+            "custom_components.db_infoscreen.config_flow.find_station_matches",
+            return_value=[],
+        ),
     ):
-
         result2 = await flow.async_step_station_search(
             {CONF_STATION: "MyCustomStation"}
         )
@@ -274,16 +281,16 @@ async def test_hassio_discovery_already_installed(hass):
     mock_addon_manager = AsyncMock()
     mock_addon_manager.async_get_addon_info.return_value = addon_info
 
-    with patch(
-        "homeassistant.components.hassio.is_hassio", return_value=True, create=True
-    ), patch.object(
-        flow, "_async_get_addon_manager", return_value=mock_addon_manager
-    ), patch(
-        "homeassistant.components.hassio.AddonState", create=True
-    ) as mock_state, patch.object(
-        flow, "_async_prefill_addon_info", new_callable=AsyncMock
-    ) as mock_prefill:
-
+    with (
+        patch(
+            "homeassistant.components.hassio.is_hassio", return_value=True, create=True
+        ),
+        patch.object(flow, "_async_get_addon_manager", return_value=mock_addon_manager),
+        patch("homeassistant.components.hassio.AddonState", create=True) as mock_state,
+        patch.object(
+            flow, "_async_prefill_addon_info", new_callable=AsyncMock
+        ) as mock_prefill,
+    ):
         mock_state.NOT_INSTALLED = "not_installed"
         addon_info.state = "installed"
         flow.context = {}
@@ -313,14 +320,13 @@ async def test_hassio_discovery_not_installed(hass):
     mock_addon_manager = AsyncMock()
     mock_addon_manager.async_get_addon_info.return_value = addon_info
 
-    with patch(
-        "homeassistant.components.hassio.is_hassio", return_value=True, create=True
-    ), patch.object(
-        flow, "_async_get_addon_manager", return_value=mock_addon_manager
-    ), patch(
-        "homeassistant.components.hassio.AddonState", create=True
-    ) as mock_state:
-
+    with (
+        patch(
+            "homeassistant.components.hassio.is_hassio", return_value=True, create=True
+        ),
+        patch.object(flow, "_async_get_addon_manager", return_value=mock_addon_manager),
+        patch("homeassistant.components.hassio.AddonState", create=True) as mock_state,
+    ):
         mock_state.NOT_INSTALLED = "not_installed"
         addon_info.state = "not_installed"
         flow.context = {}
@@ -329,6 +335,3 @@ async def test_hassio_discovery_not_installed(hass):
 
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "hassio_confirm"
-
-
-

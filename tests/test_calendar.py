@@ -1,10 +1,9 @@
 """Tests for calendar platform in DB Infoscreen integration."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 import pytest
 
-from homeassistant.components.calendar import CalendarEvent
 from homeassistant.core import HomeAssistant
 
 from custom_components.db_infoscreen.calendar import DBInfoScreenCalendar
@@ -42,7 +41,7 @@ async def test_calendar_event_generation(hass: HomeAssistant) -> None:
             "delay": 0,
             "platform": "2",
             "is_cancelled": False,
-        }
+        },
     ]
 
     entity = DBInfoScreenCalendar(mock_coordinator, MagicMock())

@@ -35,9 +35,9 @@ def test_markdown_paragraph_spacing(file_path):
             if not prev_line.startswith(
                 ("- ", "* ", "1. ", "#", ">", "|", "!", "<", "---", "```", "{%", "%}")
             ):
-                assert (
-                    False
-                ), f"Missing blank line before top-level element in {file_path} at line {i+1}"
+                assert False, (
+                    f"Missing blank line before top-level element in {file_path} at line {i + 1}"
+                )
 
 
 def test_specific_user_reported_case():

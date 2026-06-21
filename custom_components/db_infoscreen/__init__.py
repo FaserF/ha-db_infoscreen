@@ -457,7 +457,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         self.calendar_event_duration = int(
             config.get(CONF_CALENDAR_EVENT_DURATION, DEFAULT_CALENDAR_EVENT_DURATION)
         )
-        self.calendar_only_favorites = bool(config.get(CONF_CALENDAR_ONLY_FAVORITES, False))
+        self.calendar_only_favorites = bool(
+            config.get(CONF_CALENDAR_ONLY_FAVORITES, False)
+        )
         self.calendar_only_delayed = bool(config.get(CONF_CALENDAR_ONLY_DELAYED, False))
         self.cache_ttl = timedelta(
             seconds=int(config.get(CONF_CACHE_TTL, DEFAULT_CACHE_TTL))
@@ -996,20 +998,28 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                                 msg_text = m.get("text", "")
                             elif isinstance(m, str):
                                 msg_text = m
-                            
+
                             if msg_text:
                                 msg_key = (msg_text, msg_type, train_name)
                                 if msg_key not in seen_messages:
                                     seen_messages.add(msg_key)
-                                    station_messages_list.append({
-                                        "text": msg_text,
-                                        "type": msg_type,
-                                        "train": train_name,
-                                    })
-                                
+                                    station_messages_list.append(
+                                        {
+                                            "text": msg_text,
+                                            "type": msg_type,
+                                            "train": train_name,
+                                        }
+                                    )
+
                                 # Process for elevator/escalator issues
                                 lower_text = msg_text.lower()
-                                keywords = ["aufzug", "aufzüge", "fahrstuhl", "lift", "rolltreppe"]
+                                keywords = [
+                                    "aufzug",
+                                    "aufzüge",
+                                    "fahrstuhl",
+                                    "lift",
+                                    "rolltreppe",
+                                ]
                                 if any(k in lower_text for k in keywords):
                                     working_keywords = [
                                         "in betrieb",
@@ -1018,7 +1028,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                                         "funktioniert wieder",
                                         "verfügbar",
                                     ]
-                                    if not any(wk in lower_text for wk in working_keywords):
+                                    if not any(
+                                        wk in lower_text for wk in working_keywords
+                                    ):
                                         if msg_text not in seen_elevator_issues:
                                             seen_elevator_issues.add(msg_text)
                                             raw_elevator_issues_list.append(msg_text)
@@ -1031,20 +1043,28 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         msg_type = m.get("type", "general")
                     elif isinstance(m, str):
                         msg_text = m
-                    
+
                     if msg_text:
                         msg_key = (msg_text, msg_type, train_name)
                         if msg_key not in seen_messages:
                             seen_messages.add(msg_key)
-                            station_messages_list.append({
-                                "text": msg_text,
-                                "type": msg_type,
-                                "train": train_name,
-                            })
-                        
+                            station_messages_list.append(
+                                {
+                                    "text": msg_text,
+                                    "type": msg_type,
+                                    "train": train_name,
+                                }
+                            )
+
                         # Process for elevator/escalator issues
                         lower_text = msg_text.lower()
-                        keywords = ["aufzug", "aufzüge", "fahrstuhl", "lift", "rolltreppe"]
+                        keywords = [
+                            "aufzug",
+                            "aufzüge",
+                            "fahrstuhl",
+                            "lift",
+                            "rolltreppe",
+                        ]
                         if any(k in lower_text for k in keywords):
                             working_keywords = [
                                 "in betrieb",

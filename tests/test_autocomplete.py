@@ -72,7 +72,7 @@ def test_find_station_matches():
 async def test_async_get_stations_persistent_cache(mock_hass_autocomplete):
     """Test loading stations from persistent cache."""
     from datetime import datetime, timezone
-    
+
     mock_store = MagicMock()
     mock_store.async_load = AsyncMock(
         return_value={
@@ -82,9 +82,7 @@ async def test_async_get_stations_persistent_cache(mock_hass_autocomplete):
     )
     mock_store.async_save = AsyncMock()
 
-    with patch(
-        "homeassistant.helpers.storage.Store", return_value=mock_store
-    ):
+    with patch("homeassistant.helpers.storage.Store", return_value=mock_store):
         # Execute without mocking session (network), because it should load from store
         stations = await async_get_stations(
             mock_hass_autocomplete, "https://example.com"
@@ -94,4 +92,3 @@ async def test_async_get_stations_persistent_cache(mock_hass_autocomplete):
         assert "Frankfurt Hbf" in stations
         assert mock_store.async_load.called
         assert not mock_store.async_save.called
-

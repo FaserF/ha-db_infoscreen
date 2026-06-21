@@ -193,9 +193,9 @@ async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (
-                    (dt_util.now() + timedelta(minutes=15))
-                ).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "Valid Train",
                 "train": "ICE 1",
                 "cancelled": False,
@@ -234,9 +234,9 @@ async def test_coordinator_occupancy(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (
-                    (dt_util.now() + timedelta(minutes=15))
-                ).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "Test Dest",
                 "train": "ICE 1",
                 "occupancy": {"1": 1, "2": 4},  # 1st class low, 2nd class full
@@ -266,9 +266,9 @@ async def test_coordinator_platform_change(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (
-                    (dt_util.now() + timedelta(minutes=15))
-                ).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "Changed Platform",
                 "train": "ICE 1",
                 "platform": "5",
@@ -300,9 +300,9 @@ async def test_coordinator_wagon_order(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (
-                    (dt_util.now() + timedelta(minutes=15))
-                ).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "With Sectors",
                 "train": "ICE 1",
                 "platform": "Gl. 5 A-C",
@@ -350,9 +350,9 @@ async def test_coordinator_qos(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (
-                    (dt_util.now() + timedelta(minutes=15))
-                ).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "QoS Train",
                 "train": "ICE 1",
                 "qos": {"wifi": True},
@@ -391,9 +391,9 @@ async def test_coordinator_route_details(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (
-                    (dt_util.now() + timedelta(minutes=15))
-                ).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "Route Train",
                 "train": "ICE 1",
                 "route": [
@@ -436,9 +436,9 @@ async def test_coordinator_trip_id(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (
-                    (dt_util.now() + timedelta(minutes=15))
-                ).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "ID Train",
                 "train": "ICE 1",
                 "trainId": "123456789",  # Common field
@@ -472,9 +472,9 @@ async def test_coordinator_alternative_connections(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (
-                    (dt_util.now() + timedelta(minutes=15))
-                ).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "München Hbf",
                 "train": "ICE 1",
             },
@@ -525,9 +525,9 @@ async def test_coordinator_favorite_trains_filter(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (
-                    (dt_util.now() + timedelta(minutes=15))
-                ).strftime("%Y-%m-%dT%H:%M"),
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
                 "destination": "Berlin",
                 "train": "ICE 1",
             },
