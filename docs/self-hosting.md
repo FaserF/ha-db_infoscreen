@@ -44,6 +44,7 @@ You can configure the add-on via the **Configuration** tab:
 
 #### 🧩 Automatic Integration Management & Synchronization
 When this add-on starts, it automatically manages the **DB Infoscreen Integration** for you:
+
 1. **Detection**: It checks if the `db_infoscreen` custom component is installed in your `/config/custom_components/` directory.
 2. **Auto-Install/Update**: If the integration is missing or a newer release exists on GitHub, the add-on will automatically download and install/update the custom component files.
 3. **Notification**: If the integration was updated or installed, a persistent notification will appear on your Home Assistant dashboard, prompting you to restart Home Assistant.

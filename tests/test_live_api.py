@@ -19,13 +19,21 @@ from custom_components.db_infoscreen.calendar import DBInfoScreenCalendar
 # Make sure pytest-socket knows we need sockets for these tests
 pytestmark = [pytest.mark.allow_sockets, pytest.mark.enable_socket]
 
+original_allowed_hosts = None
+original_allowed_hosts_saved = False
+
 
 def _enable_socket_temporarily():
     """Bypass pytest-socket blocking during these tests."""
+    global original_allowed_hosts, original_allowed_hosts_saved
     try:
         import pytest_socket
 
         pytest_socket.enable_socket()
+        if not original_allowed_hosts_saved and hasattr(pytest_socket, "_allowed_hosts"):
+            original_allowed_hosts = pytest_socket._allowed_hosts
+            original_allowed_hosts_saved = True
+        pytest_socket.socket_allow_hosts(None)
     except (ImportError, AttributeError):
         pass
     try:
@@ -37,11 +45,24 @@ def _enable_socket_temporarily():
         pass
 
 
+def _restore_socket_state():
+    """Restore pytest-socket allow list to original state."""
+    global original_allowed_hosts, original_allowed_hosts_saved
+    if original_allowed_hosts_saved:
+        try:
+            import pytest_socket
+
+            pytest_socket.socket_allow_hosts(original_allowed_hosts)
+        except (ImportError, AttributeError):
+            pass
+
+
 @pytest.fixture(autouse=True)
 def auto_enable_socket():
     """Automatically enable socket for every test in this module."""
     _enable_socket_temporarily()
     yield
+    _restore_socket_state()
 
 
 async def check_server_status() -> tuple[bool, str]:
