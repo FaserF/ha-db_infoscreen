@@ -204,7 +204,8 @@ jobs:
 
       - name: 📦 Zip Component
         run: |
-          zip -r db_infoscreen.zip custom_components/db_infoscreen
+          cd custom_components/db_infoscreen
+          zip -r ../../db_infoscreen.zip .
 
       - name: Download Release Body Artifact
         uses: actions/download-artifact@v8
