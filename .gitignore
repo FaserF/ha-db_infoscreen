@@ -34,3 +34,9 @@ resource.py
 /test_config/custom_components/__pycache__
 /test_config/custom_components/db_infoscreen/__pycache__
 /test_config
+
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.pyc

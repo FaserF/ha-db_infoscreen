@@ -22,7 +22,7 @@ def main():
     rtype = os.environ.get("RELEASE_TYPE", "beta")
     bump_level = os.environ.get("BUMP_LEVEL", "patch")
     version_override = os.environ.get("VERSION_OVERRIDE", "")
-    repo = os.environ.get("REPO", "").lower()
+    repo = os.environ.get("REPO", "")
 
     # Determine owner and repo_name dynamically
     owner = "faserf"
