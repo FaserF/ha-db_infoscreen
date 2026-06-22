@@ -30,7 +30,9 @@ def _enable_socket_temporarily():
         import pytest_socket
 
         pytest_socket.enable_socket()
-        if not original_allowed_hosts_saved and hasattr(pytest_socket, "_allowed_hosts"):
+        if not original_allowed_hosts_saved and hasattr(
+            pytest_socket, "_allowed_hosts"
+        ):
             original_allowed_hosts = pytest_socket._allowed_hosts
             original_allowed_hosts_saved = True
         pytest_socket.socket_allow_hosts(None)
