@@ -756,6 +756,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                             )
                             return self._last_valid_value or []
 
+                        response.raise_for_status()
                         data = await response.json()
                         if asyncio.iscoroutine(data) or (
                             hasattr(data, "__await__")
