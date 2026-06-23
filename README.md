@@ -4,6 +4,7 @@
   <p><strong>A comprehensive departure board integration for Home Assistant.</strong></p>
 
   [![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+[![Downloads (Current release)](https://img.shields.io/github/downloads/FaserF/ha-db_infoscreen/latest/integration.zip?label=Downloads%20(Current%20release)&style=for-the-badge)](https://github.com/FaserF/ha-db_infoscreen/releases)
   [![GitHub Release](https://img.shields.io/github/v/release/FaserF/ha-db_infoscreen?style=for-the-badge)](https://github.com/FaserF/ha-db_infoscreen/releases)
   [![License](https://img.shields.io/github/license/FaserF/ha-db_infoscreen?style=for-the-badge)](LICENSE)
 </div>
