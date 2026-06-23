@@ -145,12 +145,9 @@ jobs:
         run: |
           python .github/scripts/version_manager.py bump --type ${{ github.event.inputs.release_type || (contains(github.event.head_commit.message, '[bump-version]') && 'stable' || 'beta') }} --level ${{ github.event.inputs.bump_level || 'patch' }} --override "${{ github.event.inputs.version_override || '' }}"
 
-          - name: Update Placeholders and Datenschutz in Templates
-            shell: bash
-            run: |
-              if [ -f .github/scripts/update_templates.py ]; then
-                python .github/scripts/update_templates.py "${{ needs.versioning.outputs.version }}"
-              fi
+          if [ -f .github/scripts/update_templates.py ]; then
+            python .github/scripts/update_templates.py "${{ needs.versioning.outputs.version }}"
+          fi
 
       - name: Commit and Push
         run: |
@@ -260,12 +257,9 @@ jobs:
           git fetch --tags
           NEW_DEV=$(python .github/scripts/version_manager.py bump --type dev --level patch)
 
-          - name: Update Placeholders and Datenschutz in Templates
-            shell: bash
-            run: |
-              if [ -f .github/scripts/update_templates.py ]; then
-                python .github/scripts/update_templates.py "${{ needs.versioning.outputs.version }}"
-              fi
+          if [ -f .github/scripts/update_templates.py ]; then
+            python .github/scripts/update_templates.py "${{ needs.versioning.outputs.version }}"
+          fi
           if ! git diff --quiet; then
             git commit -am "chore(dev): bump to $NEW_DEV [skip ci]"
             git push origin HEAD:${{ github.ref_name }} || (git pull --rebase origin ${{ github.ref_name }} && git push origin HEAD:${{ github.ref_name }})
