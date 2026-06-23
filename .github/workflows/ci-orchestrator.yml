@@ -5,6 +5,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
   workflow_call:
 permissions:
@@ -20,6 +21,7 @@ concurrency:
 jobs:
   lint-test:
     name: Lint & Test
+    if: github.event.pull_request.draft == false || github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.0
@@ -102,6 +104,7 @@ jobs:
 
   codeql:
     name: CodeQL Analysis
+    if: github.event.pull_request.draft == false || github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       actions: read
