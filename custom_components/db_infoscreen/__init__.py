@@ -746,7 +746,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     async with session.get(
                         self.fetch_url,
                         headers=headers,
-                        timeout=aiohttp.ClientTimeout(total=30),
+                        timeout=aiohttp.ClientTimeout(total=10),
                     ) as response:
                         if response.status == 429:
                             self._last_api_fetch = now.timestamp()
