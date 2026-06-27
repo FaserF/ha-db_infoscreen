@@ -82,9 +82,9 @@ If you have been a Home Assistant user in Germany for a while, you might remembe
 This project is a bridge between the Home Assistant ecosystem and the wider open-source world.
 
 !!! success "Project Hero: derf"
-    A massive amount of credit goes to [**derf**](https://github.com/derf) for his tireless work on [**db-fakedisplay**](https://github.com/derf/db-fakedisplay).
+    A massive amount of credit goes to [**derf**](https://github.com/derf) for her tireless work on [**db-fakedisplay**](https://github.com/derf/db-fakedisplay).
 
-    His backend project does the "heavy lifting": aggregating data from dozens of European transport associations (DB, ÖBB, SBB, and many more) and providing a unified, stable API. Without his work, this integration would not be possible. **Please consider starring his repository!**
+    Her backend project does the "heavy lifting": aggregating data from dozens of European transport associations (DB, ÖBB, SBB, and many more) and providing a unified, stable API. Without her work, this integration would not be possible. **Please consider starring her repository!**
 
 ---
 
