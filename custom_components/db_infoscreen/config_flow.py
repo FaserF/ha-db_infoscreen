@@ -911,9 +911,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
                 valid_server = await async_verify_server(self.hass, url)
                 if not valid_server:
-                    if server_type == SERVER_TYPE_OFFICIAL or "finalrewind" in url.lower():
+                    if (
+                        server_type == SERVER_TYPE_OFFICIAL
+                        or "finalrewind" in url.lower()
+                    ):
                         errors["base"] = "cannot_connect_official"
-                    elif server_type == SERVER_TYPE_FASERF or "fabiseitz" in url.lower():
+                    elif (
+                        server_type == SERVER_TYPE_FASERF or "fabiseitz" in url.lower()
+                    ):
                         errors["base"] = "cannot_connect_faserf"
                     else:
                         errors["base"] = "cannot_connect"
