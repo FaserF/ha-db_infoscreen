@@ -78,6 +78,16 @@
       "hassio_confirm": {
         "title": "Install official Add-on",
         "description": "Do you want to install the official DBF (DB-Infoscreen) Add-on? This is the recommended way to run a local server on Home Assistant OS."
+      },
+      "reconfigure": {
+        "title": "Reconfigure Departure Board",
+        "description": "Update the core settings for **{station}**. All other options (filters, display, advanced) remain unchanged and can be adjusted via the ⚙ Configure button.",
+        "data": {
+          "station": "Station Name / ID",
+          "server_type": "Server Type",
+          "server_url": "Server URL/IP",
+          "data_source": "Data Source"
+        }
       }
     },
     "error": {
@@ -95,7 +105,8 @@
     },
     "abort": {
       "already_configured": "This station is already configured.",
-      "station_validation_failed": "Could not validate the station. No departure data could be retrieved. Please check the station name and data source."
+      "station_validation_failed": "Could not validate the station. No departure data could be retrieved. Please check the station name and data source.",
+      "reconfigure_successful": "Configuration updated successfully. The integration will reload with the new settings."
     }
   },
   "options": {

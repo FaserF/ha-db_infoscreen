@@ -880,6 +880,110 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Return the options flow handler."""
         return OptionsFlowHandler(config_entry)
 
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Handle reconfiguration of an existing entry (station, server, data source)."""
+        reconfigure_entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            server_type = user_input.get(CONF_SERVER_TYPE, SERVER_TYPE_CUSTOM)
+            url = ""
+
+            if server_type == SERVER_TYPE_OFFICIAL:
+                url = SERVER_URL_OFFICIAL
+            elif server_type == SERVER_TYPE_FASERF:
+                url = SERVER_URL_FASERF
+            else:
+                url = user_input.get(CONF_SERVER_URL, "")
+
+            if url and not url.startswith(("http://", "https://")):
+                url = f"https://{url}"
+            if url.endswith("/"):
+                url = url[:-1]
+
+            if not url:
+                errors[CONF_SERVER_URL] = "invalid_url"
+            else:
+                # Validate server reachability
+                from .utils import async_verify_server
+
+                valid_server = await async_verify_server(self.hass, url)
+                if not valid_server:
+                    if server_type == SERVER_TYPE_OFFICIAL or "finalrewind" in url.lower():
+                        errors["base"] = "cannot_connect_official"
+                    elif server_type == SERVER_TYPE_FASERF or "fabiseitz" in url.lower():
+                        errors["base"] = "cannot_connect_faserf"
+                    else:
+                        errors["base"] = "cannot_connect"
+                else:
+                    station_raw = normalize_whitespace(user_input.get(CONF_STATION, ""))
+                    ds_raw = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
+                    data_source = normalize_data_source(ds_raw)
+
+                    validation_result = await async_validate_station_on_url(
+                        self.hass, url, station_raw, data_source
+                    )
+                    if not validation_result["valid"]:
+                        errors["base"] = (
+                            "station_ambiguous"
+                            if validation_result.get("ambiguous")
+                            else "station_invalid"
+                        )
+                    else:
+                        data_updates = dict(reconfigure_entry.data)
+                        data_updates[CONF_SERVER_TYPE] = server_type
+                        data_updates[CONF_SERVER_URL] = url
+                        data_updates[CONF_STATION] = station_raw
+                        data_updates[CONF_DATA_SOURCE] = data_source
+
+                        return self.async_update_reload_and_abort(
+                            reconfigure_entry,
+                            data_updates=data_updates,
+                        )
+
+        # Pre-fill from existing entry
+        existing = reconfigure_entry.data
+        current_server_type = existing.get(CONF_SERVER_TYPE, SERVER_TYPE_CUSTOM)
+        # Infer server type from URL for backward compat
+        current_url = existing.get(CONF_SERVER_URL, "")
+        if not current_server_type or current_server_type == SERVER_TYPE_CUSTOM:
+            if current_url == SERVER_URL_OFFICIAL:
+                current_server_type = SERVER_TYPE_OFFICIAL
+            elif current_url == SERVER_URL_FASERF:
+                current_server_type = SERVER_TYPE_FASERF
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_STATION,
+                        default=existing.get(CONF_STATION, ""),
+                    ): cv.string,
+                    vol.Required(
+                        CONF_SERVER_TYPE,
+                        default=current_server_type,
+                    ): vol.In(
+                        [SERVER_TYPE_CUSTOM, SERVER_TYPE_OFFICIAL, SERVER_TYPE_FASERF]
+                    ),
+                    vol.Optional(
+                        CONF_SERVER_URL,
+                        default=current_url,
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_DATA_SOURCE,
+                        default=existing.get(CONF_DATA_SOURCE, "IRIS-TTS"),
+                    ): vol.In(DATA_SOURCE_OPTIONS),
+                }
+            ),
+            errors=errors,
+            description_placeholders={
+                "station": existing.get(CONF_STATION, ""),
+            },
+        )
+
     async def _async_get_addon_manager(self, slug: str) -> Any:
         """Return the addon manager."""
         try:
