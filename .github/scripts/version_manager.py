@@ -122,7 +122,8 @@ def calculate_version(rtype, level="patch", curr=None, now=None, override=None):
     else:
         # SemVer Bumping Logic (Major.Minor.Patch)
         if rtype == "stable":
-            if stype:
+            # Promote an existing pre-release only when staying at the same level.
+            if stype and level == "patch":
                 return f"{v1}.{v2}.{v3}"
             if level == "major":
                 return f"{v1 + 1}.0.0"
@@ -130,7 +131,8 @@ def calculate_version(rtype, level="patch", curr=None, now=None, override=None):
                 return f"{v1}.{v2 + 1}.0"
             return f"{v1}.{v2}.{v3 + 1}"
         if rtype == "beta":
-            if stype == "b":
+            # Only reuse current patch when staying at the same level.
+            if stype == "b" and level == "patch":
                 return f"{v1}.{v2}.{v3}b{snum + 1}"
             if level == "major":
                 return f"{v1 + 1}.0.0b0"
@@ -138,7 +140,8 @@ def calculate_version(rtype, level="patch", curr=None, now=None, override=None):
                 return f"{v1}.{v2 + 1}.0b0"
             return f"{v1}.{v2}.{v3 + 1}b0"
         if rtype in ["dev", "nightly"]:
-            if stype == "-dev":
+            # Only reuse current patch when staying at the same level.
+            if stype == "-dev" and level == "patch":
                 return f"{v1}.{v2}.{v3}-dev{snum + 1}"
             if level == "major":
                 return f"{v1 + 1}.0.0-dev0"
