@@ -6,6 +6,7 @@ import voluptuous as vol
 from typing import Any
 from homeassistant import config_entries
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.service_info.hassio import HassioServiceInfo
 from .const import (
     CONF_PAUSED,
     DOMAIN,
@@ -998,8 +999,18 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         except (ImportError, AttributeError):
             return None
 
-    async def async_step_hassio(self, _user_input: dict[str, Any] | None = None):  # type: ignore[override]
+    async def async_step_hassio(
+        self, discovery_info: HassioServiceInfo | None = None
+    ) -> config_entries.ConfigFlowResult:
         """Handle Hass.io discovery."""
+        if discovery_info is not None:
+            slug = getattr(discovery_info, "slug", None)
+            if slug:
+                for expected_slug in [ADDON_STABLE_SLUG, ADDON_DEV_SLUG]:
+                    if slug == expected_slug or slug.endswith(f"_{expected_slug}"):
+                        await self._async_prefill_addon_info(slug)
+                        return await self.async_step_user()
+
         try:
             from homeassistant.components.hassio import AddonState
         except (ImportError, AttributeError):
