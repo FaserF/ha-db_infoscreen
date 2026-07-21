@@ -15,7 +15,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/labeler@v6
+      - uses: actions/labeler@v7.0.0
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
           sync-labels: true
