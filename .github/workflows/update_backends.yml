@@ -19,10 +19,10 @@ jobs:
       - name: Run update script
         run: python scripts/update_backends.py
 
-      - name: Format with Black
+      - name: Format with Ruff
         run: |
-          pip install black
-          black custom_components/db_infoscreen/const.py README.md
+          pip install ruff
+          ruff format custom_components/db_infoscreen/const.py README.md
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v8

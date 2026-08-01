@@ -78,5 +78,5 @@ Help us reach more users by contributing translations!
 ## 📜 Pull Request Guidelines
 
 1.  **Issue First**: For major changes, please open an issue first to discuss your proposal.
-2.  **Formatting**: We use `black` for code formatting and `ruff` for linting.
+2.  **Formatting**: We use `ruff` for code formatting and linting.
 3.  **Documentation**: If you add a new feature, please update the relevant `.md` file in the `docs/` folder.
