@@ -5,8 +5,6 @@ import argparse
 import re
 import subprocess
 import sys
-from typing import Any
-
 
 # Noise filter — commits matching ANY pattern are silently dropped
 NOISE_PATTERNS = [
@@ -123,7 +121,7 @@ def get_norm_key(msg: str) -> str:
 
 
 def get_formatted_item(
-    display: str, hashes: list[str], repo: str, commit_authors: dict[str, str]
+    display: str, hashes: list, repo: str, commit_authors: dict
 ) -> str:
     if hashes:
         links = []
@@ -155,7 +153,7 @@ def get_formatted_item(
     return display
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser(description="Generate structured git changelog.")
     parser.add_argument("--from-tag", default="", help="Git ref to diff against")
     parser.add_argument("--total-commits", default="", help="Total commit count input")
@@ -179,20 +177,18 @@ def main() -> None:
         raw_output = ""
 
     commit_lines = [line.strip() for line in raw_output.splitlines() if line.strip()]
-    commit_authors: dict[str, str] = {}
+    commit_authors = {}
 
     try:
         total_raw = int(total_commits) if total_commits else len(commit_lines)
     except ValueError:
         total_raw = len(commit_lines)
 
-    buckets: dict[str, list[dict[str, Any]]] = {k: [] for k in CATEGORY_ORDER}
-    seen_items: dict[str, dict[str, Any]] = {}
+    buckets = {k: [] for k in CATEGORY_ORDER}
+    seen_items = {}
 
     for line in commit_lines:
         author = ""
-        commit_hash = ""
-        msg = ""
         if " || " in line:
             parts = line.split(" || ", 1)
             meta, msg = parts[0], parts[1].strip()
@@ -332,7 +328,7 @@ def main() -> None:
                 if commit_hash and commit_hash not in existing_break["hashes"]:
                     existing_break["hashes"].append(commit_hash)
             else:
-                break_item: dict[str, Any] = {
+                break_item = {
                     "display": break_display,
                     "hashes": [commit_hash] if commit_hash else [],
                 }
@@ -345,10 +341,7 @@ def main() -> None:
                 existing_item["hashes"].append(commit_hash)
             continue
 
-        item: dict[str, Any] = {
-            "display": display,
-            "hashes": [commit_hash] if commit_hash else [],
-        }
+        item = {"display": display, "hashes": [commit_hash] if commit_hash else []}
         seen_items[norm_key] = item
         buckets[bucket].append(item)
 
@@ -373,42 +366,36 @@ def main() -> None:
     for key in CATEGORY_ORDER:
         if key == "breaking":
             continue
-        bucket_list = buckets[key]
-        if not bucket_list:
+        bucket = buckets[key]
+        if not bucket:
             continue
         has_any = True
 
         out.append(f"### {CATEGORY_EMOJI[key]}")
         out.append("")
 
-        collapse = (len(bucket_list) > MAX_PER_SECTION) and (key not in NEVER_COLLAPSE)
+        collapse = (len(bucket) > MAX_PER_SECTION) and (key not in NEVER_COLLAPSE)
 
         if collapse:
             for i in range(MAX_PER_SECTION):
                 formatted = get_formatted_item(
-                    bucket_list[i]["display"],
-                    bucket_list[i]["hashes"],
-                    repo,
-                    commit_authors,
+                    bucket[i]["display"], bucket[i]["hashes"], repo, commit_authors
                 )
                 out.append(f"- {formatted}")
-            remaining = len(bucket_list) - MAX_PER_SECTION
+            remaining = len(bucket) - MAX_PER_SECTION
             out.append("")
             out.append("<details>")
             out.append(f"<summary>Show {remaining} more changes…</summary>")
             out.append("")
-            for i in range(MAX_PER_SECTION, len(bucket_list)):
+            for i in range(MAX_PER_SECTION, len(bucket)):
                 formatted = get_formatted_item(
-                    bucket_list[i]["display"],
-                    bucket_list[i]["hashes"],
-                    repo,
-                    commit_authors,
+                    bucket[i]["display"], bucket[i]["hashes"], repo, commit_authors
                 )
                 out.append(f"- {formatted}")
             out.append("")
             out.append("</details>")
         else:
-            for item in bucket_list:
+            for item in bucket:
                 formatted = get_formatted_item(
                     item["display"], item["hashes"], repo, commit_authors
                 )
