@@ -147,6 +147,11 @@ async def test_delete_via_stations_clears_filter(hass):
         {"next_step_id": "filter_options"},
     )
 
+    hass.config_entries.options.async_configure.return_value = {
+        "type": FlowResultType.CREATE_ENTRY,
+        "data": {CONF_VIA_STATIONS: []},
+    }
+
     result_save = await hass.config_entries.options.async_configure(
         result_filter["flow_id"],
         {CONF_VIA_STATIONS: ""},
