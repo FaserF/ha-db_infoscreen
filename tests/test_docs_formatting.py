@@ -1,6 +1,7 @@
 """Tests to ensure documentation formatting remains clean."""
 
 import os
+
 import pytest
 
 DOCS_DIR = "docs"

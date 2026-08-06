@@ -1,17 +1,18 @@
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
+from homeassistant import config_entries
+from homeassistant.data_entry_flow import FlowResultType
+
 from custom_components.db_infoscreen.config_flow import ConfigFlow
 from custom_components.db_infoscreen.const import (
-    DOMAIN,
-    CONF_STATION,
     CONF_DATA_SOURCE,
     CONF_NEXT_DEPARTURES,
     CONF_SERVER_TYPE,
+    CONF_STATION,
+    DOMAIN,
     SERVER_TYPE_OFFICIAL,
 )
-
-from homeassistant.data_entry_flow import FlowResultType
-from homeassistant import config_entries
 
 
 @pytest.mark.asyncio

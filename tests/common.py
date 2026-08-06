@@ -1,7 +1,8 @@
 """Shared test helpers."""
 
 from contextlib import contextmanager
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import custom_components.db_infoscreen as db_mod
 
 

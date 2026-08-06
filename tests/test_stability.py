@@ -3,10 +3,11 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 from custom_components.db_infoscreen import DBInfoScreenCoordinator
 from custom_components.db_infoscreen.const import (
-    CONF_STATION,
     CONF_NEXT_DEPARTURES,
+    CONF_STATION,
     CONF_UPDATE_INTERVAL,
 )
 from tests.common import patch_session

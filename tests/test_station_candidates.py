@@ -1,8 +1,8 @@
 """Tests for station candidate discovery in utils.py."""
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from homeassistant.core import HomeAssistant
 
 from custom_components.db_infoscreen.utils import (

@@ -1,20 +1,22 @@
-import aiohttp
-import pytest
 import warnings
 from unittest.mock import MagicMock, patch
+
+import aiohttp
+import pytest
 from homeassistant.core import HomeAssistant
+
 from custom_components.db_infoscreen.__init__ import DBInfoScreenCoordinator
-from custom_components.db_infoscreen.sensor import (
-    DBInfoSensor,
-    DBInfoScreenWatchdogSensor,
-    DBInfoScreenLeaveNowSensor,
-)
 from custom_components.db_infoscreen.binary_sensor import (
-    DBInfoScreenElevatorBinarySensor,
-    DBInfoScreenDelayBinarySensor,
     DBInfoScreenCancellationBinarySensor,
+    DBInfoScreenDelayBinarySensor,
+    DBInfoScreenElevatorBinarySensor,
 )
 from custom_components.db_infoscreen.calendar import DBInfoScreenCalendar
+from custom_components.db_infoscreen.sensor import (
+    DBInfoScreenLeaveNowSensor,
+    DBInfoScreenWatchdogSensor,
+    DBInfoSensor,
+)
 
 # Make sure pytest-socket knows we need sockets for these tests
 pytestmark = [pytest.mark.allow_sockets, pytest.mark.enable_socket]

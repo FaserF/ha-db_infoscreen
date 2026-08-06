@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import logging
-import json
-import re
-import difflib
 import asyncio
-from urllib.parse import quote, unquote
+import difflib
+import json
+import logging
+import re
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
+from urllib.parse import quote, unquote
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -452,7 +452,7 @@ async def async_get_station_candidates(
                         try:
                             data = await response.json()
                             # Candidates in JSON
-                            if "candidates" in data and data["candidates"]:
+                            if data.get("candidates"):
                                 return [
                                     {"name": c["name"], "code": c["code"]}
                                     for c in data["candidates"]

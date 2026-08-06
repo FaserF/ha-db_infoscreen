@@ -2,61 +2,63 @@
 
 import logging
 import re
-import voluptuous as vol
 from typing import Any
-from homeassistant import config_entries
+
 import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
+from homeassistant import config_entries
 from homeassistant.helpers.service_info.hassio import HassioServiceInfo
+
 from .const import (
-    CONF_PAUSED,
-    DOMAIN,
-    CONF_STATION,
-    CONF_NEXT_DEPARTURES,
-    CONF_UPDATE_INTERVAL,
-    DEFAULT_NEXT_DEPARTURES,
-    DEFAULT_UPDATE_INTERVAL,
-    DEFAULT_OFFSET,
-    MAX_SENSORS,
-    CONF_CACHE_TTL,
-    DEFAULT_CACHE_TTL,
-    CONF_CALENDAR_EVENT_DURATION,
-    DEFAULT_CALENDAR_EVENT_DURATION,
-    CONF_CALENDAR_ONLY_FAVORITES,
-    CONF_CALENDAR_ONLY_DELAYED,
-    CONF_HIDE_LOW_DELAY,
-    CONF_DETAILED,
-    CONF_PAST_60_MINUTES,
-    CONF_DATA_SOURCE,
-    CONF_OFFSET,
-    CONF_PLATFORMS,
     CONF_ADMODE,
-    DATA_SOURCE_OPTIONS,
-    CONF_VIA_STATIONS,
-    CONF_DIRECTION,
-    CONF_EXCLUDED_DIRECTIONS,
-    CONF_IGNORED_TRAINTYPES,
-    CONF_DROP_LATE_TRAINS,
-    CONF_KEEP_ROUTE,
-    CONF_KEEP_ENDSTATION,
+    CONF_CACHE_TTL,
+    CONF_CALENDAR_EVENT_DURATION,
+    CONF_CALENDAR_ONLY_DELAYED,
+    CONF_CALENDAR_ONLY_FAVORITES,
+    CONF_DATA_SOURCE,
     CONF_DEDUPLICATE_DEPARTURES,
     CONF_DEDUPLICATE_KEY,
-    DEFAULT_DEDUPLICATE_KEY,
+    CONF_DETAILED,
+    CONF_DIRECTION,
+    CONF_DROP_LATE_TRAINS,
     CONF_ENABLE_TEXT_VIEW,
-    CONF_TEXT_VIEW_TEMPLATE,
-    DEFAULT_TEXT_VIEW_TEMPLATE,
     CONF_EXCLUDE_CANCELLED,
-    CONF_SHOW_OCCUPANCY,
+    CONF_EXCLUDED_DIRECTIONS,
     CONF_FAVORITE_TRAINS,
-    CONF_VIA_STATIONS_LOGIC,
-    IGNORED_TRAINTYPES_OPTIONS,
-    CONF_WALK_TIME,
+    CONF_HIDE_LOW_DELAY,
+    CONF_IGNORED_TRAINTYPES,
+    CONF_KEEP_ENDSTATION,
+    CONF_KEEP_ROUTE,
+    CONF_NEXT_DEPARTURES,
+    CONF_OFFSET,
+    CONF_PAST_60_MINUTES,
+    CONF_PAUSED,
+    CONF_PLATFORMS,
     CONF_SERVER_TYPE,
     CONF_SERVER_URL,
+    CONF_SHOW_OCCUPANCY,
+    CONF_STATION,
+    CONF_TEXT_VIEW_TEMPLATE,
+    CONF_UPDATE_INTERVAL,
+    CONF_VIA_STATIONS,
+    CONF_VIA_STATIONS_LOGIC,
+    CONF_WALK_TIME,
+    DATA_SOURCE_OPTIONS,
+    DEFAULT_CACHE_TTL,
+    DEFAULT_CALENDAR_EVENT_DURATION,
+    DEFAULT_DEDUPLICATE_KEY,
+    DEFAULT_NEXT_DEPARTURES,
+    DEFAULT_OFFSET,
+    DEFAULT_TEXT_VIEW_TEMPLATE,
+    DEFAULT_UPDATE_INTERVAL,
+    DOMAIN,
+    IGNORED_TRAINTYPES_OPTIONS,
+    MAX_SENSORS,
     SERVER_TYPE_CUSTOM,
-    SERVER_TYPE_OFFICIAL,
     SERVER_TYPE_FASERF,
-    SERVER_URL_OFFICIAL,
+    SERVER_TYPE_OFFICIAL,
     SERVER_URL_FASERF,
+    SERVER_URL_OFFICIAL,
     normalize_data_source,
 )
 from .utils import async_get_stations, find_station_matches, normalize_whitespace
@@ -97,8 +99,10 @@ async def async_validate_station_on_url(
     Returns {"valid": True} or {"valid": False, "error": "description"}
     """
     from urllib.parse import quote
+
     from homeassistant.helpers.aiohttp_client import async_get_clientsession
-    from .const import DATA_SOURCE_MAP, SERVER_URL_OFFICIAL, SERVER_URL_FASERF
+
+    from .const import DATA_SOURCE_MAP, SERVER_URL_FASERF, SERVER_URL_OFFICIAL
 
     # Clean station name
     station_str: str = str(station)
@@ -187,13 +191,13 @@ async def async_validate_station_on_url(
                     "hosted server. 24/7 availability cannot be guaranteed, but we try. "
                     "Error: "
                 )
-            return {"valid": False, "error": f"{err_msg}{str(e)}"}
+            return {"valid": False, "error": f"{err_msg}{e!s}"}
         else:
             if is_german:
                 err_msg = "Verbindung zum API-Server fehlgeschlagen: "
             else:
                 err_msg = "Could not connect to API server: "
-            return {"valid": False, "error": f"{err_msg}{str(e)}"}
+            return {"valid": False, "error": f"{err_msg}{e!s}"}
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
@@ -276,8 +280,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 url = f"https://{url}"
 
             # Remove trailing slash
-            if url.endswith("/"):
-                url = url[:-1]
+            url = url.removesuffix("/")
 
             if not url:
                 errors[CONF_SERVER_URL] = "invalid_url"
@@ -901,8 +904,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
             if url and not url.startswith(("http://", "https://")):
                 url = f"https://{url}"
-            if url.endswith("/"):
-                url = url[:-1]
+            url = url.removesuffix("/")
 
             if not url:
                 errors[CONF_SERVER_URL] = "invalid_url"
@@ -1261,8 +1263,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 url = f"https://{url}"
 
             # Remove trailing slash
-            if url.endswith("/"):
-                url = url[:-1]
+            url = url.removesuffix("/")
 
             if not url:
                 errors[CONF_SERVER_URL] = "invalid_url"
@@ -1351,14 +1352,23 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             # Process via_stations from string to list if necessary
             if CONF_VIA_STATIONS in user_input:
                 via_raw = user_input.get(CONF_VIA_STATIONS, "")
-                user_input[CONF_VIA_STATIONS] = [
-                    s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
-                ]
+                if isinstance(via_raw, str):
+                    user_input[CONF_VIA_STATIONS] = [
+                        s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
+                    ]
+                elif isinstance(via_raw, list):
+                    user_input[CONF_VIA_STATIONS] = [
+                        s.strip() for s in via_raw if isinstance(s, str) and s.strip()
+                    ]
             return await self._async_save_options(user_input)
 
         # Get via_stations list and join for display
         via_stations_list = self._get_config_value(CONF_VIA_STATIONS, [])
-        if via_stations_list is None:
+        if isinstance(via_stations_list, str):
+            via_stations_list = [
+                s.strip() for s in re.split(r",|\|", via_stations_list) if s.strip()
+            ]
+        elif not isinstance(via_stations_list, list):
             via_stations_list = []
         via_stations_str = ", ".join(via_stations_list)
 
@@ -1367,43 +1377,43 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if isinstance(ignored_types, str):
             ignored_types = [t.strip() for t in ignored_types.split(",") if t.strip()]
 
+        schema = vol.Schema(
+            {
+                vol.Optional(CONF_PLATFORMS): cv.string,
+                vol.Optional(CONF_VIA_STATIONS): cv.string,
+                vol.Optional(CONF_VIA_STATIONS_LOGIC): vol.In(["OR", "AND"]),
+                vol.Optional(CONF_DIRECTION): cv.string,
+                vol.Optional(CONF_EXCLUDED_DIRECTIONS): cv.string,
+                vol.Optional(CONF_IGNORED_TRAINTYPES): cv.multi_select(
+                    IGNORED_TRAINTYPES_OPTIONS
+                ),
+                vol.Optional(CONF_EXCLUDE_CANCELLED): cv.boolean,
+                vol.Optional(CONF_FAVORITE_TRAINS): cv.string,
+            }
+        )
+
         return self.async_show_form(
             step_id="filter_options",
-            data_schema=vol.Schema(
+            data_schema=self.add_suggested_values_to_schema(
+                schema,
                 {
-                    vol.Optional(
-                        CONF_PLATFORMS,
-                        default=self._get_config_value(CONF_PLATFORMS, ""),
-                    ): cv.string,
-                    vol.Optional(
-                        CONF_VIA_STATIONS,
-                        default=via_stations_str,
-                    ): cv.string,
-                    vol.Optional(
-                        CONF_VIA_STATIONS_LOGIC,
-                        default=self._get_config_value(CONF_VIA_STATIONS_LOGIC, "OR"),
-                    ): vol.In(["OR", "AND"]),
-                    vol.Optional(
-                        CONF_DIRECTION,
-                        default=self._get_config_value(CONF_DIRECTION, ""),
-                    ): cv.string,
-                    vol.Optional(
-                        CONF_EXCLUDED_DIRECTIONS,
-                        default=self._get_config_value(CONF_EXCLUDED_DIRECTIONS, ""),
-                    ): cv.string,
-                    vol.Optional(
-                        CONF_IGNORED_TRAINTYPES,
-                        default=ignored_types,
-                    ): cv.multi_select(IGNORED_TRAINTYPES_OPTIONS),
-                    vol.Optional(
-                        CONF_EXCLUDE_CANCELLED,
-                        default=self._get_config_value(CONF_EXCLUDE_CANCELLED, False),
-                    ): cv.boolean,
-                    vol.Optional(
-                        CONF_FAVORITE_TRAINS,
-                        default=self._get_config_value(CONF_FAVORITE_TRAINS, ""),
-                    ): cv.string,
-                }
+                    CONF_PLATFORMS: self._get_config_value(CONF_PLATFORMS, ""),
+                    CONF_VIA_STATIONS: via_stations_str,
+                    CONF_VIA_STATIONS_LOGIC: self._get_config_value(
+                        CONF_VIA_STATIONS_LOGIC, "OR"
+                    ),
+                    CONF_DIRECTION: self._get_config_value(CONF_DIRECTION, ""),
+                    CONF_EXCLUDED_DIRECTIONS: self._get_config_value(
+                        CONF_EXCLUDED_DIRECTIONS, ""
+                    ),
+                    CONF_IGNORED_TRAINTYPES: ignored_types,
+                    CONF_EXCLUDE_CANCELLED: self._get_config_value(
+                        CONF_EXCLUDE_CANCELLED, False
+                    ),
+                    CONF_FAVORITE_TRAINS: self._get_config_value(
+                        CONF_FAVORITE_TRAINS, ""
+                    ),
+                },
             ),
         )
 

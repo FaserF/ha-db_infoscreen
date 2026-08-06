@@ -1,9 +1,11 @@
 from unittest.mock import MagicMock
+
 import pytest
-from custom_components.db_infoscreen.sensor import DBInfoSensor
+
 from custom_components.db_infoscreen.binary_sensor import (
     DBInfoScreenElevatorBinarySensor,
 )
+from custom_components.db_infoscreen.sensor import DBInfoSensor
 
 
 @pytest.fixture

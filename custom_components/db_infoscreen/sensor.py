@@ -1,19 +1,21 @@
 """Sensor platform for DB Infoscreen integration."""
 
+import logging
+from typing import Any, cast
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
-from typing import Any, cast
+from homeassistant.util import dt as dt_util
+
 from .const import (
-    DOMAIN,
     CONF_ENABLE_TEXT_VIEW,
-    CONF_WALK_TIME,
     CONF_TEXT_VIEW_TEMPLATE,
+    CONF_WALK_TIME,
     DEFAULT_TEXT_VIEW_TEMPLATE,
+    DOMAIN,
 )
 from .entity import DBInfoScreenBaseEntity
 from .utils import parse_datetime_flexible
-import logging
-from homeassistant.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 

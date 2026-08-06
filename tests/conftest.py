@@ -1,7 +1,8 @@
-import sys
 import os
+import sys
 import types
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 # Prevent pytest-socket from blocking local loopback on Windows

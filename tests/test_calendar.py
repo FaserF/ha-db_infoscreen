@@ -2,8 +2,8 @@
 
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
-import pytest
 
+import pytest
 from homeassistant.core import HomeAssistant
 
 from custom_components.db_infoscreen.calendar import DBInfoScreenCalendar

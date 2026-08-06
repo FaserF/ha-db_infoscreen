@@ -5,75 +5,76 @@ This module provides the core logic and coordinator for fetching train departure
 information from the Deutsche Bahn (DBF) API and regional providers.
 """
 
-from typing import Any
-import async_timeout
 import asyncio
 import copy
-import logging
 import json
+import logging
 import re
-import voluptuous as vol
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from urllib.parse import quote, urlencode, urlparse
 
-from homeassistant import config_entries
-from . import repairs
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import async_timeout
 import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
+from homeassistant import config_entries
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.network import get_url
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_util
 
+from . import repairs
 from .const import (
-    CONF_PAUSED,
-    DOMAIN,
-    CONF_STATION,
-    CONF_NEXT_DEPARTURES,
-    CONF_UPDATE_INTERVAL,
-    DEFAULT_UPDATE_INTERVAL,
-    DEFAULT_NEXT_DEPARTURES,
-    DEFAULT_OFFSET,
-    CONF_HIDE_LOW_DELAY,
-    CONF_DETAILED,
-    CONF_PAST_60_MINUTES,
-    CONF_DATA_SOURCE,
-    CONF_OFFSET,
-    CONF_PLATFORMS,
     CONF_ADMODE,
-    MIN_UPDATE_INTERVAL,
-    CONF_VIA_STATIONS,
-    CONF_DIRECTION,
-    CONF_EXCLUDED_DIRECTIONS,
-    CONF_IGNORED_TRAINTYPES,
-    CONF_DROP_LATE_TRAINS,
-    CONF_KEEP_ROUTE,
-    CONF_KEEP_ENDSTATION,
+    CONF_CACHE_TTL,
+    CONF_CALENDAR_EVENT_DURATION,
+    CONF_CALENDAR_ONLY_DELAYED,
+    CONF_CALENDAR_ONLY_FAVORITES,
+    CONF_DATA_SOURCE,
     CONF_DEDUPLICATE_DEPARTURES,
     CONF_DEDUPLICATE_KEY,
-    DEFAULT_DEDUPLICATE_KEY,
-    CONF_VIA_STATIONS_LOGIC,
-    TRAIN_TYPE_MAPPING,
+    CONF_DETAILED,
+    CONF_DIRECTION,
+    CONF_DROP_LATE_TRAINS,
     CONF_EXCLUDE_CANCELLED,
-    CONF_SHOW_OCCUPANCY,
+    CONF_EXCLUDED_DIRECTIONS,
     CONF_FAVORITE_TRAINS,
-    CONF_WALK_TIME,
+    CONF_HIDE_LOW_DELAY,
+    CONF_IGNORED_TRAINTYPES,
+    CONF_KEEP_ENDSTATION,
+    CONF_KEEP_ROUTE,
+    CONF_NEXT_DEPARTURES,
+    CONF_OFFSET,
+    CONF_PAST_60_MINUTES,
+    CONF_PAUSED,
+    CONF_PLATFORMS,
     CONF_SERVER_TYPE,
     CONF_SERVER_URL,
-    CONF_CACHE_TTL,
-    DEFAULT_CACHE_TTL,
-    CONF_CALENDAR_EVENT_DURATION,
-    DEFAULT_CALENDAR_EVENT_DURATION,
-    CONF_CALENDAR_ONLY_FAVORITES,
-    CONF_CALENDAR_ONLY_DELAYED,
-    SERVER_TYPE_CUSTOM,
-    SERVER_TYPE_OFFICIAL,
-    SERVER_TYPE_FASERF,
-    SERVER_URL_OFFICIAL,
-    SERVER_URL_FASERF,
-    normalize_data_source,
+    CONF_SHOW_OCCUPANCY,
+    CONF_STATION,
+    CONF_UPDATE_INTERVAL,
+    CONF_VIA_STATIONS,
+    CONF_VIA_STATIONS_LOGIC,
+    CONF_WALK_TIME,
     DATA_SOURCE_MAP,
+    DEFAULT_CACHE_TTL,
+    DEFAULT_CALENDAR_EVENT_DURATION,
+    DEFAULT_DEDUPLICATE_KEY,
+    DEFAULT_NEXT_DEPARTURES,
+    DEFAULT_OFFSET,
+    DEFAULT_UPDATE_INTERVAL,
+    DOMAIN,
+    MIN_UPDATE_INTERVAL,
+    SERVER_TYPE_CUSTOM,
+    SERVER_TYPE_FASERF,
+    SERVER_TYPE_OFFICIAL,
+    SERVER_URL_FASERF,
+    SERVER_URL_OFFICIAL,
+    TRAIN_TYPE_MAPPING,
+    normalize_data_source,
 )
 from .utils import (
     normalize_whitespace,
@@ -352,8 +353,7 @@ async def async_migrate_entry(
                 d[CONF_SERVER_URL] = url
 
             # Clean up old key
-            if "custom_api_url" in d:
-                del d["custom_api_url"]
+            d.pop("custom_api_url", None)
 
         migrate_dict(new_data)
         migrate_dict(new_options)
@@ -430,7 +430,17 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         self.offset = self.convert_offset_to_seconds(
             str(config.get(CONF_OFFSET, DEFAULT_OFFSET))
         )
-        self.via_stations = config.get(CONF_VIA_STATIONS, [])
+        via_raw = config.get(CONF_VIA_STATIONS, [])
+        if isinstance(via_raw, str):
+            self.via_stations = [
+                s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
+            ]
+        elif isinstance(via_raw, list):
+            self.via_stations = [
+                s.strip() for s in via_raw if isinstance(s, str) and s.strip()
+            ]
+        else:
+            self.via_stations = []
         self.direction = config.get(CONF_DIRECTION, "")
         self.excluded_directions = config.get(CONF_EXCLUDED_DIRECTIONS, "")
 
@@ -580,20 +590,19 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             headers = {
                 "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
             }
-            async with async_timeout.timeout(10):
-                async with session.get(
-                    about_url, headers=headers, allow_redirects=True
-                ) as response:
-                    if response.status < 500:
-                        data = await response.json()
-                        if isinstance(data, dict):
-                            # Search for version strings in the response
-                            v = data.get("version")
-                            av = data.get("api_version")
-                            if v and v != "???":
-                                self.server_version = str(v)
-                            elif av:
-                                self.server_version = f"API v{av}"
+            async with async_timeout.timeout(10), session.get(
+                about_url, headers=headers, allow_redirects=True
+            ) as response:
+                if response.status < 500:
+                    data = await response.json()
+                    if isinstance(data, dict):
+                        # Search for version strings in the response
+                        v = data.get("version")
+                        av = data.get("api_version")
+                        if v and v != "???":
+                            self.server_version = str(v)
+                        elif av:
+                            self.server_version = f"API v{av}"
         except Exception as e:
             _LOGGER.debug(
                 "Could not fetch server version from %s: %s", self._base_url, e
@@ -1229,9 +1238,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             # If the API returns an empty list, we try to infer it from the train name.
             if not train_classes and isinstance(train_classes, list):
                 train_name = str(departure.get("train", "")).upper()
-                if "ICE" in train_name:
-                    api_classes_to_process = ["ICE"]
-                elif "IC" in train_name or "EC" in train_name or "TGV" in train_name:
+                if "ICE" in train_name or "IC" in train_name or "EC" in train_name or "TGV" in train_name:
                     api_classes_to_process = ["ICE"]
                 elif "RE" in train_name:
                     api_classes_to_process = ["RE"]

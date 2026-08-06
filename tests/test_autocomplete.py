@@ -1,10 +1,11 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 from custom_components.db_infoscreen.utils import (
+    CACHE_KEY_DATA,
     async_get_stations,
     find_station_matches,
-    CACHE_KEY_DATA,
 )
 
 

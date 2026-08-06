@@ -1,19 +1,20 @@
-from unittest.mock import MagicMock, AsyncMock, patch
+import copy
 from datetime import timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from homeassistant.util import dt as dt_util
-import copy
 
 from custom_components.db_infoscreen import DBInfoScreenCoordinator
 from custom_components.db_infoscreen.const import (
-    CONF_STATION,
-    CONF_NEXT_DEPARTURES,
-    CONF_UPDATE_INTERVAL,
-    CONF_VIA_STATIONS,
     CONF_DATA_SOURCE,
     CONF_DETAILED,
-    CONF_HIDE_LOW_DELAY,
     CONF_FAVORITE_TRAINS,
+    CONF_HIDE_LOW_DELAY,
+    CONF_NEXT_DEPARTURES,
+    CONF_STATION,
+    CONF_UPDATE_INTERVAL,
+    CONF_VIA_STATIONS,
 )
 from tests.common import patch_session
 
@@ -558,8 +559,10 @@ async def test_coordinator_favorite_trains_filter(hass, mock_config_entry):
 @pytest.mark.asyncio
 async def test_coordinator_retry(hass, mock_config_entry):
     """Test retry logic on transient failures."""
-    import aiohttp
     import asyncio
+
+    import aiohttp
+
     from tests.common import patch_session
 
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
@@ -606,6 +609,7 @@ async def test_coordinator_retry(hass, mock_config_entry):
 async def test_coordinator_retry_max_failure(hass, mock_config_entry):
     """Test that it returns cached data after max retries fail."""
     import asyncio
+
     from tests.common import patch_session
 
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)

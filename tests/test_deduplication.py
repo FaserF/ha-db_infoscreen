@@ -1,14 +1,15 @@
-from unittest.mock import MagicMock
 from datetime import timedelta
+from unittest.mock import MagicMock
+
 import pytest
 from homeassistant.util import dt as dt_util
 
 from custom_components.db_infoscreen import DBInfoScreenCoordinator
 from custom_components.db_infoscreen.const import (
-    CONF_STATION,
-    CONF_NEXT_DEPARTURES,
     CONF_DEDUPLICATE_DEPARTURES,
     CONF_DEDUPLICATE_KEY,
+    CONF_NEXT_DEPARTURES,
+    CONF_STATION,
 )
 from tests.common import patch_session
 

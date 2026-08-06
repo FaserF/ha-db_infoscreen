@@ -1,9 +1,11 @@
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
+
 import pytest
-from datetime import datetime, timezone, timedelta
-from custom_components.db_infoscreen.sensor import DBInfoScreenPunctualitySensor
-from custom_components.db_infoscreen.__init__ import DBInfoScreenCoordinator
 from homeassistant.util import dt as dt_util
+
+from custom_components.db_infoscreen.__init__ import DBInfoScreenCoordinator
+from custom_components.db_infoscreen.sensor import DBInfoScreenPunctualitySensor
 
 
 @pytest.fixture

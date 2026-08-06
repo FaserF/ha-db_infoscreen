@@ -10,20 +10,19 @@ from homeassistant import data_entry_flow
 from homeassistant.components.repairs import RepairsFlow
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
-
 from homeassistant.helpers.selector import (
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
-    SelectOptionDict,
     SelectSelectorMode,
 )
 
 from .const import (
+    CONF_DATA_SOURCE,
+    CONF_STATION,
+    DATA_SOURCE_OPTIONS,
     DOMAIN,
     GITHUB_ISSUES_URL,
-    CONF_STATION,
-    CONF_DATA_SOURCE,
-    DATA_SOURCE_OPTIONS,
 )
 
 _LOGGER = logging.getLogger(__name__)

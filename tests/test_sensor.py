@@ -1,7 +1,9 @@
 from unittest.mock import MagicMock
+
 import pytest
-from custom_components.db_infoscreen.sensor import DBInfoScreenWatchdogSensor
+
 from custom_components.db_infoscreen.const import CONF_STATION
+from custom_components.db_infoscreen.sensor import DBInfoScreenWatchdogSensor
 
 
 @pytest.fixture

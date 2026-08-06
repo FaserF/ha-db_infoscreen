@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 import logging
+from datetime import datetime, timedelta
 from typing import Any, cast
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent

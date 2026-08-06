@@ -1,8 +1,9 @@
 """Test the translation files."""
 
-import re
 import json
 import os
+import re
+
 import pytest
 
 DOMAIN = "db_infoscreen"

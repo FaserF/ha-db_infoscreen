@@ -5,13 +5,13 @@ from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.db_infoscreen.const import (
-    DOMAIN,
-    CONF_STATION,
-    CONF_DATA_SOURCE,
-    CONF_VIA_STATIONS,
-    CONF_PLATFORMS,
-    CONF_UPDATE_INTERVAL,
     CONF_CACHE_TTL,
+    CONF_DATA_SOURCE,
+    CONF_PLATFORMS,
+    CONF_STATION,
+    CONF_UPDATE_INTERVAL,
+    CONF_VIA_STATIONS,
+    DOMAIN,
 )
 
 
@@ -125,3 +125,32 @@ async def test_via_station_delimiter_mismatch(hass):
     assert len(via_list) == 2, f"Expected 2 stations, got {via_list}"
     assert "A" in via_list
     assert "B" in via_list
+
+
+@pytest.mark.asyncio
+async def test_delete_via_stations_clears_filter(hass):
+    """Test clearing/deleting via stations in options flow updates options to empty list."""
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="Berlin Hbf",
+        data={
+            CONF_STATION: "Berlin Hbf",
+            CONF_VIA_STATIONS: ["Spandau"],
+        },
+        options={},
+    )
+    config_entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    result_filter = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {"next_step_id": "filter_options"},
+    )
+
+    result_save = await hass.config_entries.options.async_configure(
+        result_filter["flow_id"],
+        {CONF_VIA_STATIONS: ""},
+    )
+
+    assert result_save["type"] == FlowResultType.CREATE_ENTRY
+    assert result_save["data"][CONF_VIA_STATIONS] == []

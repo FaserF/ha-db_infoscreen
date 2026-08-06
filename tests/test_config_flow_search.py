@@ -1,10 +1,11 @@
 """Test the db_infoscreen config flow station search."""
 
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 from homeassistant.core import HomeAssistant
 
-from custom_components.db_infoscreen.const import CONF_STATION, CONF_DATA_SOURCE
 from custom_components.db_infoscreen.config_flow import ConfigFlow
+from custom_components.db_infoscreen.const import CONF_DATA_SOURCE, CONF_STATION
 
 # Mock JS response matching the regex in utils.py
 SEARCH_JS_SINGLE = 'stations=["Frankfurt (Main) Hbf"];'

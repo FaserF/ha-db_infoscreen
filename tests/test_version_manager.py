@@ -1,9 +1,9 @@
-import unittest
-from unittest.mock import patch, mock_open
 import datetime
 import importlib.util
 import os
 import subprocess
+import unittest
+from unittest.mock import mock_open, patch
 
 # Dynamic import of version_manager
 script_path = os.path.abspath(".github/scripts/version_manager.py")

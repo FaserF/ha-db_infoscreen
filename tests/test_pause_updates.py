@@ -1,15 +1,16 @@
-from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from homeassistant.util import dt as dt_util
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.util import dt as dt_util
 
 from custom_components.db_infoscreen import DBInfoScreenCoordinator
 from custom_components.db_infoscreen.const import (
-    DOMAIN,
+    CONF_PAUSED,
     CONF_STATION,
     CONF_UPDATE_INTERVAL,
-    CONF_PAUSED,
+    DOMAIN,
 )
 from tests.common import patch_session
 
@@ -137,6 +138,7 @@ async def test_options_flow_schema_has_paused(hass):
 async def test_set_paused_service(hass):
     """Test the set_paused service."""
     from pytest_homeassistant_custom_component.common import MockConfigEntry
+
     from custom_components.db_infoscreen import async_setup_entry
 
     entry = MockConfigEntry(
