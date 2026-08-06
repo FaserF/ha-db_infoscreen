@@ -166,6 +166,29 @@ async def test_coordinator_429_exception_counts_as_api_fetch(hass, mock_config_e
 
 
 @pytest.mark.asyncio
+async def test_coordinator_429_without_cache_raises_updatefailed(
+    hass, mock_config_entry
+):
+    """A 429 with no previously cached data must fail the update.
+
+    Regression: previously this returned an empty list that the coordinator
+    treated as a *successful* update, leaving sensors stuck at ``no_data``
+    (e.g. after a restart while the shared User-Agent is rate limited).
+    """
+    from homeassistant.helpers.update_coordinator import UpdateFailed
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    coordinator.server_version = "test"
+
+    with patch_session(side_effect=lambda *_args, **_kwargs: _mock_response(429)):
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+
+    # The next fetch is still throttled so failures don't hammer the server.
+    assert coordinator._last_api_fetch > 0
+
+
+@pytest.mark.asyncio
 async def test_coordinator_missing_raw_data_without_fetch_returns_last_valid(
     hass, mock_config_entry
 ):

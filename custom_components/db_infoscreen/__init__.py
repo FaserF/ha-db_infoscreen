@@ -22,7 +22,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.network import get_url
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util import dt as dt_util
 
@@ -754,7 +754,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                                 "Rate limit hit for %s (429 Too Many Requests). Skipping retries for this cycle.",
                                 self.fetch_url,
                             )
-                            return self._last_valid_value or []
+                            if self._last_valid_value:
+                                return self._last_valid_value
+                            raise UpdateFailed(
+                                f"Rate limited (429) while fetching {self.fetch_url}"
+                            )
 
                         response.raise_for_status()
                         data = await response.json()
@@ -775,7 +779,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                             "Rate limit hit for %s (429 Too Many Requests). Skipping retries.",
                             self.fetch_url,
                         )
-                        return self._last_valid_value or []
+                        if self._last_valid_value:
+                            return self._last_valid_value
+                        raise UpdateFailed(
+                            f"Rate limited (429) while fetching {self.fetch_url}"
+                        )
                     if attempt < max_retries:
                         _LOGGER.warning(
                             "Attempt %d failed fetching data from %s: %s. Retrying in %d seconds...",
@@ -795,7 +803,14 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         )
                         # Activate Repairs issue
                         self._handle_update_error(str(err))
-                        return self._last_valid_value or []
+                        # Throttle the next API fetch so repeated failures respect
+                        # the configured interval instead of hammering the server.
+                        self._last_api_fetch = now.timestamp()
+                        if self._last_valid_value:
+                            return self._last_valid_value
+                        raise UpdateFailed(
+                            f"Failed to fetch data from {self.fetch_url}: {err}"
+                        )
                 except (
                     asyncio.TimeoutError,
                     aiohttp.ClientError,
@@ -821,11 +836,20 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         )
                         # Activate Repairs issue
                         self._handle_update_error(str(err))
-                        return self._last_valid_value or []
+                        # Throttle the next API fetch so repeated failures respect
+                        # the configured interval instead of hammering the server.
+                        self._last_api_fetch = now.timestamp()
+                        if self._last_valid_value:
+                            return self._last_valid_value
+                        raise UpdateFailed(
+                            f"Failed to fetch data from {self.fetch_url}: {err}"
+                        )
 
         if not isinstance(data, dict):
             _LOGGER.error("Expected dict from API, got %s", type(data))
-            return self._last_valid_value or []
+            if self._last_valid_value:
+                return self._last_valid_value
+            raise UpdateFailed(f"Expected dict from API, got {type(data)}")
 
         raw_departures = data.get("departures", [])
         if raw_departures is None:
