@@ -823,11 +823,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         # Throttle the next API fetch so repeated failures respect
                         # the configured interval instead of hammering the server.
                         self._last_api_fetch = now.timestamp()
-                        if self._last_valid_value:
+                        if self._last_valid_value is not None:
                             return self._last_valid_value
-                        raise UpdateFailed(
-                            f"Failed to fetch data from {self.fetch_url}: {err}"
-                        )
+                        return []
                 except UpdateFailed:
                     raise
                 except (
@@ -858,11 +856,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         # Throttle the next API fetch so repeated failures respect
                         # the configured interval instead of hammering the server.
                         self._last_api_fetch = now.timestamp()
-                        if self._last_valid_value:
+                        if self._last_valid_value is not None:
                             return self._last_valid_value
-                        raise UpdateFailed(
-                            f"Failed to fetch data from {self.fetch_url}: {err}"
-                        )
+                        return []
 
         if not isinstance(data, dict):
             _LOGGER.error("Expected dict from API, got %s", type(data))

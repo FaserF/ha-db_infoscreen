@@ -1122,6 +1122,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         for s in re.split(r",|\|", via_raw)
                         if s.strip()
                     ]
+                elif via_raw is None:
+                    user_input[CONF_VIA_STATIONS] = []
 
             for key in [CONF_EXCLUDED_DIRECTIONS, CONF_FAVORITE_TRAINS]:
                 if key in user_input:
@@ -1360,6 +1362,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     user_input[CONF_VIA_STATIONS] = [
                         s.strip() for s in via_raw if isinstance(s, str) and s.strip()
                     ]
+                elif via_raw is None:
+                    user_input[CONF_VIA_STATIONS] = []
             return await self._async_save_options(user_input)
 
         # Get via_stations list and join for display
