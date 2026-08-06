@@ -51,7 +51,6 @@ def _enable_socket_temporarily():
 
 def _restore_socket_state():
     """Restore pytest-socket allow list to original state."""
-    global original_allowed_hosts_saved
     if original_allowed_hosts_saved:
         try:
             import pytest_socket
@@ -82,15 +81,15 @@ async def check_server_status() -> tuple[bool, str]:
             ) as resp,
         ):
             if resp.status == 200:
-                    try:
-                        data = await resp.json()
-                        if "departures" in data:
-                            return True, "Reachable and returns valid departures"
-                        return False, f"Invalid JSON schema: {str(data)[:100]}"
-                    except Exception as json_err:
-                        return False, f"JSON parse error: {json_err}"
-                return False, f"HTTP status {resp.status}"
-    except Exception as conn_err:
+                try:
+                    data = await resp.json()
+                    if "departures" in data:
+                        return True, "Reachable and returns valid departures"
+                    return False, f"Invalid JSON schema: {str(data)[:100]}"
+                except Exception as json_err:  # noqa: BLE001
+                    return False, f"JSON parse error: {json_err}"
+            return False, f"HTTP status {resp.status}"
+    except Exception as conn_err:  # noqa: BLE001
         return False, f"Connection error: {conn_err}"
 
 
@@ -151,7 +150,7 @@ async def live_coordinator_fixture(hass: HomeAssistant):
 @pytest.mark.asyncio
 async def test_live_data_structure(live_coordinator) -> None:
     """Test that the live data contains required fields and station messages."""
-    coordinator, entry = live_coordinator
+    coordinator, _entry = live_coordinator
     assert coordinator.last_update_success is True
     assert len(coordinator.data) > 0
 

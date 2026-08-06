@@ -188,7 +188,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
 
                 _LOGGER.debug("Sensor state updated: %s", self._last_valid_value)
                 return self._last_valid_value
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 _LOGGER.error("Exception during data parsing: %s", e)
                 return self._last_valid_value or "error"
         else:
@@ -304,7 +304,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
 
                 try:
                     text = template.format_map(SafeDict(format_dict))
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     _LOGGER.warning("Failed to format next_departures_text: %s", e)
                     text = f"{line} -> {destination} (Pl {platform}): {time}{delay_str}"
 

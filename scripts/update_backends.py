@@ -1,7 +1,7 @@
+import html
+import os
 import re
 import urllib.request
-import os
-import html
 from urllib.parse import parse_qs
 
 # Source URL
@@ -71,7 +71,7 @@ def fetch_backends():
         with urllib.request.urlopen(req, timeout=10) as response:
             html_content = response.read().decode("utf-8")
         return html_content
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Error fetching URL: {e}")
         return None
 
@@ -231,7 +231,7 @@ def update_readme(backends):
         with open(README_FILE, "w", encoding="utf-8") as f:
             f.write(new_content)
         print(f"Successfully updated {README_FILE}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Failed to update README: {e}")
 
 
@@ -264,7 +264,7 @@ def update_docs_config(backends):
             f.write(new_content)
         os.replace(tmp_file, DOCS_CONFIG_FILE)
         print(f"Successfully updated {DOCS_CONFIG_FILE}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Failed to update {DOCS_CONFIG_FILE}: {e}")
 
 

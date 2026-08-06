@@ -167,7 +167,7 @@ async def async_validate_station_on_url(
                     "valid": False,
                     "error": f"API returned status {response.status}. Please try again later.",
                 }
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         _LOGGER.error("Validation request failed: %s", e)
         is_german = getattr(hass.config, "language", "en") == "de"
 
@@ -1051,7 +1051,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             self.discovery_info[CONF_SERVER_URL] = f"http://{host}:{port}"
             self.discovery_info[CONF_SERVER_TYPE] = SERVER_TYPE_CUSTOM
             _LOGGER.debug("Pre-filled addon info: %s", self.discovery_info)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             _LOGGER.warning("Could not pre-fill addon info: %s", e)
 
     async def async_step_hassio_confirm(self, user_input: dict[str, Any] | None = None):
@@ -1064,7 +1064,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             try:
                 await addon_manager.async_install_addon()
                 await addon_manager.async_start_addon()
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 _LOGGER.error("Failed to install DBF addon (%s): %s", slug, e)
                 errors["base"] = "addon_install_error"
                 return self.async_show_form(

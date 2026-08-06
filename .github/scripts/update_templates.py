@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
+import json
 import os
 import re
 import sys
 import urllib.request
-import json
 
 
 def get_latest_ha_version():
@@ -13,7 +12,7 @@ def get_latest_ha_version():
         with urllib.request.urlopen(req, timeout=5) as response:
             data = json.loads(response.read().decode("utf-8"))
             return data["info"]["version"]
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Error fetching HA version: {e}")
         return "2026.6.2"
 
@@ -29,7 +28,7 @@ def get_service_version(repo_name):
             with urllib.request.urlopen(req, timeout=5) as response:
                 data = json.loads(response.read().decode("utf-8"))
                 return data["latest"][0]
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"Error fetching OpenWrt version: {e}")
             return "25.12.4"
 
@@ -42,7 +41,7 @@ def get_service_version(repo_name):
             with urllib.request.urlopen(req, timeout=5) as response:
                 data = json.loads(response.read().decode("utf-8"))
                 return data["tag_name"].lstrip("v")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"Error fetching Valetudo version: {e}")
             return "2026.6.0"
 
@@ -55,7 +54,7 @@ def get_service_version(repo_name):
             with urllib.request.urlopen(req, timeout=5) as response:
                 data = json.loads(response.read().decode("utf-8"))
                 return data["tag_name"].lstrip("v")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"Error fetching Atmosphere version: {e}")
             return "1.8.0"
 
@@ -175,15 +174,25 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
 
         if "description:" in line:
             desc_lower = line.lower()
-            if any(
-                k in desc_lower
-                for k in ["domain", "host", "ip address", "url", "instance", "address"]
+            if (
+                any(
+                    k in desc_lower
+                    for k in [
+                        "domain",
+                        "host",
+                        "ip address",
+                        "url",
+                        "instance",
+                        "address",
+                    ]
+                )
+                and "not share" not in desc_lower
+                and "private" not in desc_lower
             ):
-                if "not share" not in desc_lower and "private" not in desc_lower:
-                    line = (
-                        line.rstrip()
-                        + " (Do NOT share sensitive passwords, credentials, or public API keys. Use example.com or 192.168.1.1 instead.)"
-                    )
+                line = (
+                    line.rstrip()
+                    + " (Do NOT share sensitive passwords, credentials, or public API keys. Use example.com or 192.168.1.1 instead.)"
+                )
 
         new_lines.append(line)
 
@@ -212,7 +221,7 @@ if __name__ == "__main__":
     template_dir = ".github/ISSUE_TEMPLATE"
     if os.path.exists(template_dir):
         for filename in os.listdir(template_dir):
-            if filename.endswith(".yml") or filename.endswith(".yaml"):
+            if filename.endswith((".yml", ".yaml")):
                 path = os.path.join(template_dir, filename)
                 changed = clean_and_update_template(
                     path, version, ha_version, repo_name

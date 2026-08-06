@@ -54,7 +54,7 @@ class TestVersionManager(unittest.TestCase):
     def test_stable_to_stable(self, mock_git):
         # 2026.2.0 -> bump stable -> 2026.2.1
         mock_git.return_value = b"2026.2.0\n"
-        now = datetime.datetime(2026, 2, 4)
+        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.timezone.utc)
         new_v = vm.calculate_version("stable", now=now)
         self.assertEqual(new_v, "2026.2.1")
 
@@ -62,7 +62,7 @@ class TestVersionManager(unittest.TestCase):
     def test_stable_to_beta(self, mock_git):
         # 2026.2.0 -> bump beta -> 2026.2.1b0
         mock_git.return_value = b"2026.2.0\n"
-        now = datetime.datetime(2026, 2, 4)
+        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.timezone.utc)
         new_v = vm.calculate_version("beta", now=now)
         self.assertEqual(new_v, "2026.2.1b0")
 
@@ -70,7 +70,7 @@ class TestVersionManager(unittest.TestCase):
     def test_beta_to_beta(self, mock_git):
         # 2026.2.1b0 -> bump beta -> 2026.2.1b1
         mock_git.return_value = b"2026.2.1b0\n"
-        now = datetime.datetime(2026, 2, 4)
+        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.timezone.utc)
         new_v = vm.calculate_version("beta", now=now)
         self.assertEqual(new_v, "2026.2.1b1")
 
@@ -78,7 +78,7 @@ class TestVersionManager(unittest.TestCase):
     def test_beta_to_stable(self, mock_git):
         # 2026.2.1b1 -> bump stable -> 2026.2.1
         mock_git.return_value = b"2026.2.1b1\n"
-        now = datetime.datetime(2026, 2, 4)
+        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.timezone.utc)
         new_v = vm.calculate_version("stable", now=now)
         self.assertEqual(new_v, "2026.2.1")
 
@@ -86,7 +86,7 @@ class TestVersionManager(unittest.TestCase):
     def test_stable_to_dev(self, mock_git):
         # 2026.2.1 -> bump dev -> 2026.2.2-dev0
         mock_git.return_value = b"2026.2.1\n"
-        now = datetime.datetime(2026, 2, 4)
+        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.timezone.utc)
         new_v = vm.calculate_version("dev", now=now)
         self.assertEqual(new_v, "2026.2.2-dev0")
 
@@ -94,7 +94,7 @@ class TestVersionManager(unittest.TestCase):
     def test_dev_to_beta(self, mock_git):
         # 2026.2.2-dev0 -> bump beta -> 2026.2.2b0
         mock_git.return_value = b"2026.2.2-dev0\n"
-        now = datetime.datetime(2026, 2, 4)
+        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.timezone.utc)
         new_v = vm.calculate_version("beta", now=now)
         self.assertEqual(new_v, "2026.2.2b0")
 
@@ -102,7 +102,7 @@ class TestVersionManager(unittest.TestCase):
     def test_rollover_new_month(self, mock_git):
         # 2026.1.2 -> bump stable in Feb -> 2026.2.0
         mock_git.return_value = b"2026.1.2\n"
-        now = datetime.datetime(2026, 2, 4)
+        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.timezone.utc)
         new_v = vm.calculate_version("stable", now=now)
         self.assertEqual(new_v, "2026.2.0")
 
@@ -110,7 +110,7 @@ class TestVersionManager(unittest.TestCase):
     def test_rollover_new_month_beta(self, mock_git):
         # 2026.1.2 -> bump beta in Feb -> 2026.2.0b0
         mock_git.return_value = b"2026.1.2\n"
-        now = datetime.datetime(2026, 2, 4)
+        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.timezone.utc)
         new_v = vm.calculate_version("beta", now=now)
         self.assertEqual(new_v, "2026.2.0b0")
 

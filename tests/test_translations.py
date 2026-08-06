@@ -207,7 +207,7 @@ def test_sensor_translation_keys(sensor_files, strings_path):
             )
 
 
-async def test_extra_translation_sections(strings_path, en_path, de_path):
+def test_extra_translation_sections(strings_path, en_path, de_path):
     """Test consistency for extra translation sections like repairs, train_types."""
     with open(strings_path, "r", encoding="utf-8") as f:
         strings = json.load(f)
@@ -248,7 +248,7 @@ async def test_extra_translation_sections(strings_path, en_path, de_path):
             )
 
 
-async def test_all_translation_keys_referenced():
+def test_all_translation_keys_referenced():
     """Test that all translation keys used in code are present in strings.json."""
     strings_path = os.path.join(
         os.path.dirname(__file__),
@@ -315,14 +315,14 @@ async def test_all_translation_keys_referenced():
             )
 
 
-async def test_translation_schema_compliance(strings_path, en_path, de_path):
+def test_translation_schema_compliance(strings_path, en_path, de_path):
     """Strictly validate schema compliance against March 2026 hassfest rules."""
     for path in [strings_path, en_path, de_path]:
         path_name = os.path.basename(path)
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        def check_schema(obj, trace=""):
+        def check_schema(obj, trace="", file_name=path_name):
             if not isinstance(obj, dict):
                 return
 
@@ -330,18 +330,20 @@ async def test_translation_schema_compliance(strings_path, en_path, de_path):
             if trace.endswith(".data"):
                 for key, value in obj.items():
                     assert isinstance(value, str), (
-                        f"Schema Violation in {path_name}: '{trace}.{key}' must be a string, but got {type(value).__name__} (Dicts in 'data' blocks are forbidden)"
+                        f"Schema Violation in {file_name}: '{trace}.{key}' must be a string, but got {type(value).__name__} (Dicts in 'data' blocks are forbidden)"
                     )
 
             # Rule 2: 'options' blocks are NOT ALLOWED in flow steps (caught by hassfest)
             # They must be in the top-level 'selector' block instead
             if trace.endswith((".step.init", ".step.user")):
                 assert "options" not in obj, (
-                    f"Schema Violation in {path_name}: '{trace}.options' is forbidden. Flow step options must be moved to the root 'selector' block."
+                    f"Schema Violation in {file_name}: '{trace}.options' is forbidden. Flow step options must be moved to the root 'selector' block."
                 )
 
             for key, value in obj.items():
-                check_schema(value, f"{trace}.{key}" if trace else key)
+                check_schema(
+                    value, f"{trace}.{key}" if trace else key, file_name=file_name
+                )
 
         check_schema(data)
 

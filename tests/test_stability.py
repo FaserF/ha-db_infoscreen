@@ -36,7 +36,7 @@ async def test_coordinator_handles_api_errors(hass, mock_config_entry):
 
     # Simulate a network error
     def side_effect_error(*args, **kwargs):
-        raise Exception("Network Error")
+        raise RuntimeError("Network Error")
 
     with patch_session(side_effect=side_effect_error):
         # Should not raise exception

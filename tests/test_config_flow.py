@@ -130,7 +130,7 @@ async def test_form_create_entry_advanced(hass):
 
     assert result_advanced["type"] == FlowResultType.CREATE_ENTRY
     mock_create.assert_called_once()
-    args, kwargs = mock_create.call_args
+    args, _kwargs = mock_create.call_args
     # Verify our basic options + advanced options combine properly:
     assert args[0][CONF_EXCLUDED_DIRECTIONS] == "Berlin"
     assert args[0][CONF_DATA_SOURCE] == "IRIS-TTS"

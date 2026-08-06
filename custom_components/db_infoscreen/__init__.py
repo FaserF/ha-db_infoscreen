@@ -581,7 +581,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                             url = url.replace("127.0.0.1", local_ip).replace(
                                 "localhost", local_ip
                             )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     _LOGGER.debug("Could not resolve local IP for web_url: %s", e)
             return url
         return None
@@ -611,7 +611,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                             self.server_version = str(v)
                         elif av:
                             self.server_version = f"API v{av}"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             _LOGGER.debug(
                 "Could not fetch server version from %s: %s", self._base_url, e
             )
@@ -673,7 +673,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 sectors_bistro.update(sections)
 
         def format_sectors(sectors: set) -> str:
-            sorted_sectors = sorted(list(sectors))
+            sorted_sectors = sorted(sectors)
             if not sorted_sectors:
                 return ""
             if len(sorted_sectors) > 1:
@@ -699,9 +699,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         return {
             "text": " | ".join(parts),
             "structured": {
-                "first_class": sorted(list(sectors_first_class)),
-                "second_class": sorted(list(sectors_second_class)),
-                "bistro": sorted(list(sectors_bistro)),
+                "first_class": sorted(sectors_first_class),
+                "second_class": sorted(sectors_second_class),
+                "bistro": sorted(sectors_bistro),
             },
         }
 
@@ -834,7 +834,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     asyncio.TimeoutError,
                     aiohttp.ClientError,
                     ValueError,
-                    Exception,
+                    Exception,  # noqa: BLE001
                 ) as err:
                     if attempt < max_retries:
                         _LOGGER.warning(
@@ -1073,12 +1073,14 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                                         "funktioniert wieder",
                                         "verfügbar",
                                     ]
-                                    if not any(
-                                        wk in lower_text for wk in working_keywords
+                                    if (
+                                        not any(
+                                            wk in lower_text for wk in working_keywords
+                                        )
+                                        and msg_text not in seen_elevator_issues
                                     ):
-                                        if msg_text not in seen_elevator_issues:
-                                            seen_elevator_issues.add(msg_text)
-                                            raw_elevator_issues_list.append(msg_text)
+                                        seen_elevator_issues.add(msg_text)
+                                        raw_elevator_issues_list.append(msg_text)
             elif isinstance(messages, list):
                 for m in messages:
                     msg_text = ""
@@ -1195,13 +1197,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             )
             departure["is_cancelled"] = is_cancelled  # Normalize
 
-            if self.exclude_cancelled:
-                if is_cancelled:
-                    _LOGGER.debug(
-                        "Skipping cancelled departure: %s",
-                        departure,
-                    )
-                    continue
+            if self.exclude_cancelled and is_cancelled:
+                _LOGGER.debug(
+                    "Skipping cancelled departure: %s",
+                    departure,
+                )
+                continue
 
             # Platform filter (LOCAL)
             if self.platforms and not self._platforms_filtered_server_side:
@@ -1397,25 +1398,23 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
             for text in msg_texts:
                 lower_text = text.lower()
-                if "wlan" in lower_text or "wifi" in lower_text:
-                    if (
-                        "nicht" in lower_text
-                        or "gestört" in lower_text
-                        or "ausfall" in lower_text
-                        or "defekt" in lower_text
-                    ):
-                        facilities["wifi"] = False
+                if ("wlan" in lower_text or "wifi" in lower_text) and (
+                    "nicht" in lower_text
+                    or "gestört" in lower_text
+                    or "ausfall" in lower_text
+                    or "defekt" in lower_text
+                ):
+                    facilities["wifi"] = False
                 if (
                     "bistro" in lower_text
                     or "restaurant" in lower_text
                     or "catering" in lower_text
+                ) and (
+                    "nicht" in lower_text
+                    or "gestört" in lower_text
+                    or "geschlossen" in lower_text
                 ):
-                    if (
-                        "nicht" in lower_text
-                        or "gestört" in lower_text
-                        or "geschlossen" in lower_text
-                    ):
-                        facilities["bistro"] = False
+                    facilities["bistro"] = False
 
             if facilities:
                 departure["facilities"] = facilities
@@ -1779,7 +1778,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     _LOGGER.info(
                         "Sent notification for trip %s: %s", train_id_to_watch, message
                     )
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     _LOGGER.error(
                         "Failed to send notification for trip %s: %s",
                         train_id_to_watch,
@@ -1850,7 +1849,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             for dep in data.get("departures", []):
                 if dep.get("train") == train_id or dep.get("trip_id") == train_id:
                     return dep
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             _LOGGER.debug("Failed to fetch cascaded data for %s: %s", station, e)
         return None
 

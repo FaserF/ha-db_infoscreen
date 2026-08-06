@@ -199,7 +199,7 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
                 )
                 events.append(event)
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 _LOGGER.debug("Error parsing departure for calendar: %s", e)
                 continue
 

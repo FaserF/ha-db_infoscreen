@@ -142,7 +142,7 @@ async def async_get_autocomplete_path(hass: HomeAssistant, base_url: str) -> str
                             path,
                         )
                         return path
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         _LOGGER.warning(
             "Failed to dynamically discover autocomplete path for %s, using fallback: %s",
             base_url,
@@ -191,7 +191,7 @@ async def async_verify_server(hass: HomeAssistant, base_url: str) -> bool:
     except asyncio.TimeoutError:
         _LOGGER.warning("Server verification timed out for %s (12s limit)", base_url)
         return False
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         _LOGGER.warning("Server verification failed for %s: %s", base_url, e)
         return False
 
@@ -230,7 +230,7 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
 
     try:
         stored_data = await store.async_load()
-    except Exception as store_err:
+    except Exception as store_err:  # noqa: BLE001
         _LOGGER.warning("Failed to load station cache for %s: %s", base_url, store_err)
         stored_data = None
 
@@ -277,7 +277,7 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
                         await store.async_save(
                             {"stations": stations, "last_update": now.isoformat()}
                         )
-                    except Exception as save_err:
+                    except Exception as save_err:  # noqa: BLE001
                         _LOGGER.warning(
                             "Failed to save station cache for %s: %s",
                             base_url,
@@ -292,7 +292,7 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
                     if data_key in hass.data:
                         return hass.data[data_key]
                     return []
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         _LOGGER.error("Error downloading station list from %s: %s", base_url, e)
         if data_key in hass.data:
             return hass.data[data_key]
@@ -466,14 +466,14 @@ async def async_get_station_candidates(
                                 ):
                                     official_name = data["station"].get("name", station)
                                 return [{"name": official_name, "code": station}]
-                        except Exception as json_err:
+                        except Exception as json_err:  # noqa: BLE001
                             _LOGGER.debug(
                                 "Failed to parse JSON response for station %s: %s",
                                 station,
                                 json_err,
                             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             _LOGGER.debug("Lookup failed for %s: %s", url, e)
 
     return []
