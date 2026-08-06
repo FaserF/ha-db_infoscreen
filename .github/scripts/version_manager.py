@@ -80,7 +80,7 @@ def calculate_version(rtype, level="patch", curr=None, now=None, override=None):
         return override
 
     if now is None:
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(datetime.timezone.utc)
     if curr is None:
         curr = get_current_version(MANIFEST_FILE)
 

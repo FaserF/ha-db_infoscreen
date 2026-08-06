@@ -29,16 +29,16 @@ def test_markdown_paragraph_spacing(file_path):
         line_raw = lines[i]
         prev_line = lines[i - 1].strip()
 
-        # Rule: Top-level headers or bullets following a text line must have a blank line
         if (
             line_raw.startswith(("- ", "* ", "1. ", "### ", "## ", "# "))
-        ) and prev_line:
-            if not prev_line.startswith(
+            and prev_line
+            and not prev_line.startswith(
                 ("- ", "* ", "1. ", "#", ">", "|", "!", "<", "---", "```", "{%", "%}")
-            ):
-                assert False, (
-                    f"Missing blank line before top-level element in {file_path} at line {i + 1}"
-                )
+            )
+        ):
+            assert False, (
+                f"Missing blank line before top-level element in {file_path} at line {i + 1}"
+            )
 
 
 def test_specific_user_reported_case():

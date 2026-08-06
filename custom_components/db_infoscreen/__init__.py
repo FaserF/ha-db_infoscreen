@@ -218,9 +218,10 @@ async def async_setup_entry(
             if "entity_id" in service_call.data:
                 ent_reg = er.async_get(hass)
                 for entity_id in service_call.data["entity_id"]:
-                    if ent_entry := ent_reg.async_get(entity_id):
-                        if ent_entry.platform == DOMAIN:
-                            target_entry_ids.add(ent_entry.config_entry_id)
+                    if (
+                        ent_entry := ent_reg.async_get(entity_id)
+                    ) and ent_entry.platform == DOMAIN:
+                        target_entry_ids.add(ent_entry.config_entry_id)
             if "device_id" in service_call.data:
                 dev_reg = dr.async_get(hass)
                 for device_id in service_call.data["device_id"]:
@@ -278,9 +279,10 @@ async def async_setup_entry(
             if "entity_id" in service_call.data:
                 ent_reg = er.async_get(hass)
                 for entity_id in service_call.data["entity_id"]:
-                    if ent_entry := ent_reg.async_get(entity_id):
-                        if ent_entry.platform == DOMAIN:
-                            target_entry_ids.add(ent_entry.config_entry_id)
+                    if (
+                        ent_entry := ent_reg.async_get(entity_id)
+                    ) and ent_entry.platform == DOMAIN:
+                        target_entry_ids.add(ent_entry.config_entry_id)
             if "device_id" in service_call.data:
                 dev_reg = dr.async_get(hass)
                 for device_id in service_call.data["device_id"]:
@@ -593,9 +595,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             headers = {
                 "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
             }
-            async with async_timeout.timeout(10), session.get(
-                about_url, headers=headers, allow_redirects=True
-            ) as response:
+            async with (
+                async_timeout.timeout(10),
+                session.get(
+                    about_url, headers=headers, allow_redirects=True
+                ) as response,
+            ):
                 if response.status < 500:
                     data = await response.json()
                     if isinstance(data, dict):
@@ -823,6 +828,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         raise UpdateFailed(
                             f"Failed to fetch data from {self.fetch_url}: {err}"
                         )
+                except UpdateFailed:
+                    raise
                 except (
                     asyncio.TimeoutError,
                     aiohttp.ClientError,
@@ -1111,10 +1118,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                                 "funktioniert wieder",
                                 "verfügbar",
                             ]
-                            if not any(wk in lower_text for wk in working_keywords):
-                                if msg_text not in seen_elevator_issues:
-                                    seen_elevator_issues.add(msg_text)
-                                    raw_elevator_issues_list.append(msg_text)
+                            if (
+                                not any(wk in lower_text for wk in working_keywords)
+                                and msg_text not in seen_elevator_issues
+                            ):
+                                seen_elevator_issues.add(msg_text)
+                                raw_elevator_issues_list.append(msg_text)
 
         self.station_messages = station_messages_list
         self.raw_elevator_issues = raw_elevator_issues_list
@@ -1265,7 +1274,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             # If the API returns an empty list, we try to infer it from the train name.
             if not train_classes and isinstance(train_classes, list):
                 train_name = str(departure.get("train", "")).upper()
-                if "ICE" in train_name or "IC" in train_name or "EC" in train_name or "TGV" in train_name:
+                if (
+                    "ICE" in train_name
+                    or "IC" in train_name
+                    or "EC" in train_name
+                    or "TGV" in train_name
+                ):
                     api_classes_to_process = ["ICE"]
                 elif "RE" in train_name:
                     api_classes_to_process = ["RE"]

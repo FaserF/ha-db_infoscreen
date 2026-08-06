@@ -181,10 +181,15 @@ async def test_coordinator_429_without_cache_raises_updatefailed(
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
     coordinator.server_version = "test"
 
-    with patch_session(side_effect=lambda *_args, **_kwargs: _mock_response(429)):
-        with pytest.raises(UpdateFailed):
-            await coordinator._async_update_data()
+    with (
+        patch_session(
+            side_effect=lambda *_args, **_kwargs: _mock_response(429)
+        ) as mock_session,
+        pytest.raises(UpdateFailed),
+    ):
+        await coordinator._async_update_data()
 
+    assert mock_session.get.call_count == 1
     # The next fetch is still throttled so failures don't hammer the server.
     assert coordinator._last_api_fetch > 0
 
@@ -615,17 +620,19 @@ async def test_coordinator_retry(hass, mock_config_entry):
             raise aiohttp.ClientError("Transient Error")
         return mock_data
 
-    with patch_session(side_effect=side_effect) as mock_session:
-        with patch("asyncio.sleep", AsyncMock()) as mock_sleep:
-            # Mock version fetch to avoid consuming side_effect counts
-            coordinator.async_fetch_server_version = AsyncMock()  # type: ignore[method-assign]
+    with (
+        patch_session(side_effect=side_effect) as mock_session,
+        patch("asyncio.sleep", AsyncMock()) as mock_sleep,
+    ):
+        # Mock version fetch to avoid consuming side_effect counts
+        coordinator.async_fetch_server_version = AsyncMock()  # type: ignore[method-assign]
 
-            data = await coordinator._async_update_data()
+        data = await coordinator._async_update_data()
 
-            assert len(data) == 1
-            assert data[0]["destination"] == "Success"
-            assert mock_session.get.call_count == 3
-            assert mock_sleep.call_count == 2
+        assert len(data) == 1
+        assert data[0]["destination"] == "Success"
+        assert mock_session.get.call_count == 3
+        assert mock_sleep.call_count == 2
 
 
 @pytest.mark.asyncio
@@ -641,16 +648,18 @@ async def test_coordinator_retry_max_failure(hass, mock_config_entry):
     def side_effect(url, **kwargs):
         raise asyncio.TimeoutError("Perm timeout")
 
-    with patch_session(side_effect=side_effect) as mock_session:
-        with patch("asyncio.sleep", AsyncMock()) as mock_sleep:
-            # Mock version fetch
-            coordinator.async_fetch_server_version = AsyncMock()  # type: ignore[method-assign]
+    with (
+        patch_session(side_effect=side_effect) as mock_session,
+        patch("asyncio.sleep", AsyncMock()) as mock_sleep,
+    ):
+        # Mock version fetch
+        coordinator.async_fetch_server_version = AsyncMock()  # type: ignore[method-assign]
 
-            data = await coordinator._async_update_data()
+        data = await coordinator._async_update_data()
 
-            # Should have tried 3 times (initial + 2 retries)
-            assert mock_session.get.call_count == 3
-            assert mock_sleep.call_count == 2
-            # Should return cached data
-            assert len(data) == 1
-            assert data[0]["train"] == "Cached"
+        # Should have tried 3 times (initial + 2 retries)
+        assert mock_session.get.call_count == 3
+        assert mock_sleep.call_count == 2
+        # Should return cached data
+        assert len(data) == 1
+        assert data[0]["train"] == "Cached"

@@ -318,6 +318,7 @@ async def test_all_translation_keys_referenced():
 async def test_translation_schema_compliance(strings_path, en_path, de_path):
     """Strictly validate schema compliance against March 2026 hassfest rules."""
     for path in [strings_path, en_path, de_path]:
+        path_name = os.path.basename(path)
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
@@ -329,14 +330,14 @@ async def test_translation_schema_compliance(strings_path, en_path, de_path):
             if trace.endswith(".data"):
                 for key, value in obj.items():
                     assert isinstance(value, str), (
-                        f"Schema Violation in {os.path.basename(path)}: '{trace}.{key}' must be a string, but got {type(value).__name__} (Dicts in 'data' blocks are forbidden)"
+                        f"Schema Violation in {path_name}: '{trace}.{key}' must be a string, but got {type(value).__name__} (Dicts in 'data' blocks are forbidden)"
                     )
 
             # Rule 2: 'options' blocks are NOT ALLOWED in flow steps (caught by hassfest)
             # They must be in the top-level 'selector' block instead
-            if trace.endswith(".step.init") or trace.endswith(".step.user"):
+            if trace.endswith((".step.init", ".step.user")):
                 assert "options" not in obj, (
-                    f"Schema Violation in {os.path.basename(path)}: '{trace}.options' is forbidden. Flow step options must be moved to the root 'selector' block."
+                    f"Schema Violation in {path_name}: '{trace}.options' is forbidden. Flow step options must be moved to the root 'selector' block."
                 )
 
             for key, value in obj.items():

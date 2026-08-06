@@ -4,7 +4,7 @@ import re
 import subprocess
 import json
 import glob
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def run_git(args):
@@ -253,7 +253,7 @@ def main():
         f"> **Affected areas:** {impact_str}\n"
     )
 
-    released_at = datetime.utcnow().strftime("%Y-%m-%d %H:%M") + " UTC"
+    released_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M") + " UTC"
     body_parts = [
         f"# {friendly_name} {version}  {channel_badge}",
         "",

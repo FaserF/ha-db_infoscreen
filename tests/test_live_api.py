@@ -51,7 +51,7 @@ def _enable_socket_temporarily():
 
 def _restore_socket_state():
     """Restore pytest-socket allow list to original state."""
-    global original_allowed_hosts, original_allowed_hosts_saved
+    global original_allowed_hosts_saved
     if original_allowed_hosts_saved:
         try:
             import pytest_socket
@@ -75,12 +75,13 @@ async def check_server_status() -> tuple[bool, str]:
     try:
         # Use a standard session with custom User-Agent to verify access
         headers = {"User-Agent": "Mozilla/5.0"}
-        async with aiohttp.ClientSession(headers=headers) as session:
-            # Note: fetch without admode to avoid Cloudflare/proxy 502/530 errors
-            async with session.get(
+        async with (
+            aiohttp.ClientSession(headers=headers) as session,
+            session.get(
                 "https://dbf.fabiseitz.de/M%C3%BCnchen%20Ost.json", timeout=5
-            ) as resp:
-                if resp.status == 200:
+            ) as resp,
+        ):
+            if resp.status == 200:
                     try:
                         data = await resp.json()
                         if "departures" in data:

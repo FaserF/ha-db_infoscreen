@@ -397,20 +397,16 @@ async def async_get_station_candidates(
                         if (
                             "inoffizieller Abfahrtsmonitor" in text
                             or "Oder hier eine Station angeben" in text
+                        ) and not any(
+                            x in text
+                            for x in [
+                                "Wählen Sie",
+                                "Multiple Choice",
+                                "Mehrdeutige Eingabe",
+                            ]
                         ):
-                            # If it's the home page, but NOT a choice page, skip it
-                            if not any(
-                                x in text
-                                for x in [
-                                    "Wählen Sie",
-                                    "Multiple Choice",
-                                    "Mehrdeutige Eingabe",
-                                ]
-                            ):
-                                _LOGGER.debug(
-                                    "Detected landing page at %s, skipping", url
-                                )
-                                continue
+                            _LOGGER.debug("Detected landing page at %s, skipping", url)
+                            continue
 
                         # Detect Multiple Choice page - Broadened detection for localized/older versions
                         if (
@@ -459,20 +455,17 @@ async def async_get_station_candidates(
                                 ]
 
                             # Direct match JSON
-                            if response.status == 200:
-                                if (
-                                    "departures" in data
-                                    or "arrivals" in data
-                                    or "station" in data
+                            if response.status == 200 and (
+                                "departures" in data
+                                or "arrivals" in data
+                                or "station" in data
+                            ):
+                                official_name = station
+                                if "station" in data and isinstance(
+                                    data["station"], dict
                                 ):
-                                    official_name = station
-                                    if "station" in data and isinstance(
-                                        data["station"], dict
-                                    ):
-                                        official_name = data["station"].get(
-                                            "name", station
-                                        )
-                                    return [{"name": official_name, "code": station}]
+                                    official_name = data["station"].get("name", station)
+                                return [{"name": official_name, "code": station}]
                         except Exception as json_err:
                             _LOGGER.debug(
                                 "Failed to parse JSON response for station %s: %s",
