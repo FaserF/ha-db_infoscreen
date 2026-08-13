@@ -94,9 +94,16 @@ This integration is available as a default repository in HACS.
 
 ## ⚙️ Configuration
 
+### 🔍 Auto-Discovery (Zeroconf / mDNS & Supervisor)
+- **Automatic Detection**: When running the official DBF Add-on (with `host_network: true`), Home Assistant will **automatically discover** the instance via Zeroconf (`_ha-db_infoscreen._tcp.local.`) and display a discovery notification in **Settings ➔ Devices & Services**.
+- **Supervisor Integration**: If discovered or added manually on a Home Assistant OS / Supervised system, the integration automatically pre-fills the local Add-on URL (`http://<host>:8092`).
+
+### ✍️ Manual Setup
+
 1.  Go to **Settings** -> **Devices & Services**.
 2.  Click **Add Integration**.
 3.  Search for **DB Infoscreen**.
+
 
 [![Add Integration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=db_infoscreen)
 
