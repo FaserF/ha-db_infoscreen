@@ -76,8 +76,12 @@
         }
       },
       "hassio_confirm": {
-        "title": "Install official Add-on",
+        "title": "Install Official Add-on",
         "description": "Do you want to install the official DBF (DB-Infoscreen) Add-on? This is the recommended way to run a local server on Home Assistant OS."
+      },
+      "discovery_confirm": {
+        "title": "Discovered DBF (DB-Infoscreen)",
+        "description": "Discovered local DBF instance at {url}. Click Submit to proceed with station search."
       },
       "reconfigure": {
         "title": "Reconfigure Departure Board",

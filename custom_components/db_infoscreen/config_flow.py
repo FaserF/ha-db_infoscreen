@@ -8,6 +8,7 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers.service_info.hassio import HassioServiceInfo
+from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 
 from .const import (
     CONF_ADMODE,
@@ -1080,8 +1081,54 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             description_placeholders={"addon_name": ADDON_NAME},
         )
 
+    async def async_step_zeroconf(
+        self, discovery_info: ZeroconfServiceInfo
+    ) -> config_entries.ConfigFlowResult:
+        """Handle zeroconf discovery for DBF add-on."""
+        host = discovery_info.host
+        port = discovery_info.port
+
+        server_url = f"http://{host}:{port}"
+        self.discovery_info[CONF_SERVER_URL] = server_url
+        self.discovery_info[CONF_SERVER_TYPE] = SERVER_TYPE_CUSTOM
+        self.server_url = server_url
+        self.server_type = SERVER_TYPE_CUSTOM
+
+        await self.async_set_unique_id(f"dbf_{host}_{port}")
+        self._abort_if_unique_id_configured(updates={CONF_SERVER_URL: server_url})
+
+        try:
+            self._context["title_placeholders"] = {"url": server_url}
+            self._context["hassio_checked"] = True
+        except (AttributeError, TypeError):
+            try:
+                self.context["title_placeholders"] = {"url": server_url}
+                self.context["hassio_checked"] = True
+            except (AttributeError, TypeError):
+                pass
+
+        return await self.async_step_discovery_confirm()
+
+    async def async_step_discovery_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Confirm zeroconf discovery and proceed to station search."""
+        server_url = self.discovery_info.get(CONF_SERVER_URL, "")
+
+        if user_input is not None:
+            self.server_url = server_url
+            self.server_type = SERVER_TYPE_CUSTOM
+            return await self.async_step_station_search()
+
+        return self.async_show_form(
+            step_id="discovery_confirm",
+            data_schema=vol.Schema({}),
+            description_placeholders={"url": server_url},
+        )
+
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
+
     """
     Handle post-setup configuration changes for DB Infoscreen.
 

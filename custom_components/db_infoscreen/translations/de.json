@@ -79,6 +79,10 @@
         "title": "Offizielles Add-on installieren",
         "description": "Möchtest du das offizielle DBF (DB-Infoscreen) Add-on installieren? Dies ist der empfohlene Weg, um einen lokalen Server unter Home Assistant OS zu betreiben."
       },
+      "discovery_confirm": {
+        "title": "DBF (DB-Infoscreen) entdeckt",
+        "description": "Lokale DBF-Instanz unter {url} entdeckt. Klicke auf Absenden, um mit der Stationssuche fortzufahren."
+      },
       "reconfigure": {
         "title": "Abfahrtstafel neu konfigurieren",
         "description": "Kerneinstellungen für **{station}** aktualisieren. Alle anderen Optionen (Filter, Anzeige, Erweitert) bleiben unverändert und können über den ⚙ Konfigurieren-Knopf angepasst werden.",
