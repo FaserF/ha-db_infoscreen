@@ -1128,7 +1128,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
-
     """
     Handle post-setup configuration changes for DB Infoscreen.
 
