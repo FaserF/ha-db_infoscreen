@@ -17,7 +17,6 @@
   "version": "2026.8.1-dev0",
   "zeroconf": [
     {
-      "name": "dbf*",
       "type": "_ha-db_infoscreen._tcp.local."
     }
   ]
