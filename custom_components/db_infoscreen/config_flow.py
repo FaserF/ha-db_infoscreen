@@ -1098,12 +1098,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         self._abort_if_unique_id_configured(updates={CONF_SERVER_URL: server_url})
 
         try:
-            self._context["title_placeholders"] = {"url": server_url}
-            self._context["hassio_checked"] = True
+            self._context["title_placeholders"] = {"url": server_url}  # type: ignore
+            self._context["hassio_checked"] = True  # type: ignore
         except (AttributeError, TypeError):
             try:
                 self.context["title_placeholders"] = {"url": server_url}
-                self.context["hassio_checked"] = True
+                self.context["hassio_checked"] = True  # type: ignore
             except (AttributeError, TypeError):
                 pass
 
