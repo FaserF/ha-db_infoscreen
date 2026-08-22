@@ -7,8 +7,16 @@ from typing import Any
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+
+try:
+    from homeassistant.helpers.service_info.hassio import HassioServiceInfo
+except ImportError:
+    HassioServiceInfo = Any  # type: ignore[misc,assignment]
+
+try:
+    from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+except ImportError:
+    ZeroconfServiceInfo = Any  # type: ignore[misc,assignment]
 
 from .const import (
     CONF_ADMODE,
@@ -69,6 +77,7 @@ _LOGGER = logging.getLogger(__name__)
 ADDON_STABLE_SLUG = "7da084a7_dbf"
 ADDON_DEV_SLUG = "local_dbf"
 ADDON_NAME = "DBF (DB-Infoscreen)"
+ADDON_REPOSITORY = "https://github.com/FaserF/hassio-addons"
 DEFAULT_PORT = 8092
 
 
@@ -998,7 +1007,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         try:
             from homeassistant.components.hassio import AddonManager
 
-            return AddonManager(self.hass, _LOGGER, slug, ADDON_NAME)
+            return AddonManager(self.hass, _LOGGER, ADDON_NAME, slug)
         except (ImportError, AttributeError):
             return None
 
@@ -1015,7 +1024,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                         return await self.async_step_user()
 
         try:
-            from homeassistant.components.hassio import AddonState
+            from homeassistant.components.hassio import AddonError, AddonState
         except (ImportError, AttributeError):
             return await self.async_step_user()
 
@@ -1024,7 +1033,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             addon_manager = await self._async_get_addon_manager(slug)
             if addon_manager is None:
                 continue
-            addon_info = await addon_manager.async_get_addon_info()
+            try:
+                addon_info = await addon_manager.async_get_addon_info()
+            except (AddonError, Exception) as err:  # noqa: BLE001
+                _LOGGER.debug("Could not get addon info for %s: %s", slug, err)
+                continue
             if addon_info.state != AddonState.NOT_INSTALLED:
                 # Already installed, pre-fill info and go to user step
                 await self._async_prefill_addon_info(slug)
