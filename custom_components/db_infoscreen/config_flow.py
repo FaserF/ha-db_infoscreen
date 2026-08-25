@@ -251,7 +251,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             from homeassistant.components.hassio import is_hassio  # type: ignore
 
             is_hassio_env = is_hassio(self.hass)  # type: ignore
-        except (ImportError, AttributeError):
+        except ImportError, AttributeError:
             _LOGGER.debug("Hass.io component not found or is_hassio missing")
 
         if (
@@ -262,10 +262,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         ):
             try:
                 self._context["hassio_checked"] = True  # type: ignore
-            except (AttributeError, TypeError):
+            except AttributeError, TypeError:
                 try:
                     self.context["hassio_checked"] = True  # type: ignore
-                except (AttributeError, TypeError):
+                except AttributeError, TypeError:
                     pass
             return await self.async_step_hassio()
 
@@ -1008,7 +1008,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             from homeassistant.components.hassio import AddonManager
 
             return AddonManager(self.hass, _LOGGER, ADDON_NAME, slug)
-        except (ImportError, AttributeError):
+        except ImportError, AttributeError:
             return None
 
     async def async_step_hassio(
@@ -1025,7 +1025,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         try:
             from homeassistant.components.hassio import AddonError, AddonState
-        except (ImportError, AttributeError):
+        except ImportError, AttributeError:
             return await self.async_step_user()
 
         # Check if either stable or dev is installed
@@ -1113,11 +1113,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         try:
             self._context["title_placeholders"] = {"url": server_url}  # type: ignore
             self._context["hassio_checked"] = True  # type: ignore
-        except (AttributeError, TypeError):
+        except AttributeError, TypeError:
             try:
                 self.context["title_placeholders"] = {"url": server_url}
                 self.context["hassio_checked"] = True  # type: ignore
-            except (AttributeError, TypeError):
+            except AttributeError, TypeError:
                 pass
 
         return await self.async_step_discovery_confirm()

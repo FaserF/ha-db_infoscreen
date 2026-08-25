@@ -114,7 +114,7 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
                         and (str(delay).isdigit() or isinstance(delay, (int, float)))
                         else 0
                     )
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     delay_int = 0
 
                 # 1. Filter: Only Delayed Trains

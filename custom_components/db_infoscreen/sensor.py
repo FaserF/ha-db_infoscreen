@@ -238,10 +238,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
             next_departures.append(dep_copy)
 
         last_updated = getattr(self.coordinator, "last_update", None)
-        if last_updated:
-            last_updated = last_updated.isoformat()
-        else:
-            last_updated = "Unknown"
+        last_updated = last_updated.isoformat() if last_updated else "Unknown"
 
         attributes = {
             "next_departures": next_departures,
@@ -282,7 +279,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                     try:
                         if int(delay) > 0:
                             delay_str = f" +{delay}"
-                    except (ValueError, TypeError):
+                    except ValueError, TypeError:
                         pass
 
                 class SafeDict(dict):

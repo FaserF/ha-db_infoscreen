@@ -16,6 +16,7 @@ if os.name == "nt":
 
 # Try to import pytest-homeassistant-custom-component
 import importlib.util
+from datetime import UTC
 
 PYTEST_HA_AVAILABLE = (
     importlib.util.find_spec("pytest_homeassistant_custom_component") is not None
@@ -222,7 +223,7 @@ if not PYTEST_HA_AVAILABLE:
 
     # Create a real stub for homeassistant.util.dt with datetime functions
     if "homeassistant.util.dt" not in sys.modules:
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         ha_util_dt = types.ModuleType("homeassistant.util.dt")
 
@@ -235,12 +236,12 @@ if not PYTEST_HA_AVAILABLE:
                 if dt_str.endswith("Z"):
                     dt_str = dt_str[:-1] + "+00:00"
                 return datetime.fromisoformat(dt_str)
-            except (ValueError, AttributeError):
+            except ValueError, AttributeError:
                 return None
 
         def now():
             """Return current timezone-aware datetime."""
-            return datetime.now(timezone.utc)
+            return datetime.now(UTC)
 
         def as_local(dt):
             """Return local datetime."""
@@ -251,7 +252,7 @@ if not PYTEST_HA_AVAILABLE:
 
         def utc_from_timestamp(timestamp):
             """Return UTC datetime from timestamp."""
-            return datetime.fromtimestamp(timestamp, timezone.utc)
+            return datetime.fromtimestamp(timestamp, UTC)
 
         ha_util_dt.parse_datetime = parse_datetime  # type: ignore[attr-defined]
         ha_util_dt.now = now  # type: ignore[attr-defined]
@@ -321,7 +322,7 @@ def setup_frame_helper():
             frame._REPORTED_INTEGRATIONS = set()
         if getattr(frame, "_INTEGRATION_FRAME", None) is None:
             frame._INTEGRATION_FRAME = {}  # type: ignore[attr-defined]
-    except (ImportError, AttributeError):
+    except ImportError, AttributeError:
         pass
     yield
 
@@ -345,7 +346,7 @@ def enable_custom_integrations(monkeypatch):
             frame, "report_non_thread_safe_operation", MagicMock(), raising=False
         )
         monkeypatch.setattr(frame, "verify_core_config", MagicMock(), raising=False)
-    except (ImportError, AttributeError):
+    except ImportError, AttributeError:
         pass
     yield
 
@@ -406,5 +407,5 @@ def clear_cache():
         from custom_components.db_infoscreen import RESPONSE_CACHE
 
         RESPONSE_CACHE.clear()
-    except (ImportError, AttributeError):
+    except ImportError, AttributeError:
         pass

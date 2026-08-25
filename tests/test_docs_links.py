@@ -36,7 +36,7 @@ class LinkValidator:
             rel_path = os.path.relpath(file_path, DOCS_DIR).replace("\\", "/")
             self.anchors[rel_path] = set()
 
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
 
             # 1. Explicit anchors {: #id }
@@ -60,7 +60,7 @@ class LinkValidator:
         errors = []
         for file_path in self.files:
             current_file = os.path.relpath(file_path, DOCS_DIR).replace("\\", "/")
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
 
             # Find markdown links: [text](link)

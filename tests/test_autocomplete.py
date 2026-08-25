@@ -1,3 +1,4 @@
+from datetime import UTC
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -72,13 +73,13 @@ def test_find_station_matches():
 @pytest.mark.asyncio
 async def test_async_get_stations_persistent_cache(mock_hass_autocomplete):
     """Test loading stations from persistent cache."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     mock_store = MagicMock()
     mock_store.async_load = AsyncMock(
         return_value={
             "stations": ["Köln Hbf", "Frankfurt Hbf"],
-            "last_update": datetime.now(timezone.utc).isoformat(),
+            "last_update": datetime.now(UTC).isoformat(),
         }
     )
     mock_store.async_save = AsyncMock()

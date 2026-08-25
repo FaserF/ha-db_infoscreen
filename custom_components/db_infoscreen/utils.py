@@ -5,7 +5,7 @@ import difflib
 import json
 import logging
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from urllib.parse import quote, unquote
 
@@ -78,7 +78,7 @@ def parse_datetime_flexible(value: Any, now: datetime) -> datetime | None:
                 except ValueError:
                     pass
 
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         pass
 
     return None
@@ -188,7 +188,7 @@ async def async_verify_server(hass: HomeAssistant, base_url: str) -> bool:
                     "Server at %s returned status %s", base_url, response.status
                 )
                 return False
-    except asyncio.TimeoutError:
+    except TimeoutError:
         _LOGGER.warning("Server verification timed out for %s (12s limit)", base_url)
         return False
     except Exception as e:  # noqa: BLE001
@@ -204,7 +204,7 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
     """
     from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     autocomplete_path = await async_get_autocomplete_path(hass, base_url)
     station_url = f"{base_url}{autocomplete_path}"
 

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -101,7 +101,7 @@ async def test_update_history_avv_line_field(real_coordinator):
     causing the `not train` guard to skip them all → departure_history stayed
     empty → punctuality reported 100% with 0 total_trains.
     """
-    now_ts = int(datetime.now(timezone.utc).timestamp())
+    now_ts = int(datetime.now(UTC).timestamp())
     departures = [
         {
             "line": "32",  # AVV field — no "train" key at all
@@ -150,7 +150,7 @@ async def test_update_history_no_departure_timestamp(real_coordinator):
 
     The fix falls back to departure_datetime (set during pre-processing).
     """
-    base = datetime.now(timezone.utc)
+    base = datetime.now(UTC)
     departures = [
         {
             "train": "Bus 31",
@@ -193,7 +193,7 @@ async def test_update_history_raw_cancellation_fields(real_coordinator):
     must be recognised even when entries were filtered before the main loop's
     is_cancelled normalisation.
     """
-    now_ts = int(datetime.now(timezone.utc).timestamp())
+    now_ts = int(datetime.now(UTC).timestamp())
     departures = [
         {
             "train": "RE 1",

@@ -38,7 +38,7 @@ def _enable_socket_temporarily():
             original_allowed_hosts = pytest_socket._allowed_hosts
             original_allowed_hosts_saved = True
         pytest_socket.socket_allow_hosts(None)
-    except (ImportError, AttributeError):
+    except ImportError, AttributeError:
         pass
     try:
         # Also clean HASocketBlockedError instances from pytest-homeassistant-custom-component
@@ -56,7 +56,7 @@ def _restore_socket_state():
             import pytest_socket
 
             pytest_socket.socket_allow_hosts(original_allowed_hosts)
-        except (ImportError, AttributeError):
+        except ImportError, AttributeError:
             pass
 
 
@@ -102,7 +102,8 @@ async def live_coordinator_fixture(hass: HomeAssistant):
         warnings.warn(
             UserWarning(
                 f"Skipping live test: dbf.fabiseitz.de is not available ({reason})"
-            )
+            ),
+            stacklevel=2,
         )
         pytest.skip(f"dbf.fabiseitz.de is not available ({reason})")
 

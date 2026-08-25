@@ -88,7 +88,7 @@ def flatten_json(y):
 
 def test_translations_consistency(translations_path, strings_path):
     """Test that all strings in strings.json are present in translations."""
-    with open(strings_path, "r", encoding="utf-8") as f:
+    with open(strings_path, encoding="utf-8") as f:
         strings = json.load(f)
 
     flat_strings = flatten_json(strings)
@@ -98,7 +98,7 @@ def test_translations_consistency(translations_path, strings_path):
         file_path = os.path.join(translations_path, filename)
         assert os.path.exists(file_path), f"Translation file {filename} missing"
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             translations = json.load(f)
 
         flat_trans = flatten_json(translations)
@@ -129,10 +129,10 @@ def test_translations_consistency(translations_path, strings_path):
 
 def test_config_flow_keys_in_strings(config_flow_path, strings_path):
     """Test that all keys used in config_flow.py are in strings.json."""
-    with open(config_flow_path, "r", encoding="utf-8") as f:
+    with open(config_flow_path, encoding="utf-8") as f:
         content = f.read()
 
-    with open(strings_path, "r", encoding="utf-8") as f:
+    with open(strings_path, encoding="utf-8") as f:
         strings = json.load(f)
 
     flat_strings = flatten_json(strings)
@@ -181,13 +181,13 @@ def test_config_flow_keys_in_strings(config_flow_path, strings_path):
 
 def test_sensor_translation_keys(sensor_files, strings_path):
     """Test that all translation_keys used in sensors are in strings.json."""
-    with open(strings_path, "r", encoding="utf-8") as f:
+    with open(strings_path, encoding="utf-8") as f:
         strings = json.load(f)
 
     flat_strings = flatten_json(strings)
 
     for file_path in sensor_files:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         # _attr_translation_key = "leave_now"
@@ -209,11 +209,11 @@ def test_sensor_translation_keys(sensor_files, strings_path):
 
 def test_extra_translation_sections(strings_path, en_path, de_path):
     """Test consistency for extra translation sections like repairs, train_types."""
-    with open(strings_path, "r", encoding="utf-8") as f:
+    with open(strings_path, encoding="utf-8") as f:
         strings = json.load(f)
-    with open(en_path, "r", encoding="utf-8") as f:
+    with open(en_path, encoding="utf-8") as f:
         en = json.load(f)
-    with open(de_path, "r", encoding="utf-8") as f:
+    with open(de_path, encoding="utf-8") as f:
         de = json.load(f)
 
     # Check train_types keys (now in entity.sensor.departures.state)
@@ -257,7 +257,7 @@ def test_all_translation_keys_referenced():
         "db_infoscreen",
         "strings.json",
     )
-    with open(strings_path, "r", encoding="utf-8") as f:
+    with open(strings_path, encoding="utf-8") as f:
         strings = json.load(f)
 
     # 1. Check repairs action keys used in repairs.py
@@ -268,7 +268,7 @@ def test_all_translation_keys_referenced():
         DOMAIN,
         "repairs.py",
     )
-    with open(repairs_path, "r", encoding="utf-8") as f:
+    with open(repairs_path, encoding="utf-8") as f:
         # SelectOptionDict(value="retry", label="retry")
         action_matches = re.findall(
             r'SelectOptionDict\(value="([^"]+)",',
@@ -294,7 +294,7 @@ def test_all_translation_keys_referenced():
         "db_infoscreen",
         "const.py",
     )
-    with open(const_path, "r", encoding="utf-8") as f:
+    with open(const_path, encoding="utf-8") as f:
         const_content = f.read()
 
     mapping_match = re.search(
@@ -319,7 +319,7 @@ def test_translation_schema_compliance(strings_path, en_path, de_path):
     """Strictly validate schema compliance against March 2026 hassfest rules."""
     for path in [strings_path, en_path, de_path]:
         path_name = os.path.basename(path)
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
         def check_schema(obj, trace="", file_name=path_name):

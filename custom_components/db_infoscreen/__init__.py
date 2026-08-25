@@ -10,7 +10,7 @@ import copy
 import json
 import logging
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import quote, urlencode, urlparse
 
@@ -829,10 +829,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 except UpdateFailed:
                     raise
                 except (
-                    asyncio.TimeoutError,
+                    TimeoutError,
                     aiohttp.ClientError,
                     ValueError,
-                    Exception,  # noqa: BLE001
+                    Exception,
                 ) as err:
                     if attempt < max_retries:
                         _LOGGER.warning(
@@ -1727,7 +1727,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         notify = True
                         message += f"Delay is now {delay_int} min. "
                         watch_config["last_notified_delay"] = delay_int
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
 
             # 2. Check Platform
@@ -1856,7 +1856,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         Records the final seen status (delay, cancellation) for each train instance.
         Used to calculate percentage-based punctuality metrics in sensors.
         """
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(UTC)
         threshold_24h = now_utc - timedelta(hours=24)
 
         # 1. Purge old history
@@ -1890,7 +1890,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 if dt_obj is not None:
                     try:
                         timestamp = int(dt_obj.timestamp())
-                    except (AttributeError, OSError, OverflowError):
+                    except AttributeError, OSError, OverflowError:
                         timestamp = None
 
             history_key = (
@@ -1923,7 +1923,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     delay_val = int(match.group(1)) if match else 0
                 else:
                     delay_val = int(raw_delay) if raw_delay not in (None, "") else 0
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 delay_val = 0
 
             is_cancelled_val = bool(

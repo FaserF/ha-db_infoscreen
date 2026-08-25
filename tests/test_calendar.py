@@ -1,6 +1,6 @@
 """Tests for calendar platform in DB Infoscreen integration."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -24,7 +24,7 @@ async def test_calendar_event_generation(hass: HomeAssistant) -> None:
     mock_coordinator.calendar_only_delayed = False
 
     # Mock departures data
-    now = datetime(2026, 6, 21, 12, 0, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 6, 21, 12, 0, 0, tzinfo=UTC)
     mock_coordinator.data = [
         {
             "line": "S 3",
@@ -57,8 +57,8 @@ async def test_calendar_event_generation(hass: HomeAssistant) -> None:
     # Event duration: 15 minutes -> Event ends at 12:20 + 15 min = 12:35
     event1 = events[0]
     assert event1.summary == "S 3 → Holzkirchen (+5min)"
-    assert event1.start == datetime(2026, 6, 21, 12, 10, 0, tzinfo=timezone.utc)
-    assert event1.end == datetime(2026, 6, 21, 12, 35, 0, tzinfo=timezone.utc)
+    assert event1.start == datetime(2026, 6, 21, 12, 10, 0, tzinfo=UTC)
+    assert event1.end == datetime(2026, 6, 21, 12, 35, 0, tzinfo=UTC)
     assert "Connection Details: https://example.com/api" in event1.description
     assert "Walk Time: 10 minutes" in event1.description
 
@@ -67,8 +67,8 @@ async def test_calendar_event_generation(hass: HomeAssistant) -> None:
     # Event duration: 15 minutes -> Event ends at 12:20 + 15 min = 12:35
     event2 = events[1]
     assert event2.summary == "S 8 → Herrsching"
-    assert event2.start == datetime(2026, 6, 21, 12, 10, 0, tzinfo=timezone.utc)
-    assert event2.end == datetime(2026, 6, 21, 12, 35, 0, tzinfo=timezone.utc)
+    assert event2.start == datetime(2026, 6, 21, 12, 10, 0, tzinfo=UTC)
+    assert event2.end == datetime(2026, 6, 21, 12, 35, 0, tzinfo=UTC)
 
     # Test calendar filter: Only delayed
     mock_coordinator.calendar_only_delayed = True

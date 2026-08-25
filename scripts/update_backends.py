@@ -127,7 +127,7 @@ def update_const_file(backends):
         print(f"Error: {CONST_FILE} not found!")
         return
 
-    with open(CONST_FILE, "r", encoding="utf-8") as f:
+    with open(CONST_FILE, encoding="utf-8") as f:
         content = f.read()
 
     data_map = {}
@@ -210,7 +210,7 @@ def update_readme(backends):
     if not os.path.exists(README_FILE):
         return
 
-    with open(README_FILE, "r", encoding="utf-8") as f:
+    with open(README_FILE, encoding="utf-8") as f:
         content = f.read()
 
     md_list = generate_readme_content(backends)
@@ -239,7 +239,7 @@ def update_docs_config(backends):
     if not os.path.exists(DOCS_CONFIG_FILE):
         return
 
-    with open(DOCS_CONFIG_FILE, "r", encoding="utf-8") as f:
+    with open(DOCS_CONFIG_FILE, encoding="utf-8") as f:
         content = f.read()
 
     md_list = generate_readme_content(backends)

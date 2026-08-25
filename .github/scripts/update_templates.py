@@ -65,7 +65,7 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
     if not os.path.exists(file_path):
         return False
 
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         content = f.read()
 
     original_content = content

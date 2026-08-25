@@ -587,7 +587,6 @@ async def test_coordinator_favorite_trains_filter(hass, mock_config_entry):
 @pytest.mark.asyncio
 async def test_coordinator_retry(hass, mock_config_entry):
     """Test retry logic on transient failures."""
-    import asyncio
 
     import aiohttp
 
@@ -615,7 +614,7 @@ async def test_coordinator_retry(hass, mock_config_entry):
         nonlocal counts
         counts += 1
         if counts == 1:
-            raise asyncio.TimeoutError("Transient Timeout")
+            raise TimeoutError("Transient Timeout")
         if counts == 2:
             raise aiohttp.ClientError("Transient Error")
         return mock_data
@@ -638,7 +637,6 @@ async def test_coordinator_retry(hass, mock_config_entry):
 @pytest.mark.asyncio
 async def test_coordinator_retry_max_failure(hass, mock_config_entry):
     """Test that it returns cached data after max retries fail."""
-    import asyncio
 
     from tests.common import patch_session
 
@@ -646,7 +644,7 @@ async def test_coordinator_retry_max_failure(hass, mock_config_entry):
     coordinator._last_valid_value = [{"train": "Cached"}]
 
     def side_effect(url, **kwargs):
-        raise asyncio.TimeoutError("Perm timeout")
+        raise TimeoutError("Perm timeout")
 
     with (
         patch_session(side_effect=side_effect) as mock_session,

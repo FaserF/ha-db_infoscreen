@@ -1,9 +1,10 @@
+import contextlib
 import glob
 import json
 import os
 import re
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def run_git(args):
@@ -37,7 +38,7 @@ def main():
     manifest_path = manifest_files[0]
     domain = os.path.basename(os.path.dirname(manifest_path))
 
-    with open(manifest_path, "r", encoding="utf-8") as f:
+    with open(manifest_path, encoding="utf-8") as f:
         manifest = json.load(f)
 
     friendly_name = manifest.get("name", domain)
@@ -157,10 +158,8 @@ def main():
             if os.path.exists("CHANGELOG_BODY.md"):
                 with open("CHANGELOG_BODY.md", encoding="utf-8") as cl_file:
                     changelog_md = cl_file.read().strip()
-                try:
+                with contextlib.suppress(OSError):
                     os.remove("CHANGELOG_BODY.md")
-                except OSError:
-                    pass
         except Exception as e:
             print(f"Error generating changelog: {e}")
             changelog_md = (
@@ -266,7 +265,7 @@ def main():
         f"> **Affected areas:** {impact_str}\n"
     )
 
-    released_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M") + " UTC"
+    released_at = datetime.now(UTC).strftime("%Y-%m-%d %H:%M") + " UTC"
     body_parts = [
         f"# {friendly_name} {version}  {channel_badge}",
         "",

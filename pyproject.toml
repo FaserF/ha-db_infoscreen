@@ -1,0 +1,22 @@
+[tool.ruff]
+line-length = 88
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4"]
+ignore = ["E501", "B008", "SIM102", "SIM105", "SIM117", "E402", "B017", "B904", "ARG001", "RUF012", "DTZ003", "DTZ007", "DTZ001", "DTZ005", "BLE001", "S110", "S112"]
+
+[tool.mypy]
+explicit_package_bases = true
+python_version = "3.14"
+show_error_codes = true
+ignore_missing_imports = true
+strict = false
+disallow_subclassing_any = false
+disallow_untyped_decorators = false
+warn_return_any = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+pythonpath = ["."]

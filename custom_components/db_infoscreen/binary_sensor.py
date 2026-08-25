@@ -100,7 +100,7 @@ class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
             try:
                 if delay and int(delay) > 0:
                     return True
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
         return False
 
@@ -128,7 +128,7 @@ class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
                         }
                     )
                     max_delay = max(max_delay, delay_int)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
 
         return {
@@ -158,10 +158,7 @@ class DBInfoScreenCancellationBinarySensor(DBInfoScreenBaseBinarySensor):
         departures: list[dict[str, Any]] = cast(
             list[dict[str, Any]], self.coordinator.data or []
         )
-        for departure in departures:
-            if departure.get("is_cancelled", False):
-                return True
-        return False
+        return any(departure.get("is_cancelled", False) for departure in departures)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
