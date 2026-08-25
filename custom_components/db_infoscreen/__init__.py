@@ -715,9 +715,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         # Periodic cleanup of global cache
         prune_response_cache(RESPONSE_CACHE, self.cache_ttl)
 
-        # Fetch server version if we don't have it yet
+        # Fetch server version in background task if we don't have it yet to avoid delaying initial startup
         if self.server_version is None:
-            await self.async_fetch_server_version()
+            self.hass.async_create_task(self.async_fetch_server_version())
 
         do_api_fetch = (
             now.timestamp() - self._last_api_fetch >= self._api_update_interval
