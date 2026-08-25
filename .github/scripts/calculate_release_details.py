@@ -160,7 +160,7 @@ def main():
                     changelog_md = cl_file.read().strip()
                 with contextlib.suppress(OSError):
                     os.remove("CHANGELOG_BODY.md")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"Error generating changelog: {e}")
             changelog_md = (
                 "_Changelog could not be generated automatically. See commit history._"
