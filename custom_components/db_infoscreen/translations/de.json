@@ -225,7 +225,28 @@
         "step": {
           "init": {
             "title": "API-Fehler für {station}",
-            "description": "Beim Abrufen der Daten für **{station}** sind mehrere Fehler aufgetreten:\n\n`{error}`{construction_hint}\n\nDies könnte ein temporäres Problem sein. Du kannst es erneut versuchen oder die Datenquelle ändern.",
+            "description": "Beim Abrufen der Daten für **{station}** sind mehrere Fehler aufgetreten:\n\n`{error}`\n\nDies könnte ein temporäres Problem sein. Du kannst es erneut versuchen oder die Datenquelle ändern.",
+            "data": {
+              "action": "Aktion"
+            }
+          },
+          "change_source": {
+            "title": "Datenquelle ändern",
+            "description": "Wähle eine andere Datenquelle für diese Station.",
+            "data": {
+              "data_source": "Datenquelle"
+            }
+          }
+        }
+      }
+    },
+    "api_error_via": {
+      "title": "API-Fehler für Station (Über-Station/Via konfiguriert)",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "API-Fehler für {station}",
+            "description": "Beim Abrufen der Daten für **{station}** sind mehrere Fehler aufgetreten:\n\n`{error}`\n\nℹ️ **Hinweis:** Da für diese Station eine **Über-Station (Via)** konfiguriert ist, kann es sein, dass aufgrund von **Bauarbeiten oder Fahrplanänderungen** aktuell keine durchgehenden Züge über diese Verbindung verkehren.\n\nDies könnte ein temporäres Problem sein. Du kannst es erneut versuchen oder die Datenquelle ändern.",
             "data": {
               "action": "Aktion"
             }

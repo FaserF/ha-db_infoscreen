@@ -30,6 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 # Issue IDs
 ISSUE_STALE_DATA = "stale_data"
 ISSUE_API_ERROR = "api_error"
+ISSUE_API_ERROR_VIA = "api_error_via"
 ISSUE_STATION_UNSUPPORTED = "station_unsupported"
 ISSUE_CONNECTION_ERROR = "connection_error"
 
@@ -64,6 +65,7 @@ def create_api_error_issue(
     entry_id: str,
     station: str,
     error_message: str,
+    has_via: bool = False,
 ) -> None:
     """Create a repair issue for persistent API errors."""
     clean_error = error_message.strip() if error_message else ""
@@ -71,6 +73,7 @@ def create_api_error_issue(
         clean_error = (
             "Unknown error occurred while connecting to the departure board API."
         )
+    issue_key = ISSUE_API_ERROR_VIA if has_via else ISSUE_API_ERROR
     ir.async_create_issue(
         hass,
         DOMAIN,
@@ -78,7 +81,7 @@ def create_api_error_issue(
         is_fixable=True,
         is_persistent=True,
         severity=ir.IssueSeverity.ERROR,
-        translation_key=ISSUE_API_ERROR,
+        translation_key=issue_key,
         translation_placeholders={
             "station": station or "Unknown station",
             "error": clean_error,
@@ -256,17 +259,10 @@ class APIErrorRepairFlow(RepairsFlow):
 
         # Retrieve error from coordinator or issue if available
         error_msg = "Unknown error"
-        has_via = False
         if self._entry_id in self.hass.data.get(DOMAIN, {}):
             coordinator = self.hass.data[DOMAIN][self._entry_id]
             if getattr(coordinator, "_last_error_message", None):
                 error_msg = coordinator._last_error_message
-            if getattr(coordinator, "via_stations", None):
-                has_via = bool(coordinator.via_stations)
-        elif entry:
-            via = entry.data.get("via_stations") or entry.options.get("via_stations")
-            if via:
-                has_via = True
 
         return self.async_show_form(
             step_id="init",
@@ -291,16 +287,6 @@ class APIErrorRepairFlow(RepairsFlow):
                     entry.data.get(CONF_STATION, "Unknown") if entry else "Unknown"
                 ),
                 "error": error_msg,
-                "construction_hint": (
-                    "\n\n"
-                    + (
-                        "ℹ️ **Hinweis:** Da für diese Station eine **Über-Station (Via)** konfiguriert ist, kann es sein, dass aufgrund von **Bauarbeiten oder Fahrplanänderungen** aktuell keine durchgehenden Züge über diese Verbindung verkehren."
-                        if self.hass.config.language == "de"
-                        else "ℹ️ **Note:** A **via station** is configured for this station. Due to **construction works or timetable changes**, there might currently be no trains running along this route."
-                    )
-                    if has_via
-                    else ""
-                ),
             },
         )
 

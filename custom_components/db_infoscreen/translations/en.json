@@ -224,7 +224,28 @@
         "step": {
           "init": {
             "title": "API Error for {station}",
-            "description": "Multiple errors occurred while fetching data for **{station}**:\n\n`{error}`{construction_hint}\n\nThis might be a temporary issue. You can try again or change the data source.",
+            "description": "Multiple errors occurred while fetching data for **{station}**:\n\n`{error}`\n\nThis might be a temporary issue. You can try again or change the data source.",
+            "data": {
+              "action": "Action"
+            }
+          },
+          "change_source": {
+            "title": "Change Data Source",
+            "description": "Select a different data source for this station.",
+            "data": {
+              "data_source": "Data Source"
+            }
+          }
+        }
+      }
+    },
+    "api_error_via": {
+      "title": "API error for station (Via route configured)",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "API Error for {station}",
+            "description": "Multiple errors occurred while fetching data for **{station}**:\n\n`{error}`\n\nℹ️ **Note:** A **via station** is configured for this station. Due to **construction works or timetable changes**, there might currently be no trains running along this route.\n\nThis might be a temporary issue. You can try again or change the data source.",
             "data": {
               "action": "Action"
             }

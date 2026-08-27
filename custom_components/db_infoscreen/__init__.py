@@ -1998,9 +1998,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     self._consecutive_errors,
                 )
             else:
+                has_via = (
+                    bool(self.via_stations) if hasattr(self, "via_stations") else False
+                )
                 repairs.create_api_error_issue(
                     self.hass,
                     entry_id,
                     self.station,
                     self._last_error_message,
+                    has_via=has_via,
                 )
