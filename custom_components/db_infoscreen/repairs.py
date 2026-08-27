@@ -268,20 +268,6 @@ class APIErrorRepairFlow(RepairsFlow):
             if via:
                 has_via = True
 
-        if has_via:
-            construction_hint = (
-                "\n\nℹ️ **Hinweis:** Da für diese Station eine **Über-Station (Via)** "
-                "konfiguriert ist, kann es sein, dass aufgrund von **Bauarbeiten oder Fahrplanänderungen** "
-                "aktuell keine durchgehenden Züge über diese Verbindung verkehren."
-                if self.hass.config.language == "de"
-                else (
-                    "\n\nℹ️ **Note:** A **via station** is configured for this station. "
-                    "Due to **construction works or timetable changes**, there might currently be no "
-                    "trains running along this route."
-                )
-            )
-            error_msg = f"{error_msg}{construction_hint}"
-
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
@@ -305,6 +291,16 @@ class APIErrorRepairFlow(RepairsFlow):
                     entry.data.get(CONF_STATION, "Unknown") if entry else "Unknown"
                 ),
                 "error": error_msg,
+                "construction_hint": (
+                    "\n\n"
+                    + (
+                        "ℹ️ **Hinweis:** Da für diese Station eine **Über-Station (Via)** konfiguriert ist, kann es sein, dass aufgrund von **Bauarbeiten oder Fahrplanänderungen** aktuell keine durchgehenden Züge über diese Verbindung verkehren."
+                        if self.hass.config.language == "de"
+                        else "ℹ️ **Note:** A **via station** is configured for this station. Due to **construction works or timetable changes**, there might currently be no trains running along this route."
+                    )
+                    if has_via
+                    else ""
+                ),
             },
         )
 

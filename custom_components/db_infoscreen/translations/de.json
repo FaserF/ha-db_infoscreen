@@ -225,7 +225,7 @@
         "step": {
           "init": {
             "title": "API-Fehler für {station}",
-            "description": "Beim Abrufen der Daten für **{station}** sind mehrere Fehler aufgetreten:\n\n`{error}`\n\nDies könnte ein temporäres Problem sein. Du kannst es erneut versuchen oder die Datenquelle ändern.",
+            "description": "Beim Abrufen der Daten für **{station}** sind mehrere Fehler aufgetreten:\n\n`{error}`{construction_hint}\n\nDies könnte ein temporäres Problem sein. Du kannst es erneut versuchen oder die Datenquelle ändern.",
             "data": {
               "action": "Aktion"
             }

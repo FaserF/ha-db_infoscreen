@@ -224,7 +224,7 @@
         "step": {
           "init": {
             "title": "API Error for {station}",
-            "description": "Multiple errors occurred while fetching data for **{station}**:\n\n`{error}`\n\nThis might be a temporary issue. You can try again or change the data source.",
+            "description": "Multiple errors occurred while fetching data for **{station}**:\n\n`{error}`{construction_hint}\n\nThis might be a temporary issue. You can try again or change the data source.",
             "data": {
               "action": "Action"
             }
