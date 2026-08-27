@@ -52,7 +52,7 @@ def create_stale_data_issue(
         severity=ir.IssueSeverity.WARNING,
         translation_key=ISSUE_STALE_DATA,
         translation_placeholders={
-            "station": station,
+            "station": station or "Unknown station",
             "hours": str(hours_stale),
         },
         learn_more_url=GITHUB_ISSUES_URL,
@@ -66,6 +66,11 @@ def create_api_error_issue(
     error_message: str,
 ) -> None:
     """Create a repair issue for persistent API errors."""
+    clean_error = error_message.strip() if error_message else ""
+    if not clean_error:
+        clean_error = (
+            "Unknown error occurred while connecting to the departure board API."
+        )
     ir.async_create_issue(
         hass,
         DOMAIN,
@@ -75,8 +80,8 @@ def create_api_error_issue(
         severity=ir.IssueSeverity.ERROR,
         translation_key=ISSUE_API_ERROR,
         translation_placeholders={
-            "station": station,
-            "error": error_message,
+            "station": station or "Unknown station",
+            "error": clean_error,
         },
         learn_more_url=GITHUB_ISSUES_URL,
     )
@@ -187,6 +192,7 @@ class StaleDataRepairFlow(RepairsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> data_entry_flow.FlowResult:
         """Handle the initial step - offer to retry or change settings."""
+        entry = self.hass.config_entries.async_get_entry(self._entry_id)
         if user_input is not None:
             if user_input.get("action") == "retry":
                 # Attempt to refresh the coordinator
@@ -216,6 +222,12 @@ class StaleDataRepairFlow(RepairsFlow):
                     )
                 }
             ),
+            description_placeholders={
+                "station": (
+                    entry.data.get(CONF_STATION, "Unknown") if entry else "Unknown"
+                ),
+                "hours": "24+",
+            },
         )
 
 
@@ -231,6 +243,7 @@ class APIErrorRepairFlow(RepairsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> data_entry_flow.FlowResult:
         """Handle the initial step."""
+        entry = self.hass.config_entries.async_get_entry(self._entry_id)
         if user_input is not None:
             if user_input.get("action") == "retry":
                 if self._entry_id in self.hass.data.get(DOMAIN, {}):
@@ -240,6 +253,34 @@ class APIErrorRepairFlow(RepairsFlow):
                 return self.async_create_entry(data={})
             elif user_input.get("action") == "change_source":
                 return await self.async_step_change_source()
+
+        # Retrieve error from coordinator or issue if available
+        error_msg = "Unknown error"
+        has_via = False
+        if self._entry_id in self.hass.data.get(DOMAIN, {}):
+            coordinator = self.hass.data[DOMAIN][self._entry_id]
+            if getattr(coordinator, "_last_error_message", None):
+                error_msg = coordinator._last_error_message
+            if getattr(coordinator, "via_stations", None):
+                has_via = bool(coordinator.via_stations)
+        elif entry:
+            via = entry.data.get("via_stations") or entry.options.get("via_stations")
+            if via:
+                has_via = True
+
+        if has_via:
+            construction_hint = (
+                "\n\nℹ️ **Hinweis:** Da für diese Station eine **Über-Station (Via)** "
+                "konfiguriert ist, kann es sein, dass aufgrund von **Bauarbeiten oder Fahrplanänderungen** "
+                "aktuell keine durchgehenden Züge über diese Verbindung verkehren."
+                if self.hass.config.language == "de"
+                else (
+                    "\n\nℹ️ **Note:** A **via station** is configured for this station. "
+                    "Due to **construction works or timetable changes**, there might currently be no "
+                    "trains running along this route."
+                )
+            )
+            error_msg = f"{error_msg}{construction_hint}"
 
         return self.async_show_form(
             step_id="init",
@@ -259,6 +300,12 @@ class APIErrorRepairFlow(RepairsFlow):
                     )
                 }
             ),
+            description_placeholders={
+                "station": (
+                    entry.data.get(CONF_STATION, "Unknown") if entry else "Unknown"
+                ),
+                "error": error_msg,
+            },
         )
 
     async def async_step_change_source(

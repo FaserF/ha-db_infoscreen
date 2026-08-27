@@ -552,6 +552,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         )
         self.config_entry = config_entry
         self._consecutive_errors = 0
+        self._last_error_message: str | None = None
         self._last_successful_update: datetime | None = None
         self._stale_issue_raised = False
         self.server_version: str | None = None
@@ -883,6 +884,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
         # Success! Clear any error tracking and repair issues
         self._consecutive_errors = 0
+        self._last_error_message = None
         self._last_successful_update = now
         self._stale_issue_raised = False
         if self.config_entry:
@@ -1949,6 +1951,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         if "429" in error_message or "Too Many Requests" in error_message:
             return
 
+        clean_error = error_message.strip() if error_message else ""
+        self._last_error_message = (
+            clean_error
+            if clean_error
+            else "Unknown error occurred while connecting to the departure board API."
+        )
         self._consecutive_errors += 1
         now = dt_util.now()
         if self.config_entry is None:
@@ -1994,5 +2002,5 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     self.hass,
                     entry_id,
                     self.station,
-                    error_message,
+                    self._last_error_message,
                 )
