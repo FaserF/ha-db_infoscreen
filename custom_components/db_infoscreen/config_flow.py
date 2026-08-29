@@ -245,30 +245,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """
         Handle the first step: Server Selection.
         """
-        # Check if we are running in Hass.io
-        is_hassio_env = False
-        try:
-            from homeassistant.components.hassio import is_hassio  # type: ignore
-
-            is_hassio_env = is_hassio(self.hass)  # type: ignore
-        except ImportError, AttributeError:
-            _LOGGER.debug("Hass.io component not found or is_hassio missing")
-
-        if (
-            user_input is None
-            and is_hassio_env
-            and not self.context.get("hassio_checked")
-            and not self.discovery_info.get(CONF_SERVER_URL)
-        ):
-            try:
-                self._context["hassio_checked"] = True  # type: ignore
-            except AttributeError, TypeError:
-                try:
-                    self.context["hassio_checked"] = True  # type: ignore
-                except AttributeError, TypeError:
-                    pass
-            return await self.async_step_hassio()
-
         errors = {}
 
         suggested_url = self.discovery_info.get(CONF_SERVER_URL, "")

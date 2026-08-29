@@ -283,9 +283,6 @@ async def test_hassio_discovery_already_installed(hass):
     mock_addon_manager.async_get_addon_info.return_value = addon_info
 
     with (
-        patch(
-            "homeassistant.components.hassio.is_hassio", return_value=True, create=True
-        ),
         patch.object(flow, "_async_get_addon_manager", return_value=mock_addon_manager),
         patch("homeassistant.components.hassio.AddonState", create=True) as mock_state,
         patch.object(
@@ -296,7 +293,7 @@ async def test_hassio_discovery_already_installed(hass):
         addon_info.state = "installed"
         flow.context = {}
 
-        result = await flow.async_step_user(None)
+        result = await flow.async_step_hassio(None)
 
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
@@ -322,9 +319,6 @@ async def test_hassio_discovery_not_installed(hass):
     mock_addon_manager.async_get_addon_info.return_value = addon_info
 
     with (
-        patch(
-            "homeassistant.components.hassio.is_hassio", return_value=True, create=True
-        ),
         patch.object(flow, "_async_get_addon_manager", return_value=mock_addon_manager),
         patch("homeassistant.components.hassio.AddonState", create=True) as mock_state,
     ):
@@ -332,7 +326,60 @@ async def test_hassio_discovery_not_installed(hass):
         addon_info.state = "not_installed"
         flow.context = {}
 
-        result = await flow.async_step_user(None)
+        result = await flow.async_step_hassio(None)
 
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "hassio_confirm"
+
+
+@pytest.mark.asyncio
+async def test_hassio_discovery_info(hass):
+    """Test Hass.io discovery with discovery_info."""
+    flow = ConfigFlow()
+    flow.hass = hass
+
+    flow.async_show_form = MagicMock(
+        side_effect=lambda **kwargs: {
+            "type": FlowResultType.FORM,
+            "step_id": kwargs.get("step_id"),
+        }
+    )
+
+    discovery_info = MagicMock()
+    discovery_info.slug = "7da084a7_dbf"
+
+    with patch.object(
+        flow, "_async_prefill_addon_info", new_callable=AsyncMock
+    ) as mock_prefill:
+        result = await flow.async_step_hassio(discovery_info)
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "user"
+    mock_prefill.assert_called_once_with("7da084a7_dbf")
+
+
+@pytest.mark.asyncio
+async def test_zeroconf_discovery(hass):
+    """Test Zeroconf discovery flow."""
+    flow = ConfigFlow()
+    flow.hass = hass
+    flow.context = {}
+
+    flow.async_show_form = MagicMock(
+        side_effect=lambda **kwargs: {
+            "type": FlowResultType.FORM,
+            "step_id": kwargs.get("step_id"),
+            "description_placeholders": kwargs.get("description_placeholders"),
+        }
+    )
+
+    discovery_info = MagicMock()
+    discovery_info.host = "192.168.1.100"
+    discovery_info.port = 8092
+
+    with patch.object(flow, "async_set_unique_id", new_callable=AsyncMock):
+        result = await flow.async_step_zeroconf(discovery_info)
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "discovery_confirm"
+    assert result["description_placeholders"] == {"url": "http://192.168.1.100:8092"}
