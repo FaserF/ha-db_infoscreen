@@ -994,7 +994,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if discovery_info is not None:
             slug = getattr(discovery_info, "slug", None)
             if slug:
-                for expected_slug in [ADDON_STABLE_SLUG, ADDON_DEV_SLUG]:
+                for expected_slug in [ADDON_STABLE_SLUG, ADDON_DEV_SLUG, "dbf"]:
                     if slug == expected_slug or slug.endswith(f"_{expected_slug}"):
                         await self._async_prefill_addon_info(slug)
                         return await self.async_step_user()
@@ -1018,6 +1018,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 # Already installed, pre-fill info and go to user step
                 await self._async_prefill_addon_info(slug)
                 return await self.async_step_user()
+
+        # If invoked via discovery but slug was not matched / installed check didn't match, proceed directly to user step
+        if discovery_info is not None:
+            return await self.async_step_user()
 
         # Neither installed, ask user
         return await self.async_step_hassio_confirm()

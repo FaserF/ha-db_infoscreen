@@ -1,9 +1,6 @@
 {
   "domain": "db_infoscreen",
   "name": "db-infoscreen",
-  "after_dependencies": [
-    "hassio"
-  ],
   "codeowners": [
     "@FaserF"
   ],
