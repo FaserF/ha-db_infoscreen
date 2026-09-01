@@ -1090,6 +1090,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         await self.async_set_unique_id(f"dbf_{host}_{port}")
         self._abort_if_unique_id_configured(updates={CONF_SERVER_URL: server_url})
 
+        # Also abort if any existing entry already points to this server URL.
+        # Existing entries use station-based unique IDs, so the ID-based check
+        # above alone will not catch them and the discovery tile would persist.
+        existing_entries = self.hass.config_entries.async_entries(DOMAIN)
+        if any(e.data.get(CONF_SERVER_URL) == server_url for e in existing_entries):
+            return self.async_abort(reason="already_configured")
+
         try:
             self._context["title_placeholders"] = {"url": server_url}  # type: ignore
             self._context["hassio_checked"] = True  # type: ignore
