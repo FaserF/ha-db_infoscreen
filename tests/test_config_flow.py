@@ -426,7 +426,9 @@ async def test_hassio_confirm_install_fallback(hass):
 
     with (
         patch.object(flow, "_async_get_addon_manager", side_effect=get_addon_manager),
-        patch.object(flow, "_async_prefill_addon_info", new_callable=AsyncMock) as mock_prefill,
+        patch.object(
+            flow, "_async_prefill_addon_info", new_callable=AsyncMock
+        ) as mock_prefill,
     ):
         flow.context = {}
         result = await flow.async_step_hassio_confirm({})

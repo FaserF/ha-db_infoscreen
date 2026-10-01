@@ -88,7 +88,6 @@ ADDON_REPOSITORY = "https://github.com/FaserF/hassio-addons"
 DEFAULT_PORT = 8092
 
 
-
 def _generate_entry_title(data: dict) -> str:
     """Generate a title for the config entry based on current settings."""
     station = data.get(CONF_STATION, "Unknown Station")
@@ -1001,7 +1000,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Handle Hass.io discovery."""
         if discovery_info is not None:
             slug = getattr(discovery_info, "slug", None)
-            if slug and (slug == "dbf" or slug.endswith("_dbf") or slug in ADDON_KNOWN_SLUGS):
+            if slug and (
+                slug == "dbf" or slug.endswith("_dbf") or slug in ADDON_KNOWN_SLUGS
+            ):
                 await self._async_prefill_addon_info(slug)
                 return await self.async_step_user()
 
@@ -1011,8 +1012,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
             installed_addons = get_addons_list(self.hass)
             for addon in installed_addons:
-                addon_slug = addon.get("slug") if isinstance(addon, dict) else getattr(addon, "slug", None)
-                if addon_slug and (addon_slug == "dbf" or addon_slug.endswith("_dbf") or addon_slug in ADDON_KNOWN_SLUGS):
+                addon_slug = (
+                    addon.get("slug")
+                    if isinstance(addon, dict)
+                    else getattr(addon, "slug", None)
+                )
+                if addon_slug and (
+                    addon_slug == "dbf"
+                    or addon_slug.endswith("_dbf")
+                    or addon_slug in ADDON_KNOWN_SLUGS
+                ):
                     await self._async_prefill_addon_info(addon_slug)
                     return await self.async_step_user()
         except (ImportError, AttributeError, Exception) as err:  # noqa: BLE001
@@ -1020,7 +1029,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         try:
             from homeassistant.components.hassio import AddonError, AddonState
-        except (ImportError, AttributeError):
+        except ImportError, AttributeError:
             return await self.async_step_user()
 
         # Fall back to checking known slugs via AddonManager
@@ -1083,7 +1092,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     installed_slug = slug
                     break
                 except Exception as e:  # noqa: BLE001
-                    _LOGGER.debug("Failed to install DBF addon candidate (%s): %s", slug, e)
+                    _LOGGER.debug(
+                        "Failed to install DBF addon candidate (%s): %s", slug, e
+                    )
                     last_error = e
 
             if installed_slug is None:
