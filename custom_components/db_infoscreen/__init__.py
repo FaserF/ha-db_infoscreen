@@ -1662,7 +1662,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
             return list(filtered_departures)[: int(self.next_departures)]
         else:
-            _LOGGER.warning(
+            _LOGGER.debug(
                 "Departures fetched but all were filtered out. Using cached data."
             )
             return self._last_valid_value or []

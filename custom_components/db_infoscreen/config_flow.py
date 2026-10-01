@@ -74,11 +74,19 @@ from .utils import async_get_stations, find_station_matches, normalize_whitespac
 
 _LOGGER = logging.getLogger(__name__)
 
-ADDON_STABLE_SLUG = "7da084a7_dbf"
+ADDON_STABLE_SLUG = "605cee21_dbf"
 ADDON_DEV_SLUG = "local_dbf"
+ADDON_KNOWN_SLUGS = [
+    "605cee21_dbf",
+    "c1e285b7_dbf",
+    "7da084a7_dbf",
+    "local_dbf",
+    "dbf",
+]
 ADDON_NAME = "DBF (DB-Infoscreen)"
 ADDON_REPOSITORY = "https://github.com/FaserF/hassio-addons"
 DEFAULT_PORT = 8092
+
 
 
 def _generate_entry_title(data: dict) -> str:
@@ -993,19 +1001,30 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Handle Hass.io discovery."""
         if discovery_info is not None:
             slug = getattr(discovery_info, "slug", None)
-            if slug:
-                for expected_slug in [ADDON_STABLE_SLUG, ADDON_DEV_SLUG, "dbf"]:
-                    if slug == expected_slug or slug.endswith(f"_{expected_slug}"):
-                        await self._async_prefill_addon_info(slug)
-                        return await self.async_step_user()
+            if slug and (slug == "dbf" or slug.endswith("_dbf") or slug in ADDON_KNOWN_SLUGS):
+                await self._async_prefill_addon_info(slug)
+                return await self.async_step_user()
+
+        # Check installed add-ons list first
+        try:
+            from homeassistant.components.hassio import get_addons_list
+
+            installed_addons = get_addons_list(self.hass)
+            for addon in installed_addons:
+                addon_slug = addon.get("slug") if isinstance(addon, dict) else getattr(addon, "slug", None)
+                if addon_slug and (addon_slug == "dbf" or addon_slug.endswith("_dbf") or addon_slug in ADDON_KNOWN_SLUGS):
+                    await self._async_prefill_addon_info(addon_slug)
+                    return await self.async_step_user()
+        except (ImportError, AttributeError, Exception) as err:  # noqa: BLE001
+            _LOGGER.debug("Could not get installed addons list: %s", err)
 
         try:
             from homeassistant.components.hassio import AddonError, AddonState
-        except ImportError, AttributeError:
+        except (ImportError, AttributeError):
             return await self.async_step_user()
 
-        # Check if either stable or dev is installed
-        for slug in [ADDON_STABLE_SLUG, ADDON_DEV_SLUG]:
+        # Fall back to checking known slugs via AddonManager
+        for slug in ADDON_KNOWN_SLUGS:
             addon_manager = await self._async_get_addon_manager(slug)
             if addon_manager is None:
                 continue
@@ -1028,45 +1047,54 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
     async def _async_prefill_addon_info(self, slug: str) -> None:
         """Pre-fill addon info from Supervisor."""
+        host = slug.replace("_", "-")
+        port = DEFAULT_PORT
+
         addon_manager = await self._async_get_addon_manager(slug)
-        try:
-            addon_info = await addon_manager.async_get_addon_info()
-            # Supervisor hostnames use hyphens, slugs might use underscores
-            host = slug.replace("_", "-")
-            port = DEFAULT_PORT
+        if addon_manager is not None:
+            try:
+                addon_info = await addon_manager.async_get_addon_info()
+                if addon_info.network:
+                    # Find port for 8092 (internal)
+                    for internal, external in addon_info.network.items():
+                        if internal.startswith(f"{DEFAULT_PORT}/"):
+                            port = external
+                            break
+            except Exception as e:  # noqa: BLE001
+                _LOGGER.debug("Could not get network info for addon %s: %s", slug, e)
 
-            if addon_info.network:
-                # Find port for 8092 (internal)
-                for internal, external in addon_info.network.items():
-                    if internal.startswith(f"{DEFAULT_PORT}/"):
-                        port = external
-                        break
-
-            self.discovery_info[CONF_SERVER_URL] = f"http://{host}:{port}"
-            self.discovery_info[CONF_SERVER_TYPE] = SERVER_TYPE_CUSTOM
-            _LOGGER.debug("Pre-filled addon info: %s", self.discovery_info)
-        except Exception as e:  # noqa: BLE001
-            _LOGGER.warning("Could not pre-fill addon info: %s", e)
+        self.discovery_info[CONF_SERVER_URL] = f"http://{host}:{port}"
+        self.discovery_info[CONF_SERVER_TYPE] = SERVER_TYPE_CUSTOM
+        _LOGGER.debug("Pre-filled addon info: %s", self.discovery_info)
 
     async def async_step_hassio_confirm(self, user_input: dict[str, Any] | None = None):
         """Confirm installation of the official addon."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            # Install stable addon
-            slug = ADDON_STABLE_SLUG
-            addon_manager = await self._async_get_addon_manager(slug)
-            try:
-                await addon_manager.async_install_addon()
-                await addon_manager.async_start_addon()
-            except Exception as e:  # noqa: BLE001
-                _LOGGER.error("Failed to install DBF addon (%s): %s", slug, e)
+            installed_slug = None
+            last_error = None
+            for slug in [ADDON_STABLE_SLUG, "c1e285b7_dbf", "7da084a7_dbf"]:
+                addon_manager = await self._async_get_addon_manager(slug)
+                if addon_manager is None:
+                    continue
+                try:
+                    await addon_manager.async_install_addon()
+                    await addon_manager.async_start_addon()
+                    installed_slug = slug
+                    break
+                except Exception as e:  # noqa: BLE001
+                    _LOGGER.debug("Failed to install DBF addon candidate (%s): %s", slug, e)
+                    last_error = e
+
+            if installed_slug is None:
+                _LOGGER.error("Failed to install DBF addon: %s", last_error)
                 errors["base"] = "addon_install_error"
                 return self.async_show_form(
                     step_id="hassio_confirm",
                     errors=errors,
                 )
             # After installation, pre-fill info
-            await self._async_prefill_addon_info(slug)
+            await self._async_prefill_addon_info(installed_slug)
             return await self.async_step_user()
 
         return self.async_show_form(

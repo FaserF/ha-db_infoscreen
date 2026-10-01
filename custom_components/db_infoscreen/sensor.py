@@ -194,7 +194,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
         else:
             # If no new data is available, return the last valid value or a fallback value
             if self._last_valid_value:
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "No departures found for station: %s. Keeping previous value: %s.",
                     self.station,
                     self._last_valid_value,
@@ -202,7 +202,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                 return self._last_valid_value
             else:
                 # If no data and no previous valid value, return a fallback message
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "No departures found for station: %s. No previous value available.",
                     self.station,
                 )

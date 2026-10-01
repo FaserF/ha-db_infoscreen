@@ -265,12 +265,42 @@ async def test_form_unreachable_servers(hass):
 
 
 @pytest.mark.asyncio
-async def test_hassio_discovery_already_installed(hass):
-    """Test Hass.io discovery flow when addon is already installed."""
+@pytest.mark.asyncio
+async def test_hassio_discovery_already_installed_from_addons_list(hass):
+    """Test Hass.io discovery flow when addon is found in get_addons_list."""
     flow = ConfigFlow()
     flow.hass = hass
 
-    # Mock show_form
+    flow.async_show_form = MagicMock(
+        side_effect=lambda **kwargs: {
+            "type": FlowResultType.FORM,
+            "step_id": kwargs.get("step_id"),
+        }
+    )
+
+    with (
+        patch(
+            "homeassistant.components.hassio.get_addons_list",
+            return_value=[{"slug": "c1e285b7_dbf", "name": "DBF"}],
+        ),
+        patch.object(
+            flow, "_async_prefill_addon_info", new_callable=AsyncMock
+        ) as mock_prefill,
+    ):
+        flow.context = {}
+        result = await flow.async_step_hassio(None)
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "user"
+    mock_prefill.assert_called_once_with("c1e285b7_dbf")
+
+
+@pytest.mark.asyncio
+async def test_hassio_discovery_already_installed_from_manager(hass):
+    """Test Hass.io discovery flow when addon is found via AddonManager."""
+    flow = ConfigFlow()
+    flow.hass = hass
+
     flow.async_show_form = MagicMock(
         side_effect=lambda **kwargs: {
             "type": FlowResultType.FORM,
@@ -283,6 +313,10 @@ async def test_hassio_discovery_already_installed(hass):
     mock_addon_manager.async_get_addon_info.return_value = addon_info
 
     with (
+        patch(
+            "homeassistant.components.hassio.get_addons_list",
+            side_effect=Exception("Not ready"),
+        ),
         patch.object(flow, "_async_get_addon_manager", return_value=mock_addon_manager),
         patch("homeassistant.components.hassio.AddonState", create=True) as mock_state,
         patch.object(
@@ -319,6 +353,10 @@ async def test_hassio_discovery_not_installed(hass):
     mock_addon_manager.async_get_addon_info.return_value = addon_info
 
     with (
+        patch(
+            "homeassistant.components.hassio.get_addons_list",
+            return_value=[],
+        ),
         patch.object(flow, "_async_get_addon_manager", return_value=mock_addon_manager),
         patch("homeassistant.components.hassio.AddonState", create=True) as mock_state,
     ):
@@ -346,7 +384,7 @@ async def test_hassio_discovery_info(hass):
     )
 
     discovery_info = MagicMock()
-    discovery_info.slug = "7da084a7_dbf"
+    discovery_info.slug = "c1e285b7_dbf"
 
     with patch.object(
         flow, "_async_prefill_addon_info", new_callable=AsyncMock
@@ -355,7 +393,47 @@ async def test_hassio_discovery_info(hass):
 
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
-    mock_prefill.assert_called_once_with("7da084a7_dbf")
+    mock_prefill.assert_called_once_with("c1e285b7_dbf")
+
+
+@pytest.mark.asyncio
+async def test_hassio_confirm_install_fallback(hass):
+    """Test Hass.io install confirms with fallback slugs."""
+    flow = ConfigFlow()
+    flow.hass = hass
+
+    flow.async_show_form = MagicMock(
+        side_effect=lambda **kwargs: {
+            "type": FlowResultType.FORM,
+            "step_id": kwargs.get("step_id"),
+            "errors": kwargs.get("errors"),
+        }
+    )
+
+    mock_mgr1 = AsyncMock()
+    mock_mgr1.async_install_addon.side_effect = Exception("Not found")
+
+    mock_mgr2 = AsyncMock()
+    mock_mgr2.async_install_addon.return_value = None
+    mock_mgr2.async_start_addon.return_value = None
+
+    def get_addon_manager(slug):
+        if slug == "605cee21_dbf":
+            return mock_mgr1
+        if slug == "c1e285b7_dbf":
+            return mock_mgr2
+        return None
+
+    with (
+        patch.object(flow, "_async_get_addon_manager", side_effect=get_addon_manager),
+        patch.object(flow, "_async_prefill_addon_info", new_callable=AsyncMock) as mock_prefill,
+    ):
+        flow.context = {}
+        result = await flow.async_step_hassio_confirm({})
+
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "user"
+    mock_prefill.assert_called_once_with("c1e285b7_dbf")
 
 
 @pytest.mark.asyncio
