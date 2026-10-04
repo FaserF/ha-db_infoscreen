@@ -75,9 +75,11 @@ from .utils import async_get_stations, find_station_matches, normalize_whitespac
 _LOGGER = logging.getLogger(__name__)
 
 ADDON_STABLE_SLUG = "605cee21_dbf"
+ADDON_EDGE_SLUG = "edfe50eb_dbf"
 ADDON_DEV_SLUG = "local_dbf"
 ADDON_KNOWN_SLUGS = [
     "605cee21_dbf",
+    "edfe50eb_dbf",
     "c1e285b7_dbf",
     "7da084a7_dbf",
     "local_dbf",
@@ -1167,7 +1169,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
             installed_slug = None
             last_error = None
-            for slug in [ADDON_STABLE_SLUG, "c1e285b7_dbf", "7da084a7_dbf"]:
+            for slug in [ADDON_STABLE_SLUG, ADDON_EDGE_SLUG, "c1e285b7_dbf", "7da084a7_dbf"]:
                 addon_manager = await self._async_get_addon_manager(slug)
                 if addon_manager is None:
                     continue
