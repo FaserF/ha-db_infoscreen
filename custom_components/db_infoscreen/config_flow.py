@@ -1005,9 +1005,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             for addon in installed:
                 slug = getattr(addon, "slug", None)
                 if slug and (
-                    slug == "dbf"
-                    or slug.endswith("_dbf")
-                    or slug in ADDON_KNOWN_SLUGS
+                    slug == "dbf" or slug.endswith("_dbf") or slug in ADDON_KNOWN_SLUGS
                 ):
                     return slug
         except (ImportError, AttributeError, Exception) as err:  # noqa: BLE001
@@ -1025,9 +1023,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     else getattr(addon, "slug", None)
                 )
                 if slug and (
-                    slug == "dbf"
-                    or slug.endswith("_dbf")
-                    or slug in ADDON_KNOWN_SLUGS
+                    slug == "dbf" or slug.endswith("_dbf") or slug in ADDON_KNOWN_SLUGS
                 ):
                     return slug
         except (ImportError, AttributeError, Exception) as err:  # noqa: BLE001
@@ -1089,8 +1085,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             if server_url:
                 existing_entries = self.hass.config_entries.async_entries(DOMAIN)
                 if any(
-                    e.data.get(CONF_SERVER_URL) == server_url
-                    for e in existing_entries
+                    e.data.get(CONF_SERVER_URL) == server_url for e in existing_entries
                 ):
                     return self.async_abort(reason="already_configured")
             return await self.async_step_user()
@@ -1167,7 +1162,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                         ADDON_REPOSITORY,
                         repo_err,
                     )
-            except (ImportError, AttributeError, Exception):
+            except ImportError, AttributeError, Exception:
                 pass
 
             installed_slug = None

@@ -390,7 +390,9 @@ async def test_hassio_discovery_info(hass):
     discovery_info.config = {"addon": "c1e285b7_dbf"}
 
     with (
-        patch.object(flow, "async_set_unique_id", new_callable=AsyncMock) as mock_set_uid,
+        patch.object(
+            flow, "async_set_unique_id", new_callable=AsyncMock
+        ) as mock_set_uid,
         patch.object(flow, "_abort_if_unique_id_configured") as mock_abort_uid,
         patch.object(
             flow, "_async_prefill_addon_info", new_callable=AsyncMock
