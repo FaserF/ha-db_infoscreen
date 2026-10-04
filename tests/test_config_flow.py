@@ -9,6 +9,7 @@ from custom_components.db_infoscreen.const import (
     CONF_DATA_SOURCE,
     CONF_NEXT_DEPARTURES,
     CONF_SERVER_TYPE,
+    CONF_SERVER_URL,
     CONF_STATION,
     DOMAIN,
     SERVER_TYPE_OFFICIAL,
@@ -384,16 +385,52 @@ async def test_hassio_discovery_info(hass):
     )
 
     discovery_info = MagicMock()
+    discovery_info.uuid = "1234567890abcdef"
     discovery_info.slug = "c1e285b7_dbf"
+    discovery_info.config = {"addon": "c1e285b7_dbf"}
 
-    with patch.object(
-        flow, "_async_prefill_addon_info", new_callable=AsyncMock
-    ) as mock_prefill:
+    with (
+        patch.object(flow, "async_set_unique_id", new_callable=AsyncMock) as mock_set_uid,
+        patch.object(flow, "_abort_if_unique_id_configured") as mock_abort_uid,
+        patch.object(
+            flow, "_async_prefill_addon_info", new_callable=AsyncMock
+        ) as mock_prefill,
+    ):
         result = await flow.async_step_hassio(discovery_info)
 
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
+    mock_set_uid.assert_called_once_with("1234567890abcdef")
+    mock_abort_uid.assert_called_once()
     mock_prefill.assert_called_once_with("c1e285b7_dbf")
+
+
+@pytest.mark.asyncio
+async def test_hassio_discovery_already_configured(hass):
+    """Test Hass.io discovery aborts when entry with same URL exists."""
+    flow = ConfigFlow()
+    flow.hass = hass
+
+    existing_entry = MagicMock()
+    existing_entry.data = {CONF_SERVER_URL: "http://c1e285b7-dbf:8092"}
+    hass.config_entries.async_entries = MagicMock(return_value=[existing_entry])
+
+    discovery_info = MagicMock()
+    discovery_info.uuid = "abcdef1234567890"
+    discovery_info.slug = "c1e285b7_dbf"
+
+    async def fake_prefill(slug):
+        flow.discovery_info[CONF_SERVER_URL] = "http://c1e285b7-dbf:8092"
+
+    with (
+        patch.object(flow, "async_set_unique_id", new_callable=AsyncMock),
+        patch.object(flow, "_abort_if_unique_id_configured"),
+        patch.object(flow, "_async_prefill_addon_info", side_effect=fake_prefill),
+    ):
+        result = await flow.async_step_hassio(discovery_info)
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
 
 
 @pytest.mark.asyncio
@@ -425,6 +462,7 @@ async def test_hassio_confirm_install_fallback(hass):
         return None
 
     with (
+        patch.object(flow, "_async_find_installed_addon", return_value=None),
         patch.object(flow, "_async_get_addon_manager", side_effect=get_addon_manager),
         patch.object(
             flow, "_async_prefill_addon_info", new_callable=AsyncMock

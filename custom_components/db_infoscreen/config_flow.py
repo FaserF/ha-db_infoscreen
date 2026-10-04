@@ -994,64 +994,112 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         except ImportError, AttributeError:
             return None
 
-    async def async_step_hassio(
-        self, discovery_info: HassioServiceInfo | None = None
-    ) -> config_entries.ConfigFlowResult:
-        """Handle Hass.io discovery."""
-        if discovery_info is not None:
-            slug = getattr(discovery_info, "slug", None)
-            if slug and (
-                slug == "dbf" or slug.endswith("_dbf") or slug in ADDON_KNOWN_SLUGS
-            ):
-                await self._async_prefill_addon_info(slug)
-                return await self.async_step_user()
+    async def _async_find_installed_addon(self) -> str | None:
+        """Find slug of an installed DBF addon if any."""
+        # 1. Try Supervisor client installed addons list
+        try:
+            from homeassistant.components.hassio import get_supervisor_client
 
-        # Check installed add-ons list first
+            client = get_supervisor_client(self.hass)
+            installed = await client.addons.list()
+            for addon in installed:
+                slug = getattr(addon, "slug", None)
+                if slug and (
+                    slug == "dbf"
+                    or slug.endswith("_dbf")
+                    or slug in ADDON_KNOWN_SLUGS
+                ):
+                    return slug
+        except (ImportError, AttributeError, Exception) as err:  # noqa: BLE001
+            _LOGGER.debug("Could not get supervisor installed addons list: %s", err)
+
+        # 2. Try get_addons_list
         try:
             from homeassistant.components.hassio import get_addons_list
 
             installed_addons = get_addons_list(self.hass)
             for addon in installed_addons:
-                addon_slug = (
+                slug = (
                     addon.get("slug")
                     if isinstance(addon, dict)
                     else getattr(addon, "slug", None)
                 )
-                if addon_slug and (
-                    addon_slug == "dbf"
-                    or addon_slug.endswith("_dbf")
-                    or addon_slug in ADDON_KNOWN_SLUGS
+                if slug and (
+                    slug == "dbf"
+                    or slug.endswith("_dbf")
+                    or slug in ADDON_KNOWN_SLUGS
                 ):
-                    await self._async_prefill_addon_info(addon_slug)
-                    return await self.async_step_user()
+                    return slug
         except (ImportError, AttributeError, Exception) as err:  # noqa: BLE001
-            _LOGGER.debug("Could not get installed addons list: %s", err)
+            _LOGGER.debug("Could not get get_addons_list: %s", err)
 
+        # 3. Fallback: Query AddonManager for known slugs
         try:
             from homeassistant.components.hassio import AddonError, AddonState
-        except ImportError, AttributeError:
-            return await self.async_step_user()
 
-        # Fall back to checking known slugs via AddonManager
-        for slug in ADDON_KNOWN_SLUGS:
-            addon_manager = await self._async_get_addon_manager(slug)
-            if addon_manager is None:
-                continue
-            try:
-                addon_info = await addon_manager.async_get_addon_info()
-            except (AddonError, Exception) as err:  # noqa: BLE001
-                _LOGGER.debug("Could not get addon info for %s: %s", slug, err)
-                continue
-            if addon_info.state != AddonState.NOT_INSTALLED:
-                # Already installed, pre-fill info and go to user step
+            for slug in ADDON_KNOWN_SLUGS:
+                addon_manager = await self._async_get_addon_manager(slug)
+                if addon_manager is None:
+                    continue
+                try:
+                    addon_info = await addon_manager.async_get_addon_info()
+                    if addon_info.state != AddonState.NOT_INSTALLED:
+                        return slug
+                except (AddonError, Exception) as err:  # noqa: BLE001
+                    _LOGGER.debug("Could not check addon info for %s: %s", slug, err)
+        except (ImportError, AttributeError, Exception) as err:  # noqa: BLE001
+            _LOGGER.debug("Could not check addon state via AddonManager: %s", err)
+
+        return None
+
+    async def async_step_hassio(
+        self, discovery_info: HassioServiceInfo | None = None
+    ) -> config_entries.ConfigFlowResult:
+        """Handle Hass.io discovery."""
+        if discovery_info is not None:
+            uuid = getattr(discovery_info, "uuid", None)
+            if uuid:
+                await self.async_set_unique_id(uuid)
+                self._abort_if_unique_id_configured()
+
+            slug = getattr(discovery_info, "slug", None)
+            config = getattr(discovery_info, "config", {})
+            if not slug and isinstance(config, dict):
+                slug = config.get("addon")
+
+            if slug and (
+                slug == "dbf" or slug.endswith("_dbf") or slug in ADDON_KNOWN_SLUGS
+            ):
                 await self._async_prefill_addon_info(slug)
+                server_url = self.discovery_info.get(CONF_SERVER_URL)
+                if server_url:
+                    existing_entries = self.hass.config_entries.async_entries(DOMAIN)
+                    if any(
+                        e.data.get(CONF_SERVER_URL) == server_url
+                        for e in existing_entries
+                    ):
+                        return self.async_abort(reason="already_configured")
                 return await self.async_step_user()
 
-        # If invoked via discovery but slug was not matched / installed check didn't match, proceed directly to user step
+        # Check if DBF add-on is already installed
+        installed_slug = await self._async_find_installed_addon()
+        if installed_slug:
+            await self._async_prefill_addon_info(installed_slug)
+            server_url = self.discovery_info.get(CONF_SERVER_URL)
+            if server_url:
+                existing_entries = self.hass.config_entries.async_entries(DOMAIN)
+                if any(
+                    e.data.get(CONF_SERVER_URL) == server_url
+                    for e in existing_entries
+                ):
+                    return self.async_abort(reason="already_configured")
+            return await self.async_step_user()
+
+        # If invoked via discovery and not installed, do NOT prompt to install
         if discovery_info is not None:
             return await self.async_step_user()
 
-        # Neither installed, ask user
+        # Only prompt to install if user explicitly triggered hassio step
         return await self.async_step_hassio_confirm()
 
     async def _async_prefill_addon_info(self, slug: str) -> None:
@@ -1059,18 +1107,38 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         host = slug.replace("_", "-")
         port = DEFAULT_PORT
 
-        addon_manager = await self._async_get_addon_manager(slug)
-        if addon_manager is not None:
-            try:
-                addon_info = await addon_manager.async_get_addon_info()
-                if addon_info.network:
-                    # Find port for 8092 (internal)
-                    for internal, external in addon_info.network.items():
-                        if internal.startswith(f"{DEFAULT_PORT}/"):
-                            port = external
-                            break
-            except Exception as e:  # noqa: BLE001
-                _LOGGER.debug("Could not get network info for addon %s: %s", slug, e)
+        # Try to query network info directly from supervisor client
+        try:
+            from homeassistant.components.hassio import get_supervisor_client
+
+            client = get_supervisor_client(self.hass)
+            addon_info = await client.addons.addon_info(slug)
+            network = getattr(addon_info, "network", None)
+            if isinstance(network, dict):
+                for internal, external in network.items():
+                    if internal.startswith(f"{DEFAULT_PORT}/") and external:
+                        port = external
+                        break
+        except (ImportError, AttributeError, Exception) as err:  # noqa: BLE001
+            _LOGGER.debug(
+                "Could not get network info via supervisor client for %s: %s",
+                slug,
+                err,
+            )
+            # Fall back to addon_manager
+            addon_manager = await self._async_get_addon_manager(slug)
+            if addon_manager is not None:
+                try:
+                    addon_info = await addon_manager.async_get_addon_info()
+                    if addon_info.network:
+                        for internal, external in addon_info.network.items():
+                            if internal.startswith(f"{DEFAULT_PORT}/") and external:
+                                port = external
+                                break
+                except Exception as e:  # noqa: BLE001
+                    _LOGGER.debug(
+                        "Could not get network info for addon %s: %s", slug, e
+                    )
 
         self.discovery_info[CONF_SERVER_URL] = f"http://{host}:{port}"
         self.discovery_info[CONF_SERVER_TYPE] = SERVER_TYPE_CUSTOM
@@ -1080,6 +1148,28 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         """Confirm installation of the official addon."""
         errors: dict[str, str] = {}
         if user_input is not None:
+            # First, check if addon is already installed before trying to install
+            installed_slug = await self._async_find_installed_addon()
+            if installed_slug:
+                await self._async_prefill_addon_info(installed_slug)
+                return await self.async_step_user()
+
+            # Ensure repository is available in Supervisor store
+            try:
+                from homeassistant.components.hassio import get_supervisor_client
+
+                client = get_supervisor_client(self.hass)
+                try:
+                    await client.store.add_repository(ADDON_REPOSITORY)
+                except Exception as repo_err:  # noqa: BLE001
+                    _LOGGER.debug(
+                        "Could not add addon repository %s: %s",
+                        ADDON_REPOSITORY,
+                        repo_err,
+                    )
+            except (ImportError, AttributeError, Exception):
+                pass
+
             installed_slug = None
             last_error = None
             for slug in [ADDON_STABLE_SLUG, "c1e285b7_dbf", "7da084a7_dbf"]:
