@@ -1169,7 +1169,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
             installed_slug = None
             last_error = None
-            for slug in [ADDON_STABLE_SLUG, ADDON_EDGE_SLUG, "c1e285b7_dbf", "7da084a7_dbf"]:
+            for slug in [
+                ADDON_STABLE_SLUG,
+                ADDON_EDGE_SLUG,
+                "c1e285b7_dbf",
+                "7da084a7_dbf",
+            ]:
                 addon_manager = await self._async_get_addon_manager(slug)
                 if addon_manager is None:
                     continue
