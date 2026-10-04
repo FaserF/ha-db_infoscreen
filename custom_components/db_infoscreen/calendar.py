@@ -100,8 +100,10 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
                 # Extract other fields
                 line = departure.get("line", departure.get("train", "Unknown"))
                 destination = departure.get("destination", "Unknown")
-                platform = departure.get(
-                    "platform", departure.get("scheduledPlatform", "?")
+                platform = (
+                    departure.get("platform")
+                    or departure.get("scheduledPlatform")
+                    or "?"
                 )
                 delay = departure.get("delay", departure.get("delayDeparture", 0))
                 cancelled = departure.get("is_cancelled", False)
@@ -190,12 +192,17 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
 
                 description = "\n".join(description_parts)
 
+                location = (
+                    f"Platform {platform}, {self.station}"
+                    if platform and platform != "?"
+                    else self.station
+                )
                 event = CalendarEvent(
                     start=actual_start_time,
                     end=end_time,
                     summary=summary,
                     description=description,
-                    location=f"Platform {platform}, {self.station}",
+                    location=location,
                 )
                 events.append(event)
 

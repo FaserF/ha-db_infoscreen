@@ -1518,6 +1518,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     "dep",
                     "datetime",
                     "trip_id",  # Ensure trip_id is allowed to be None
+                    "platform",
+                    "scheduledPlatform",
                 }
                 keys_to_remove = [
                     k

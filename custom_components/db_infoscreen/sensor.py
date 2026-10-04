@@ -257,7 +257,9 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
             for dep in raw_departures:
                 line = dep.get("line", "?")
                 destination = dep.get("destination", "?")
-                platform = dep.get("platform", "?")
+                platform = dep.get("platform")
+                if platform is None or platform == "":
+                    platform = "?"
                 time = (
                     dep.get("time")
                     or dep.get("departure_current")

@@ -100,3 +100,40 @@ async def test_custom_text_view_template(hass, mock_config_entry):
         "S51;Karlsruhe Albtalbahnhof;{unknown_key};15:46" in text
         for text in attrs2["next_departures_text"]
     )
+
+
+@pytest.mark.asyncio
+async def test_departures_without_platform(hass, mock_config_entry):
+    """Test that departures without a platform (e.g. SEV buses) retain platform=None and are formatted cleanly."""
+    coordinator = MagicMock()
+    now = dt_util.now()
+
+    coordinator.data = [
+        {
+            "line": "Bus L31",
+            "destination": "Südbahnhof, Trier",
+            "platform": None,
+            "scheduledPlatform": None,
+            "departure_current": "16:15",
+            "departure_timestamp": now.timestamp() + 1800,
+            "delay": 0,
+        }
+    ]
+    coordinator.config_entry = mock_config_entry
+    coordinator.last_update = now
+    coordinator.api_url = "dbf.finalrewind.org"
+    coordinator.via_stations_logic = "OR"
+
+    sensor = DBInfoSensor(coordinator, mock_config_entry, "Igel", [], "", "", True)
+
+    attrs = sensor.extra_state_attributes
+    next_deps = attrs["next_departures"]
+    assert len(next_deps) == 1
+    assert "platform" in next_deps[0]
+    assert next_deps[0]["platform"] is None
+
+    # Text view fallback should display '?' instead of 'None'
+    assert any(
+        "Bus L31 -> Südbahnhof, Trier (Pl ?): 16:15" in text
+        for text in attrs["next_departures_text"]
+    )
