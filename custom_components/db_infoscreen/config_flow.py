@@ -5,7 +5,11 @@ import re
 from typing import Any
 
 import homeassistant.helpers.config_validation as cv
-import voluptuous as vol
+
+try:
+    import probatio as vol
+except ImportError:
+    import voluptuous as vol  # type: ignore[no-redef]
 from homeassistant import config_entries
 
 try:
@@ -1017,7 +1021,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         try:
             from homeassistant.components.hassio import get_addons_list
 
-            installed_addons = get_addons_list(self.hass)
+            installed_addons: list[Any] = get_addons_list(self.hass)  # type: ignore[assignment]
             for addon in installed_addons:
                 slug = (
                     addon.get("slug")
@@ -1157,7 +1161,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
                 client = get_supervisor_client(self.hass)
                 try:
-                    await client.store.add_repository(ADDON_REPOSITORY)
+                    from aiohasupervisor.models.addons import StoreAddRepository
+
+                    repo_payload: Any = StoreAddRepository(repository=ADDON_REPOSITORY)
+                except ImportError:
+                    repo_payload = ADDON_REPOSITORY
+
+                try:
+                    await client.store.add_repository(repo_payload)
                 except Exception as repo_err:  # noqa: BLE001
                     _LOGGER.debug(
                         "Could not add addon repository %s: %s",
