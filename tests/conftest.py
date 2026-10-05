@@ -384,9 +384,31 @@ def hass():
 
     mock_hass.async_add_executor_job = async_add_executor_job
 
+    def async_create_task(target, *args, **kwargs):
+        # If target is a coroutine, close it to avoid unawaited coroutine warnings in tests
+        import inspect
+
+        if inspect.iscoroutine(target):
+            target.close()
+        return MagicMock()
+
+    mock_hass.async_create_task = async_create_task
+
     mock_hass.config_entries.async_entries.return_value = []
     mock_hass.data = {"integrations": {}, "custom_components": {}}
     return mock_hass
+
+
+@pytest.fixture(autouse=True)
+def mock_fetch_server_version():
+    """Globally mock async_fetch_server_version to avoid unawaited coroutine warnings in tests."""
+    from unittest.mock import patch
+
+    with patch(
+        "custom_components.db_infoscreen.DBInfoScreenCoordinator.async_fetch_server_version",
+        AsyncMock(return_value=None),
+    ):
+        yield
 
 
 @pytest.fixture
