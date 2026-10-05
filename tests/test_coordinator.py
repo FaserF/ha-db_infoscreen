@@ -741,3 +741,6 @@ async def test_coordinator_departures_without_platform(hass, mock_config_entry):
         bus_dep = next(d for d in data if d["train"] == "Bus L31")
         assert bus_dep["platform"] is None
         assert bus_dep["scheduledPlatform"] is None
+        assert "bus" in bus_dep["trainClasses"]
+        assert bus_dep["is_replacement"] is True
+        assert any(m.get("code") == "SV" for m in bus_dep.get("messages", []))

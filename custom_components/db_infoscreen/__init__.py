@@ -1277,9 +1277,41 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             if isinstance(train_classes, str):
                 train_classes = [train_classes]
 
+            # Check if this departure represents a bus or rail replacement service
+            train_name_raw = str(departure.get("train", ""))
+            train_name_upper = train_name_raw.upper()
+            is_bus_or_sev = (
+                train_name_upper.startswith("BUS ")
+                or train_name_upper == "BUS"
+                or "ERSATZVERKEHR" in train_name_upper
+                or "SEV" in train_name_upper
+            )
+
+            # Check messages for replacement service (code SV or text Ersatzverkehr)
+            raw_dep_messages = departure.get("messages", [])
+            dep_msg_list: list[dict[str, Any]] = []
+            if isinstance(raw_dep_messages, dict):
+                for m_sub in raw_dep_messages.values():
+                    if isinstance(m_sub, list):
+                        dep_msg_list.extend([m for m in m_sub if isinstance(m, dict)])
+            elif isinstance(raw_dep_messages, list):
+                dep_msg_list.extend(
+                    [m for m in raw_dep_messages if isinstance(m, dict)]
+                )
+
+            has_sev_message = any(
+                str(m.get("code", "")).upper() == "SV"
+                or "ersatzverkehr" in str(m.get("text", "")).lower()
+                for m in dep_msg_list
+            )
+            is_replacement = is_bus_or_sev or has_sev_message
+            departure["is_replacement"] = is_replacement
+
             # If the API returns an empty list, we try to infer it from the train name.
-            if not train_classes and isinstance(train_classes, list):
-                train_name = str(departure.get("train", "")).upper()
+            if is_bus_or_sev:
+                api_classes_to_process = ["Bus"]
+            elif not train_classes and isinstance(train_classes, list):
+                train_name = train_name_upper
                 if (
                     "ICE" in train_name
                     or "IC" in train_name
@@ -1424,6 +1456,34 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             if facilities:
                 departure["facilities"] = facilities
 
+            # Retain simplified departure messages (text and code) for templates and conditions
+            dep_messages_cleaned = []
+            if isinstance(departure.get("messages"), list):
+                for m in departure["messages"]:
+                    if isinstance(m, dict):
+                        txt = m.get("text") or m.get("short") or ""
+                        if txt:
+                            item = {"text": txt}
+                            if m.get("code"):
+                                item["code"] = m["code"]
+                            dep_messages_cleaned.append(item)
+                    elif isinstance(m, str) and m.strip():
+                        dep_messages_cleaned.append({"text": m.strip()})
+            elif isinstance(departure.get("messages"), dict):
+                for m_list in departure["messages"].values():
+                    if isinstance(m_list, list):
+                        for m in m_list:
+                            if isinstance(m, dict):
+                                txt = m.get("text") or m.get("short") or ""
+                                if txt:
+                                    item = {"text": txt}
+                                    if m.get("code"):
+                                        item["code"] = m["code"]
+                                    dep_messages_cleaned.append(item)
+                            elif isinstance(m, str) and m.strip():
+                                dep_messages_cleaned.append({"text": m.strip()})
+            departure["messages"] = dep_messages_cleaned
+
             # Real-time Route Progress
             route_details = []
             if "route" in departure and isinstance(departure["route"], list):
@@ -1508,7 +1568,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     "stop_id_num",
                     "stateless",
                     "key",
-                    "messages",
                     "mot",
                 ]:
                     departure.pop(key, None)
