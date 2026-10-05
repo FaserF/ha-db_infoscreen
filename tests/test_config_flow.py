@@ -503,3 +503,53 @@ async def test_zeroconf_discovery(hass):
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "discovery_confirm"
     assert result["description_placeholders"] == {"url": "http://192.168.1.100:8092"}
+
+
+@pytest.mark.asyncio
+async def test_zeroconf_discovery_already_configured(hass):
+    """Test Zeroconf discovery aborts when entry with matching service exists (e.g. localhost:8092)."""
+    flow = ConfigFlow()
+    flow.hass = hass
+    flow.context = {}
+
+    existing_entry = MagicMock()
+    existing_entry.data = {CONF_SERVER_URL: "http://127.0.0.1:8092"}
+    hass.config_entries.async_entries = MagicMock(return_value=[existing_entry])
+
+    discovery_info = MagicMock()
+    discovery_info.host = "192.168.1.100"
+    discovery_info.port = 8092
+
+    with patch.object(flow, "async_set_unique_id", new_callable=AsyncMock):
+        result = await flow.async_step_zeroconf(discovery_info)
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+
+
+@pytest.mark.asyncio
+async def test_hassio_discovery_already_configured_different_url_format(hass):
+    """Test Hass.io discovery aborts when existing entry used localhost/local hostname."""
+    flow = ConfigFlow()
+    flow.hass = hass
+
+    existing_entry = MagicMock()
+    existing_entry.data = {CONF_SERVER_URL: "http://localhost:8092"}
+    hass.config_entries.async_entries = MagicMock(return_value=[existing_entry])
+
+    discovery_info = MagicMock()
+    discovery_info.uuid = "abcdef1234567890"
+    discovery_info.slug = "c1e285b7_dbf"
+
+    async def fake_prefill(slug):
+        flow.discovery_info[CONF_SERVER_URL] = "http://c1e285b7-dbf:8092"
+
+    with (
+        patch.object(flow, "async_set_unique_id", new_callable=AsyncMock),
+        patch.object(flow, "_abort_if_unique_id_configured"),
+        patch.object(flow, "_async_prefill_addon_info", side_effect=fake_prefill),
+    ):
+        result = await flow.async_step_hassio(discovery_info)
+
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "already_configured"

@@ -706,3 +706,38 @@ async def test_coordinator_max_size_bytes(hass, mock_config_entry):
         data = await coordinator._async_update_data()
         assert len(data) == 1
         assert data[0]["train"] == "ICE 1"
+
+
+@pytest.mark.asyncio
+async def test_coordinator_departures_without_platform(hass, mock_config_entry):
+    """Test that departures without a platform (e.g. SEV buses) are kept by the coordinator."""
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    coordinator.server_version = "test"
+
+    dep_time = (dt_util.now() + timedelta(minutes=15)).strftime("%Y-%m-%dT%H:%M")
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": dep_time,
+                "train": "Bus L31",
+                "destination": "Südbahnhof, Trier",
+                "platform": None,
+                "scheduledPlatform": None,
+                "messages": [{"code": "SV", "text": "Ersatzverkehr", "type": "A"}],
+            },
+            {
+                "scheduledDeparture": dep_time,
+                "train": "RB83",
+                "destination": "Wittlich Hbf",
+                "platform": "202",
+                "scheduledPlatform": "202",
+            },
+        ]
+    }
+
+    with patch_session(mock_data):
+        data = await coordinator._async_update_data()
+        assert len(data) == 2
+        bus_dep = next(d for d in data if d["train"] == "Bus L31")
+        assert bus_dep["platform"] is None
+        assert bus_dep["scheduledPlatform"] is None

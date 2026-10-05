@@ -96,6 +96,65 @@ ADDON_REPOSITORY = "https://github.com/FaserF/hassio-addons"
 DEFAULT_PORT = 8092
 
 
+def _normalize_host_for_comparison(host: str) -> str:
+    """Normalize host string for comparison (handling localhost, 127.0.0.1, etc.)."""
+    host = host.strip().lower()
+    if host in (
+        "localhost",
+        "127.0.0.1",
+        "::1",
+        "homeassistant.local",
+        "homeassistant",
+    ):
+        return "local"
+    return host
+
+
+def _urls_match_service(url1: str, url2: str) -> bool:
+    """Check if two server URLs point to the same DBF service."""
+    if not url1 or not url2:
+        return False
+    clean1 = url1.strip().rstrip("/")
+    clean2 = url2.strip().rstrip("/")
+    if clean1.lower() == clean2.lower():
+        return True
+
+    m1 = re.match(r"^https?://([^:/]+)(?::(\d+))?", clean1, re.IGNORECASE)
+    m2 = re.match(r"^https?://([^:/]+)(?::(\d+))?", clean2, re.IGNORECASE)
+    if not m1 or not m2:
+        return False
+
+    host1, port1 = (
+        m1.group(1),
+        int(m1.group(2) or (443 if clean1.startswith("https") else 80)),
+    )
+    host2, port2 = (
+        m2.group(1),
+        int(m2.group(2) or (443 if clean2.startswith("https") else 80)),
+    )
+
+    if port1 != port2:
+        return False
+
+    norm_h1 = _normalize_host_for_comparison(host1)
+    norm_h2 = _normalize_host_for_comparison(host2)
+    if norm_h1 == norm_h2:
+        return True
+
+    # If both use the dedicated DBF default port (8092) and either is local or an addon hostname,
+    # consider them the same local instance
+    is_h1_addon_or_local = (
+        norm_h1 == "local" or norm_h1.endswith("-dbf") or norm_h1 == "dbf"
+    )
+    is_h2_addon_or_local = (
+        norm_h2 == "local" or norm_h2.endswith("-dbf") or norm_h2 == "dbf"
+    )
+    if port1 == DEFAULT_PORT and (is_h1_addon_or_local or is_h2_addon_or_local):
+        return True
+
+    return False
+
+
 def _generate_entry_title(data: dict) -> str:
     """Generate a title for the config entry based on current settings."""
     station = data.get(CONF_STATION, "Unknown Station")
@@ -1082,7 +1141,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 if server_url:
                     existing_entries = self.hass.config_entries.async_entries(DOMAIN)
                     if any(
-                        e.data.get(CONF_SERVER_URL) == server_url
+                        _urls_match_service(e.data.get(CONF_SERVER_URL, ""), server_url)
                         for e in existing_entries
                     ):
                         return self.async_abort(reason="already_configured")
@@ -1096,7 +1155,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             if server_url:
                 existing_entries = self.hass.config_entries.async_entries(DOMAIN)
                 if any(
-                    e.data.get(CONF_SERVER_URL) == server_url for e in existing_entries
+                    _urls_match_service(e.data.get(CONF_SERVER_URL, ""), server_url)
+                    for e in existing_entries
                 ):
                     return self.async_abort(reason="already_configured")
             return await self.async_step_user()
@@ -1240,7 +1300,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         # Existing entries use station-based unique IDs, so the ID-based check
         # above alone will not catch them and the discovery tile would persist.
         existing_entries = self.hass.config_entries.async_entries(DOMAIN)
-        if any(e.data.get(CONF_SERVER_URL) == server_url for e in existing_entries):
+        if any(
+            _urls_match_service(e.data.get(CONF_SERVER_URL, ""), server_url)
+            for e in existing_entries
+        ):
             return self.async_abort(reason="already_configured")
 
         try:
