@@ -42,6 +42,7 @@ from .const import (
     CONF_IGNORED_TRAINTYPES,
     CONF_KEEP_ENDSTATION,
     CONF_KEEP_ROUTE,
+    CONF_MAX_SIZE_BYTES,
     CONF_NEXT_DEPARTURES,
     CONF_OFFSET,
     CONF_PAST_60_MINUTES,
@@ -60,6 +61,7 @@ from .const import (
     DEFAULT_CACHE_TTL,
     DEFAULT_CALENDAR_EVENT_DURATION,
     DEFAULT_DEDUPLICATE_KEY,
+    DEFAULT_MAX_SIZE_BYTES,
     DEFAULT_NEXT_DEPARTURES,
     DEFAULT_OFFSET,
     DEFAULT_TEXT_VIEW_TEMPLATE,
@@ -852,6 +854,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             vol.Optional(CONF_DIRECTION, default=""): cv.string,
             vol.Optional(CONF_EXCLUDED_DIRECTIONS, default=""): cv.string,
             vol.Optional(CONF_FAVORITE_TRAINS, default=""): cv.string,
+            vol.Optional(
+                CONF_MAX_SIZE_BYTES, default=DEFAULT_MAX_SIZE_BYTES
+            ): cv.positive_int,
         }
 
         # Data source is only editable in Options Flow, as it's already selected
@@ -1702,6 +1707,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                                     CONF_DATA_SOURCE,
                                     default=new_data_source,
                                 ): vol.In(DATA_SOURCE_OPTIONS),
+                                vol.Optional(
+                                    CONF_MAX_SIZE_BYTES,
+                                    default=user_input.get(
+                                        CONF_MAX_SIZE_BYTES, DEFAULT_MAX_SIZE_BYTES
+                                    ),
+                                ): cv.positive_int,
                             }
                         ),
                         errors={"base": "station_invalid"},
@@ -1747,6 +1758,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_DATA_SOURCE,
                         default=self._get_config_value(CONF_DATA_SOURCE, "IRIS-TTS"),
                     ): vol.In(DATA_SOURCE_OPTIONS),
+                    vol.Optional(
+                        CONF_MAX_SIZE_BYTES,
+                        default=self._get_config_value(
+                            CONF_MAX_SIZE_BYTES, DEFAULT_MAX_SIZE_BYTES
+                        ),
+                    ): cv.positive_int,
                 }
             ),
             errors=errors,

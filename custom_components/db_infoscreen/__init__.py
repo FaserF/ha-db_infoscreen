@@ -53,6 +53,7 @@ from .const import (
     CONF_IGNORED_TRAINTYPES,
     CONF_KEEP_ENDSTATION,
     CONF_KEEP_ROUTE,
+    CONF_MAX_SIZE_BYTES,
     CONF_NEXT_DEPARTURES,
     CONF_OFFSET,
     CONF_PAST_60_MINUTES,
@@ -70,6 +71,7 @@ from .const import (
     DEFAULT_CACHE_TTL,
     DEFAULT_CALENDAR_EVENT_DURATION,
     DEFAULT_DEDUPLICATE_KEY,
+    DEFAULT_MAX_SIZE_BYTES,
     DEFAULT_NEXT_DEPARTURES,
     DEFAULT_OFFSET,
     DEFAULT_UPDATE_INTERVAL,
@@ -473,6 +475,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         self.via_stations_logic = config.get(CONF_VIA_STATIONS_LOGIC, "OR")
         self.admode = config.get(CONF_ADMODE, "preferred departure")
         self.walk_time = int(config.get(CONF_WALK_TIME, 0))
+        self.max_size_bytes = int(
+            config.get(CONF_MAX_SIZE_BYTES, DEFAULT_MAX_SIZE_BYTES)
+        )
         self.calendar_event_duration = int(
             config.get(CONF_CALENDAR_EVENT_DURATION, DEFAULT_CALENDAR_EVENT_DURATION)
         )
@@ -1163,8 +1168,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 mapped_ignored_train_types,
             )
 
-        MAX_SIZE_BYTES = 16000
-
         for departure in departures_to_process:
             _LOGGER.debug("Processing departure: %s", departure)
 
@@ -1555,11 +1558,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
                     potential_size = current_size + item_size + overhead
 
-                    if potential_size > MAX_SIZE_BYTES:
+                    if potential_size > self.max_size_bytes:
                         _LOGGER.info(
                             "Filtered departures JSON size would exceed limit: %d bytes (limit %d) for entry: %s. Stopping here.",
                             potential_size,
-                            MAX_SIZE_BYTES,
+                            self.max_size_bytes,
                             self.station,
                         )
                         break

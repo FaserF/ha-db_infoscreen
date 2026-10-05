@@ -58,6 +58,7 @@
           "excluded_directions": "Exclude Final Destinations",
           "ignored_train_types": "Ignored Train Types (e.g. 'ICE')",
           "show_occupancy": "Show Occupancy Information (if available)",
+          "max_size_bytes": "Maximum JSON Size (Bytes)",
           "exclude_cancelled": "Remove Cancelled Trains",
           "favorite_trains": "Multiple Favorite Trains (comma separated e.g. 'ICE 1, RE 2')",
           "deduplicate_key": "Custom Deduplication Key (e.g. ｛line｝ - Leave empty for default: ｛journeyID｝｛journeyId｝｛id｝｛key｝｛trainNumber｝)"
@@ -198,7 +199,8 @@
           "drop_late_trains": "Drop Late Trains",
           "past_60_minutes": "Include Past 60 Minutes",
           "data_source": "Data Source",
-          "deduplicate_key": "Custom Deduplication Key (e.g. ｛line｝ - Leave empty for default: ｛journeyID｝｛journeyId｝｛id｝｛key｝｛trainNumber｝)"
+          "deduplicate_key": "Custom Deduplication Key (e.g. ｛line｝ - Leave empty for default: ｛journeyID｝｛journeyId｝｛id｝｛key｝｛trainNumber｝)",
+          "max_size_bytes": "Maximum JSON Size (Bytes)"
         }
       }
     }

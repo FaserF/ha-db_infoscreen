@@ -661,3 +661,48 @@ async def test_coordinator_retry_max_failure(hass, mock_config_entry):
         # Should return cached data
         assert len(data) == 1
         assert data[0]["train"] == "Cached"
+
+
+@pytest.mark.asyncio
+async def test_coordinator_max_size_bytes(hass, mock_config_entry):
+    """Test that max_size_bytes limits the output payload size properly."""
+    from custom_components.db_infoscreen.const import CONF_MAX_SIZE_BYTES
+    from tests.common import patch_session
+
+    mock_config_entry.options[CONF_MAX_SIZE_BYTES] = 600
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    coordinator.server_version = "test"
+
+    mock_data = {
+        "departures": [
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Berlin",
+                "train": "ICE 1",
+                "delayDeparture": 0,
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=20)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Munich",
+                "train": "ICE 2",
+                "delayDeparture": 0,
+            },
+            {
+                "scheduledDeparture": (dt_util.now() + timedelta(minutes=30)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "destination": "Hamburg",
+                "train": "ICE 3",
+                "delayDeparture": 0,
+            },
+        ]
+    }
+
+    with patch_session(mock_data):
+        data = await coordinator._async_update_data()
+        assert len(data) == 1
+        assert data[0]["train"] == "ICE 1"
