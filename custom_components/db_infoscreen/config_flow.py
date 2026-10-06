@@ -1138,13 +1138,16 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             ):
                 await self._async_prefill_addon_info(slug)
                 server_url = self.discovery_info.get(CONF_SERVER_URL)
-                try:
-                    self.context["title_placeholders"] = {
-                        "host": f"DBF Add-on ({slug})",
-                        "url": server_url or slug,
-                    }
-                except AttributeError, TypeError:
-                    pass
+                if not isinstance(self.context, dict):
+                    self.context = (
+                        dict(self.context)
+                        if hasattr(self, "context") and self.context is not None
+                        else {}
+                    )
+                self.context["title_placeholders"] = {
+                    "host": f"DBF Add-on ({slug})",
+                    "url": server_url or slug,
+                }
                 if server_url:
                     existing_entries = self.hass.config_entries.async_entries(DOMAIN)
                     if any(
@@ -1305,10 +1308,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         # Set title placeholders so HA discovery tile shows the host/IP
         host_label = f"DBF ({host}:{port})"
-        try:
-            self.context["title_placeholders"] = {"host": host_label, "url": server_url}
-        except AttributeError, TypeError:
-            pass
+        if not isinstance(self.context, dict):
+            self.context = (
+                dict(self.context)
+                if hasattr(self, "context") and self.context is not None
+                else {}
+            )
+        self.context["title_placeholders"] = {"host": host_label, "url": server_url}
 
         # Also abort if any existing entry already points to this server URL.
         # Existing entries use station-based unique IDs, so the ID-based check
