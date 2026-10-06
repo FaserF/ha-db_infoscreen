@@ -405,6 +405,10 @@ async def test_hassio_discovery_info(hass):
     mock_set_uid.assert_called_once_with("1234567890abcdef")
     mock_abort_uid.assert_called_once()
     mock_prefill.assert_called_once_with("c1e285b7_dbf")
+    assert flow.context["title_placeholders"] == {
+        "host": "DBF Add-on (c1e285b7_dbf)",
+        "url": "c1e285b7_dbf",
+    }
 
 
 @pytest.mark.asyncio
@@ -503,6 +507,10 @@ async def test_zeroconf_discovery(hass):
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "discovery_confirm"
     assert result["description_placeholders"] == {"url": "http://192.168.1.100:8092"}
+    assert flow.context["title_placeholders"] == {
+        "host": "DBF (192.168.1.100:8092)",
+        "url": "http://192.168.1.100:8092",
+    }
 
 
 @pytest.mark.asyncio

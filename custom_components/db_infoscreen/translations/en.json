@@ -1,6 +1,6 @@
 {
   "config": {
-    "flow_title": "Add Departure Board",
+    "flow_title": "{host}",
     "step": {
       "user": {
         "title": "Select Server",

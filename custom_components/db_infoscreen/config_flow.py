@@ -1138,6 +1138,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             ):
                 await self._async_prefill_addon_info(slug)
                 server_url = self.discovery_info.get(CONF_SERVER_URL)
+                try:
+                    self.context["title_placeholders"] = {
+                        "host": f"DBF Add-on ({slug})",
+                        "url": server_url or slug,
+                    }
+                except AttributeError, TypeError:
+                    pass
                 if server_url:
                     existing_entries = self.hass.config_entries.async_entries(DOMAIN)
                     if any(
@@ -1296,6 +1303,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         await self.async_set_unique_id(f"dbf_{host}_{port}")
         self._abort_if_unique_id_configured(updates={CONF_SERVER_URL: server_url})
 
+        # Set title placeholders so HA discovery tile shows the host/IP
+        host_label = f"DBF ({host}:{port})"
+        try:
+            self.context["title_placeholders"] = {"host": host_label, "url": server_url}
+        except AttributeError, TypeError:
+            pass
+
         # Also abort if any existing entry already points to this server URL.
         # Existing entries use station-based unique IDs, so the ID-based check
         # above alone will not catch them and the discovery tile would persist.
@@ -1305,16 +1319,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             for e in existing_entries
         ):
             return self.async_abort(reason="already_configured")
-
-        try:
-            self._context["title_placeholders"] = {"url": server_url}  # type: ignore
-            self._context["hassio_checked"] = True  # type: ignore
-        except AttributeError, TypeError:
-            try:
-                self.context["title_placeholders"] = {"url": server_url}
-                self.context["hassio_checked"] = True  # type: ignore
-            except AttributeError, TypeError:
-                pass
 
         return await self.async_step_discovery_confirm()
 

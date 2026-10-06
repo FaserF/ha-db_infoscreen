@@ -1,6 +1,6 @@
 {
   "config": {
-    "flow_title": "Abfahrtstafel hinzufügen",
+    "flow_title": "{host}",
     "step": {
       "user": {
         "title": "Server auswählen",
