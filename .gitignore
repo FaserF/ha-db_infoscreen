@@ -40,3 +40,8 @@ resource.py
 .ruff_cache/
 __pycache__/
 *.pyc
+.claude/
+.opencode/
+AGENTS.md
+CLAUDE.md
+opencode.json
