@@ -1148,8 +1148,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     "host": f"DBF Add-on ({slug})",
                     "url": server_url or slug,
                 }
+                existing_entries = self.hass.config_entries.async_entries(DOMAIN)
+                if existing_entries:
+                    return self.async_abort(reason="already_configured")
                 if server_url:
-                    existing_entries = self.hass.config_entries.async_entries(DOMAIN)
                     if any(
                         _urls_match_service(e.data.get(CONF_SERVER_URL, ""), server_url)
                         for e in existing_entries
@@ -1173,7 +1175,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
         # If invoked via discovery and not installed, do NOT prompt to install
         if discovery_info is not None:
-            return await self.async_step_user()
+            return self.async_abort(reason="not_supported")
 
         # Only prompt to install if user explicitly triggered hassio step
         return await self.async_step_hassio_confirm()
