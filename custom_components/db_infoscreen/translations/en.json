@@ -111,7 +111,8 @@
     "abort": {
       "already_configured": "This station is already configured.",
       "station_validation_failed": "Could not validate the station. No departure data could be retrieved. Please check the station name and data source.",
-      "reconfigure_successful": "Configuration updated successfully. The integration will reload with the new settings."
+      "reconfigure_successful": "Configuration updated successfully. The integration will reload with the new settings.",
+      "not_supported": "This device or installation is not supported."
     }
   },
   "options": {
