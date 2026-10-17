@@ -112,7 +112,8 @@
     "abort": {
       "already_configured": "Diese Station ist bereits konfiguriert.",
       "station_validation_failed": "Validierung fehlgeschlagen. Keine Abfahrtsdaten empfangen.",
-      "reconfigure_successful": "Konfiguration erfolgreich aktualisiert. Die Integration wird mit den neuen Einstellungen neu geladen."
+      "reconfigure_successful": "Konfiguration erfolgreich aktualisiert. Die Integration wird mit den neuen Einstellungen neu geladen.",
+      "not_supported": "Dieses Gerät oder diese Installation wird nicht unterstützt."
     }
   },
   "options": {
