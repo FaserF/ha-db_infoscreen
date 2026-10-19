@@ -762,8 +762,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             import aiohttp
 
             session = async_get_clientsession(self.hass)
-            max_retries = 2
-            retry_delay = 1
+            max_retries = 3
+            retry_delay = 2
 
             for attempt in range(max_retries + 1):
                 try:
@@ -811,6 +811,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         raise UpdateFailed(
                             f"Rate limited (429) while fetching {self.fetch_url}"
                         )
+                    if err.status in (502, 503, 504):
+                        _LOGGER.warning(
+                            "Temporary gateway error (%s) fetching %s. Retrying...",
+                            err.status,
+                            self.fetch_url,
+                        )
                     if attempt < max_retries:
                         _LOGGER.warning(
                             "Attempt %d failed fetching data from %s: %s. Retrying in %d seconds...",
@@ -828,8 +834,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                             max_retries,
                             err,
                         )
-                        # Activate Repairs issue
-                        self._handle_update_error(str(err))
+                        if err.status not in (502, 503, 504):
+                            # Activate Repairs issue only for non-gateway errors
+                            self._handle_update_error(str(err))
                         # Throttle the next API fetch so repeated failures respect
                         # the configured interval instead of hammering the server.
                         self._last_api_fetch = now.timestamp()
@@ -1797,7 +1804,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         notify = True
                         message += f"Delay is now {delay_int} min. "
                         watch_config["last_notified_delay"] = delay_int
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 pass
 
             # 2. Check Platform
@@ -1960,7 +1967,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 if dt_obj is not None:
                     try:
                         timestamp = int(dt_obj.timestamp())
-                    except AttributeError, OSError, OverflowError:
+                    except (AttributeError, OSError, OverflowError):
                         timestamp = None
 
             history_key = (
@@ -1993,7 +2000,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     delay_val = int(match.group(1)) if match else 0
                 else:
                     delay_val = int(raw_delay) if raw_delay not in (None, "") else 0
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 delay_val = 0
 
             is_cancelled_val = bool(

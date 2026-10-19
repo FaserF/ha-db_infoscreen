@@ -655,9 +655,9 @@ async def test_coordinator_retry_max_failure(hass, mock_config_entry):
 
         data = await coordinator._async_update_data()
 
-        # Should have tried 3 times (initial + 2 retries)
-        assert mock_session.get.call_count == 3
-        assert mock_sleep.call_count == 2
+        # Should have tried 4 times (initial + 3 retries)
+        assert mock_session.get.call_count == 4
+        assert mock_sleep.call_count == 3
         # Should return cached data
         assert len(data) == 1
         assert data[0]["train"] == "Cached"
