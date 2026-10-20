@@ -9,8 +9,9 @@ try:
     import probatio as vol
 except ImportError:
     import voluptuous as vol  # type: ignore[no-redef]
-from homeassistant.components.repairs import RepairsFlow, RepairsFlowResult
+from homeassistant.components.repairs import RepairsFlow
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResult as RepairsFlowResult
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.selector import (
     SelectOptionDict,

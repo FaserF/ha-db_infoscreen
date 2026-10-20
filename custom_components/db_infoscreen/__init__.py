@@ -762,8 +762,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             import aiohttp
 
             session = async_get_clientsession(self.hass)
-            max_retries = 2
-            retry_delay = 1
+            max_retries = 3
+            retry_delay = 2
 
             for attempt in range(max_retries + 1):
                 try:
@@ -811,6 +811,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         raise UpdateFailed(
                             f"Rate limited (429) while fetching {self.fetch_url}"
                         )
+                    if err.status in (502, 503, 504):
+                        _LOGGER.warning(
+                            "Temporary gateway error (%s) fetching %s. Retrying...",
+                            err.status,
+                            self.fetch_url,
+                        )
                     if attempt < max_retries:
                         _LOGGER.warning(
                             "Attempt %d failed fetching data from %s: %s. Retrying in %d seconds...",
@@ -828,8 +834,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                             max_retries,
                             err,
                         )
-                        # Activate Repairs issue
-                        self._handle_update_error(str(err))
+                        if err.status not in (502, 503, 504):
+                            # Activate Repairs issue only for non-gateway errors
+                            self._handle_update_error(str(err))
                         # Throttle the next API fetch so repeated failures respect
                         # the configured interval instead of hammering the server.
                         self._last_api_fetch = now.timestamp()
