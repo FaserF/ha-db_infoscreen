@@ -45,7 +45,7 @@ For a reliable and unrestricted setup, it is highly recommended to host your own
 
 ### Hosting Options
 * **Home Assistant Add-on**: [DBF Add-on Repository](https://github.com/FaserF/hassio-addons/tree/master/dbf) – simple one-click install for Home Assistant OS.
-* **Docker Container**: [derf/db-fakedisplay](https://github.com/derf/db-fakedisplay) – run via Docker on Unraid, Synology, or any container host: `docker run -d -p 8092:8092 derf/db-fakedisplay:latest`.
+* **Docker Container**: [derf/db-fakedisplay](https://github.com/derf/db-fakedisplay) – run via Docker on Unraid, Synology, or any container host: `docker run -d -p 8092:8092 derfnull/db-fakedisplay:latest`.
 
 ### Data Sources & Rate Limits
 Even when self-hosted, the backend fetches real-time train data directly from official APIs (like Deutsche Bahn IRIS-TTS and local transit HAFAS endpoints). Because these endpoints are designed to scale, a private home instance querying every few minutes will not trigger upstream rate limits or bans.
