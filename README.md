@@ -26,6 +26,16 @@
 
 ---
 
+## 🔌 Recommended Hardware & Ecosystem Links
+
+| Device / Service | Integration Use Case | Link |
+| :--- | :--- | :--- |
+| **Home Assistant Green & Offizielle Smart-Home-Hardware** | Empfohlene Hardware-Basis für lokale Home Assistant Integrationen | [Offizielle Geräte-Seite →](https://fabiseitz.de/go/ha-hardware) |
+| **Home Assistant Connect ZBT-1 (Zigbee / Thread)** | Lokales Zigbee2MQTT, ZHA & Matter-over-Thread Funknetz | [Offizielle Geräte-Seite →](https://fabiseitz.de/go/ha-zigbee) |
+
+
+---
+
 The `db-infoscreen` integration provides detailed **departure times** and train information for a given station directly in Home Assistant. Aggregating data from multiple sources (primarily **Deutsche Bahn IRIS-TTS**), it offers a powerful and comprehensive departure board for stations across Germany and Europe.
 
 📚 **[View the Full Documentation](https://faserf.github.io/ha-db_infoscreen/)**
