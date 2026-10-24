@@ -949,7 +949,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
+    ) -> Any:
         """Handle reconfiguration of an existing entry (station, server, data source)."""
         reconfigure_entry = self._get_reconfigure_entry()
         errors: dict[str, str] = {}
@@ -1061,7 +1061,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             from homeassistant.components.hassio import AddonManager
 
             return AddonManager(self.hass, _LOGGER, ADDON_NAME, slug)
-        except ImportError, AttributeError:
+        except (ImportError, AttributeError):
             return None
 
     async def _async_find_installed_addon(self) -> str | None:
@@ -1120,7 +1120,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
     async def async_step_hassio(
         self, discovery_info: HassioServiceInfo | None = None
-    ) -> config_entries.ConfigFlowResult:
+    ) -> Any:
         """Handle Hass.io discovery."""
         if discovery_info is not None:
             uuid = getattr(discovery_info, "uuid", None)
@@ -1252,7 +1252,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                         ADDON_REPOSITORY,
                         repo_err,
                     )
-            except ImportError, AttributeError, Exception:
+            except (ImportError, AttributeError, Exception):
                 pass
 
             installed_slug = None
@@ -1294,7 +1294,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
     async def async_step_zeroconf(
         self, discovery_info: ZeroconfServiceInfo
-    ) -> config_entries.ConfigFlowResult:
+    ) -> Any:
         """Handle zeroconf discovery for DBF add-on."""
         host = discovery_info.host
         port = discovery_info.port
@@ -1332,7 +1332,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
     async def async_step_discovery_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
+    ) -> Any:
         """Confirm zeroconf discovery and proceed to station search."""
         server_url = self.discovery_info.get(CONF_SERVER_URL, "")
 

@@ -555,7 +555,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         super().__init__(
             hass,
             _LOGGER,
-            config_entry=config_entry,
+
             name=f"DB-Infoscreen {self.station}",
             update_interval=local_calc_interval,
         )
@@ -1804,7 +1804,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         notify = True
                         message += f"Delay is now {delay_int} min. "
                         watch_config["last_notified_delay"] = delay_int
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 pass
 
             # 2. Check Platform
@@ -1967,7 +1967,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 if dt_obj is not None:
                     try:
                         timestamp = int(dt_obj.timestamp())
-                    except AttributeError, OSError, OverflowError:
+                    except (AttributeError, OSError, OverflowError):
                         timestamp = None
 
             history_key = (
@@ -2000,7 +2000,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     delay_val = int(match.group(1)) if match else 0
                 else:
                     delay_val = int(raw_delay) if raw_delay not in (None, "") else 0
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 delay_val = 0
 
             is_cancelled_val = bool(
@@ -2060,7 +2060,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         # After 3 consecutive errors, create an API error issue
         if self._consecutive_errors >= 3:
             # Check if this might be a permanent station issue
-            if self._consecutive_errors >= 10:
+            if self._consecutive_errors >= 30:
                 repairs.create_station_unsupported_issue(
                     self.hass,
                     entry_id,
