@@ -18,7 +18,7 @@ import async_timeout
 import homeassistant.helpers.config_validation as cv
 
 try:
-    import probatio as vol
+    import voluptuous as vol
 except ImportError:
     import voluptuous as vol  # type: ignore[no-redef]
 from homeassistant import config_entries
@@ -828,13 +828,20 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         await asyncio.sleep(retry_delay)
                         retry_delay *= 2  # Exponential backoff
                     else:
-                        _LOGGER.error(
-                            "Failed to fetch data from %s after %d retries: %s",
-                            self.fetch_url,
-                            max_retries,
-                            err,
-                        )
-                        if err.status not in (502, 503, 504):
+                        if err.status in (502, 503, 504):
+                            _LOGGER.warning(
+                                "Failed to fetch data from %s after %d retries: %s",
+                                self.fetch_url,
+                                max_retries,
+                                err,
+                            )
+                        else:
+                            _LOGGER.error(
+                                "Failed to fetch data from %s after %d retries: %s",
+                                self.fetch_url,
+                                max_retries,
+                                err,
+                            )
                             # Activate Repairs issue only for non-gateway errors
                             self._handle_update_error(str(err))
                         # Throttle the next API fetch so repeated failures respect
@@ -2067,11 +2074,18 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     self.station,
                     self.data_source,
                 )
-                _LOGGER.warning(
-                    "Station %s has failed %d times. May no longer be supported.",
-                    self.station,
-                    self._consecutive_errors,
-                )
+                if self._consecutive_errors == 10:
+                    _LOGGER.warning(
+                        "Station %s has failed %d times. May no longer be supported.",
+                        self.station,
+                        self._consecutive_errors,
+                    )
+                else:
+                    _LOGGER.debug(
+                        "Station %s has failed %d times. May no longer be supported.",
+                        self.station,
+                        self._consecutive_errors,
+                    )
             else:
                 has_via = (
                     bool(self.via_stations) if hasattr(self, "via_stations") else False
