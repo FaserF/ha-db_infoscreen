@@ -281,8 +281,8 @@ async def test_hassio_discovery_already_installed_from_addons_list(hass):
 
     with (
         patch(
-            "homeassistant.components.hassio.get_addons_list",
-            return_value=[{"slug": "c1e285b7_dbf", "name": "DBF"}],
+            "homeassistant.components.hassio.get_addons_info",
+            return_value={"addons": [{"slug": "c1e285b7_dbf", "name": "DBF"}]},
         ),
         patch.object(
             flow, "_async_prefill_addon_info", new_callable=AsyncMock
@@ -315,7 +315,7 @@ async def test_hassio_discovery_already_installed_from_manager(hass):
 
     with (
         patch(
-            "homeassistant.components.hassio.get_addons_list",
+            "homeassistant.components.hassio.get_addons_info",
             side_effect=Exception("Not ready"),
         ),
         patch.object(flow, "_async_get_addon_manager", return_value=mock_addon_manager),
@@ -355,8 +355,8 @@ async def test_hassio_discovery_not_installed(hass):
 
     with (
         patch(
-            "homeassistant.components.hassio.get_addons_list",
-            return_value=[],
+            "homeassistant.components.hassio.get_addons_info",
+            return_value={"addons": []},
         ),
         patch.object(flow, "_async_get_addon_manager", return_value=mock_addon_manager),
         patch("homeassistant.components.hassio.AddonState", create=True) as mock_state,

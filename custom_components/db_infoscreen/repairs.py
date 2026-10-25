@@ -9,7 +9,8 @@ try:
     import probatio as vol
 except ImportError:
     import voluptuous as vol  # type: ignore[no-redef]
-from homeassistant.components.repairs import RepairsFlow, RepairsFlowResult
+from homeassistant.components.repairs import RepairsFlow
+from homeassistant.data_entry_flow import FlowResult
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.selector import (
@@ -176,7 +177,7 @@ class ConfirmRepairFlow(RepairsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> RepairsFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         if user_input is not None:
             return self.async_create_entry(data={})
@@ -195,7 +196,7 @@ class StaleDataRepairFlow(RepairsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> RepairsFlowResult:
+    ) -> FlowResult:
         """Handle the initial step - offer to retry or change settings."""
         entry = self.hass.config_entries.async_get_entry(self._entry_id)
         if user_input is not None:
@@ -246,7 +247,7 @@ class APIErrorRepairFlow(RepairsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> RepairsFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         entry = self.hass.config_entries.async_get_entry(self._entry_id)
         if user_input is not None:
@@ -294,7 +295,7 @@ class APIErrorRepairFlow(RepairsFlow):
 
     async def async_step_change_source(
         self, user_input: dict[str, Any] | None = None
-    ) -> RepairsFlowResult:
+    ) -> FlowResult:
         """Allow user to change the data source."""
         if user_input is not None:
             # Update the config entry with new data source
@@ -330,7 +331,7 @@ class StationUnsupportedRepairFlow(RepairsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> RepairsFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         entry = self.hass.config_entries.async_get_entry(self._entry_id)
         if user_input is not None:
@@ -383,7 +384,7 @@ class StationUnsupportedRepairFlow(RepairsFlow):
 
     async def async_step_change_source(
         self, user_input: dict[str, Any] | None = None
-    ) -> RepairsFlowResult:
+    ) -> FlowResult:
         """Allow user to change the data source."""
         if user_input is not None:
             entry = self.hass.config_entries.async_get_entry(self._entry_id)

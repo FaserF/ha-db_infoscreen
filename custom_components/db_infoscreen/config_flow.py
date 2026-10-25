@@ -1081,11 +1081,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         except (ImportError, AttributeError, Exception) as err:  # noqa: BLE001
             _LOGGER.debug("Could not get supervisor installed addons list: %s", err)
 
-        # 2. Try get_addons_list
+        # 2. Try get_addons_info
         try:
-            from homeassistant.components.hassio import get_addons_list
+            from homeassistant.components.hassio import get_addons_info
 
-            installed_addons: list[Any] = get_addons_list(self.hass)  # type: ignore[assignment]
+            addons_info = get_addons_info(self.hass)
+            installed_addons: list[Any] = addons_info.get("addons", [])
             for addon in installed_addons:
                 slug = (
                     addon.get("slug")
@@ -1097,7 +1098,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 ):
                     return slug
         except (ImportError, AttributeError, Exception) as err:  # noqa: BLE001
-            _LOGGER.debug("Could not get get_addons_list: %s", err)
+            _LOGGER.debug("Could not get get_addons_info: %s", err)
 
         # 3. Fallback: Query AddonManager for known slugs
         try:
