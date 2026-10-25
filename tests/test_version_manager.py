@@ -24,21 +24,33 @@ class TestVersionManager(unittest.TestCase):
         # Stable 2026.2.0 should be preferred over logical "later" in string sort 2026.2.0b0
         # and 2026.2.2b0 should be highest if it exists
         mock_git.return_value = b"2026.2.0\n2026.2.0b0\n2026.2.2b0\n"
-        version = vm.get_current_version()
+        version = vm.get_current_version(
+            getattr(
+                vm, "MANIFEST_FILE", "custom_components/db_infoscreen/manifest.json"
+            )
+        )
         self.assertEqual(version, "2026.2.2b0")
 
     @patch("subprocess.check_output")
     def test_get_current_version_stable_over_beta_same_patch(self, mock_git):
         # 2026.2.0 should be picked over 2026.2.0b99
         mock_git.return_value = b"2026.2.0b99\n2026.2.0\n"
-        version = vm.get_current_version()
+        version = vm.get_current_version(
+            getattr(
+                vm, "MANIFEST_FILE", "custom_components/db_infoscreen/manifest.json"
+            )
+        )
         self.assertEqual(version, "2026.2.0")
 
     @patch("subprocess.check_output")
     def test_get_current_version_git_invalid_ignored(self, mock_git):
         # Invalid format tags should be ignored
         mock_git.return_value = b"v1.0.0\n2026.1.2\n"
-        version = vm.get_current_version()
+        version = vm.get_current_version(
+            getattr(
+                vm, "MANIFEST_FILE", "custom_components/db_infoscreen/manifest.json"
+            )
+        )
         self.assertEqual(version, "2026.1.2")
 
     @patch("subprocess.check_output")
@@ -46,8 +58,16 @@ class TestVersionManager(unittest.TestCase):
     @patch("builtins.open", new_callable=mock_open, read_data='{"version": "2026.1.5"}')
     def test_get_current_version_fallback(self, mock_file, mock_exists, mock_git):
         mock_git.side_effect = subprocess.CalledProcessError(1, "git")
-        mock_exists.side_effect = lambda p: p == vm.MANIFEST_FILE
-        version = vm.get_current_version()
+        mock_exists.side_effect = lambda p: p == (
+            getattr(
+                vm, "MANIFEST_FILE", "custom_components/db_infoscreen/manifest.json"
+            )
+        )
+        version = vm.get_current_version(
+            getattr(
+                vm, "MANIFEST_FILE", "custom_components/db_infoscreen/manifest.json"
+            )
+        )
         self.assertEqual(version, "2026.1.5")
 
     @patch("subprocess.check_output")
@@ -55,7 +75,9 @@ class TestVersionManager(unittest.TestCase):
         # 2026.2.0 -> bump stable -> 2026.2.1
         mock_git.return_value = b"2026.2.0\n"
         now = datetime.datetime(2026, 2, 4)
-        new_v = vm.calculate_version("stable", now=now)
+        new_v = vm.calculate_version(
+            "stable", mock_git.return_value.decode().strip(), now=now
+        )
         self.assertEqual(new_v, "2026.2.1")
 
     @patch("subprocess.check_output")
@@ -63,7 +85,9 @@ class TestVersionManager(unittest.TestCase):
         # 2026.2.0 -> bump beta -> 2026.2.1b0
         mock_git.return_value = b"2026.2.0\n"
         now = datetime.datetime(2026, 2, 4)
-        new_v = vm.calculate_version("beta", now=now)
+        new_v = vm.calculate_version(
+            "beta", mock_git.return_value.decode().strip(), now=now
+        )
         self.assertEqual(new_v, "2026.2.1b0")
 
     @patch("subprocess.check_output")
@@ -71,7 +95,9 @@ class TestVersionManager(unittest.TestCase):
         # 2026.2.1b0 -> bump beta -> 2026.2.1b1
         mock_git.return_value = b"2026.2.1b0\n"
         now = datetime.datetime(2026, 2, 4)
-        new_v = vm.calculate_version("beta", now=now)
+        new_v = vm.calculate_version(
+            "beta", mock_git.return_value.decode().strip(), now=now
+        )
         self.assertEqual(new_v, "2026.2.1b1")
 
     @patch("subprocess.check_output")
@@ -79,7 +105,9 @@ class TestVersionManager(unittest.TestCase):
         # 2026.2.1b1 -> bump stable -> 2026.2.1
         mock_git.return_value = b"2026.2.1b1\n"
         now = datetime.datetime(2026, 2, 4)
-        new_v = vm.calculate_version("stable", now=now)
+        new_v = vm.calculate_version(
+            "stable", mock_git.return_value.decode().strip(), now=now
+        )
         self.assertEqual(new_v, "2026.2.1")
 
     @patch("subprocess.check_output")
@@ -87,7 +115,9 @@ class TestVersionManager(unittest.TestCase):
         # 2026.2.1 -> bump dev -> 2026.2.2-dev0
         mock_git.return_value = b"2026.2.1\n"
         now = datetime.datetime(2026, 2, 4)
-        new_v = vm.calculate_version("dev", now=now)
+        new_v = vm.calculate_version(
+            "dev", mock_git.return_value.decode().strip(), now=now
+        )
         self.assertEqual(new_v, "2026.2.2-dev0")
 
     @patch("subprocess.check_output")
@@ -95,7 +125,9 @@ class TestVersionManager(unittest.TestCase):
         # 2026.2.2-dev0 -> bump beta -> 2026.2.2b0
         mock_git.return_value = b"2026.2.2-dev0\n"
         now = datetime.datetime(2026, 2, 4)
-        new_v = vm.calculate_version("beta", now=now)
+        new_v = vm.calculate_version(
+            "beta", mock_git.return_value.decode().strip(), now=now
+        )
         self.assertEqual(new_v, "2026.2.2b0")
 
     @patch("subprocess.check_output")
@@ -103,7 +135,9 @@ class TestVersionManager(unittest.TestCase):
         # 2026.1.2 -> bump stable in Feb -> 2026.2.0
         mock_git.return_value = b"2026.1.2\n"
         now = datetime.datetime(2026, 2, 4)
-        new_v = vm.calculate_version("stable", now=now)
+        new_v = vm.calculate_version(
+            "stable", mock_git.return_value.decode().strip(), now=now
+        )
         self.assertEqual(new_v, "2026.2.0")
 
     @patch("subprocess.check_output")
@@ -111,7 +145,9 @@ class TestVersionManager(unittest.TestCase):
         # 2026.1.2 -> bump beta in Feb -> 2026.2.0b0
         mock_git.return_value = b"2026.1.2\n"
         now = datetime.datetime(2026, 2, 4)
-        new_v = vm.calculate_version("beta", now=now)
+        new_v = vm.calculate_version(
+            "beta", mock_git.return_value.decode().strip(), now=now
+        )
         self.assertEqual(new_v, "2026.2.0b0")
 
 

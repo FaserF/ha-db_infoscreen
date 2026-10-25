@@ -206,7 +206,7 @@ def test_sensor_translation_keys(sensor_files, strings_path):
             ), f"Translation key '{key}' from {os.path.basename(file_path)} missing in strings.json"
 
 
-async def test_extra_translation_sections(strings_path, en_path, de_path):
+def test_extra_translation_sections(strings_path, en_path, de_path):
     """Test consistency for extra translation sections like repairs, train_types."""
     with open(strings_path, "r", encoding="utf-8") as f:
         strings = json.load(f)
@@ -247,7 +247,7 @@ async def test_extra_translation_sections(strings_path, en_path, de_path):
             ), f"Missing DE translation for train_type {type_key} in state block"
 
 
-async def test_all_translation_keys_referenced():
+def test_all_translation_keys_referenced():
     """Test that all translation keys used in code are present in strings.json."""
     strings_path = os.path.join(
         os.path.dirname(__file__),
@@ -314,7 +314,7 @@ async def test_all_translation_keys_referenced():
             ), f"Train type key '{key}' from const.py missing in strings.json['entity']['sensor']['departures']['state']"
 
 
-async def test_translation_schema_compliance(strings_path, en_path, de_path):
+def test_translation_schema_compliance(strings_path, en_path, de_path):
     """Strictly validate schema compliance against March 2026 hassfest rules."""
     for path in [strings_path, en_path, de_path]:
         with open(path, "r", encoding="utf-8") as f:

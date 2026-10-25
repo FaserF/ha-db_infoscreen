@@ -12,7 +12,7 @@ def find_manifest():
     return matches[0] if matches else None
 
 
-def get_current_version(manifest_path):
+def get_current_version(manifest_path=None):
     try:
         tags = (
             subprocess.check_output(["git", "tag"], stderr=subprocess.DEVNULL)
@@ -59,8 +59,9 @@ def write_version(v, manifest_path):
             f.write("\n")
 
 
-def calculate_version(rtype, curr):
-    now = datetime.datetime.now()
+def calculate_version(rtype, curr, now=None):
+    if now is None:
+        now = datetime.datetime.now()
     year, month = now.year, now.month
     match = re.match(r"^(\d+)\.(\d+)\.(\d+)(?:(b)(\d+)|(-dev)(\d+))?$", curr)
     if match:
@@ -83,7 +84,7 @@ def calculate_version(rtype, curr):
         return (
             f"{year}.{month}.{p}b{snum+1}"
             if stype == "b"
-            else f"{year}.{month}.{p+1}b0"
+            else (f"{year}.{month}.{p}b0" if stype else f"{year}.{month}.{p+1}b0")
         )
     if rtype in ["dev", "nightly"]:
         if new_cyc:
@@ -91,7 +92,7 @@ def calculate_version(rtype, curr):
         return (
             f"{year}.{month}.{p}-dev{snum+1}"
             if stype == "-dev"
-            else f"{year}.{month}.{p+1}-dev0"
+            else (f"{year}.{month}.{p}-dev0" if stype else f"{year}.{month}.{p+1}-dev0")
         )
     raise ValueError(f"Unknown type: {rtype}")
 
