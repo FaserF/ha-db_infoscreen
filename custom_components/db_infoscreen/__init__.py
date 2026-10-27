@@ -2067,11 +2067,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     self.station,
                     self.data_source,
                 )
-                _LOGGER.warning(
-                    "Station %s has failed %d times. May no longer be supported.",
-                    self.station,
-                    self._consecutive_errors,
-                )
+                if self._consecutive_errors == 10:
+                    _LOGGER.warning(
+                        "Station %s has failed %d times. May no longer be supported.",
+                        self.station,
+                        self._consecutive_errors,
+                    )
             else:
                 has_via = (
                     bool(self.via_stations) if hasattr(self, "via_stations") else False

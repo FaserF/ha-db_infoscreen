@@ -282,6 +282,7 @@ async def test_hassio_discovery_already_installed_from_addons_list(hass):
     with (
         patch(
             "homeassistant.components.hassio.get_addons_list",
+            create=True,
             return_value=[{"slug": "c1e285b7_dbf", "name": "DBF"}],
         ),
         patch.object(
@@ -316,6 +317,7 @@ async def test_hassio_discovery_already_installed_from_manager(hass):
     with (
         patch(
             "homeassistant.components.hassio.get_addons_list",
+            create=True,
             side_effect=Exception("Not ready"),
         ),
         patch.object(flow, "_async_get_addon_manager", return_value=mock_addon_manager),
@@ -356,6 +358,7 @@ async def test_hassio_discovery_not_installed(hass):
     with (
         patch(
             "homeassistant.components.hassio.get_addons_list",
+            create=True,
             return_value=[],
         ),
         patch.object(flow, "_async_get_addon_manager", return_value=mock_addon_manager),
