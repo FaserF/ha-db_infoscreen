@@ -555,7 +555,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         super().__init__(
             hass,
             _LOGGER,
-            config_entry=config_entry,
             name=f"DB-Infoscreen {self.station}",
             update_interval=local_calc_interval,
         )
@@ -762,8 +761,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             import aiohttp
 
             session = async_get_clientsession(self.hass)
-            max_retries = 3
-            retry_delay = 2
+            max_retries = 2
+            retry_delay = 1
 
             for attempt in range(max_retries + 1):
                 try:
@@ -811,12 +810,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         raise UpdateFailed(
                             f"Rate limited (429) while fetching {self.fetch_url}"
                         )
-                    if err.status in (502, 503, 504):
-                        _LOGGER.warning(
-                            "Temporary gateway error (%s) fetching %s. Retrying...",
-                            err.status,
-                            self.fetch_url,
-                        )
                     if attempt < max_retries:
                         _LOGGER.warning(
                             "Attempt %d failed fetching data from %s: %s. Retrying in %d seconds...",
@@ -834,9 +827,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                             max_retries,
                             err,
                         )
-                        if err.status not in (502, 503, 504):
-                            # Activate Repairs issue only for non-gateway errors
-                            self._handle_update_error(str(err))
+                        # Activate Repairs issue
+                        self._handle_update_error(str(err))
                         # Throttle the next API fetch so repeated failures respect
                         # the configured interval instead of hammering the server.
                         self._last_api_fetch = now.timestamp()
@@ -2060,19 +2052,18 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         # After 3 consecutive errors, create an API error issue
         if self._consecutive_errors >= 3:
             # Check if this might be a permanent station issue
-            if self._consecutive_errors >= 10:
+            if self._consecutive_errors >= 30:
                 repairs.create_station_unsupported_issue(
                     self.hass,
                     entry_id,
                     self.station,
                     self.data_source,
                 )
-                if self._consecutive_errors == 10:
-                    _LOGGER.warning(
-                        "Station %s has failed %d times. May no longer be supported.",
-                        self.station,
-                        self._consecutive_errors,
-                    )
+                _LOGGER.warning(
+                    "Station %s has failed %d times. May no longer be supported.",
+                    self.station,
+                    self._consecutive_errors,
+                )
             else:
                 has_via = (
                     bool(self.via_stations) if hasattr(self, "via_stations") else False

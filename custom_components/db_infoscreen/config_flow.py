@@ -949,7 +949,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
+    ) -> Any:
         """Handle reconfiguration of an existing entry (station, server, data source)."""
         reconfigure_entry = self._get_reconfigure_entry()
         errors: dict[str, str] = {}
@@ -1120,7 +1120,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
     async def async_step_hassio(
         self, discovery_info: HassioServiceInfo | None = None
-    ) -> config_entries.ConfigFlowResult:
+    ) -> Any:
         """Handle Hass.io discovery."""
         if discovery_info is not None:
             uuid = getattr(discovery_info, "uuid", None)
@@ -1292,9 +1292,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             description_placeholders={"addon_name": ADDON_NAME},
         )
 
-    async def async_step_zeroconf(
-        self, discovery_info: ZeroconfServiceInfo
-    ) -> config_entries.ConfigFlowResult:
+    async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> Any:
         """Handle zeroconf discovery for DBF add-on."""
         host = discovery_info.host
         port = discovery_info.port
@@ -1332,7 +1330,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
 
     async def async_step_discovery_confirm(
         self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
+    ) -> Any:
         """Confirm zeroconf discovery and proceed to station search."""
         server_url = self.discovery_info.get(CONF_SERVER_URL, "")
 
