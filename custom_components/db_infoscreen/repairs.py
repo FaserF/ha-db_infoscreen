@@ -11,6 +11,7 @@ except ImportError:
     import voluptuous as vol  # type: ignore[no-redef]
 from homeassistant.components.repairs import RepairsFlow
 from homeassistant.core import HomeAssistant
+
 try:
     from homeassistant.data_entry_flow import FlowResult as RepairsFlowResult
 except ImportError:

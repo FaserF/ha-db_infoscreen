@@ -78,7 +78,7 @@ def parse_datetime_flexible(value: Any, now: datetime) -> datetime | None:
                 except ValueError:
                     pass
 
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         pass
 
     return None

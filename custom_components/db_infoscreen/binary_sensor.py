@@ -100,7 +100,7 @@ class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
             try:
                 if delay and int(delay) > 0:
                     return True
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
         return False
 
@@ -128,7 +128,7 @@ class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
                         }
                     )
                     max_delay = max(max_delay, delay_int)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
 
         return {

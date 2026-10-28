@@ -1061,7 +1061,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             from homeassistant.components.hassio import AddonManager
 
             return AddonManager(self.hass, _LOGGER, ADDON_NAME, slug)
-        except (ImportError, AttributeError):
+        except ImportError, AttributeError:
             return None
 
     async def _async_find_installed_addon(self) -> str | None:
@@ -1252,7 +1252,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                         ADDON_REPOSITORY,
                         repo_err,
                     )
-            except (ImportError, AttributeError, Exception):
+            except ImportError, AttributeError, Exception:
                 pass
 
             installed_slug = None
@@ -1292,9 +1292,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             description_placeholders={"addon_name": ADDON_NAME},
         )
 
-    async def async_step_zeroconf(
-        self, discovery_info: ZeroconfServiceInfo
-    ) -> Any:
+    async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> Any:
         """Handle zeroconf discovery for DBF add-on."""
         host = discovery_info.host
         port = discovery_info.port
