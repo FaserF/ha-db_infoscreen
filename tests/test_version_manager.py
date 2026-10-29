@@ -1,9 +1,9 @@
+import unittest
+from unittest.mock import patch, mock_open
 import datetime
 import importlib.util
 import os
 import subprocess
-import unittest
-from unittest.mock import mock_open, patch
 
 # Dynamic import of version_manager
 script_path = os.path.abspath(".github/scripts/version_manager.py")
@@ -54,64 +54,64 @@ class TestVersionManager(unittest.TestCase):
     def test_stable_to_stable(self, mock_git):
         # 2026.2.0 -> bump stable -> 2026.2.1
         mock_git.return_value = b"2026.2.0\n"
-        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.UTC)
-        new_v = vm.calculate_version("stable", now=now)
+        now = datetime.datetime(2026, 2, 4)
+        new_v = vm.calculate_version("stable", vm.get_current_version(), now=now)
         self.assertEqual(new_v, "2026.2.1")
 
     @patch("subprocess.check_output")
     def test_stable_to_beta(self, mock_git):
         # 2026.2.0 -> bump beta -> 2026.2.1b0
         mock_git.return_value = b"2026.2.0\n"
-        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.UTC)
-        new_v = vm.calculate_version("beta", now=now)
+        now = datetime.datetime(2026, 2, 4)
+        new_v = vm.calculate_version("beta", vm.get_current_version(), now=now)
         self.assertEqual(new_v, "2026.2.1b0")
 
     @patch("subprocess.check_output")
     def test_beta_to_beta(self, mock_git):
         # 2026.2.1b0 -> bump beta -> 2026.2.1b1
         mock_git.return_value = b"2026.2.1b0\n"
-        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.UTC)
-        new_v = vm.calculate_version("beta", now=now)
+        now = datetime.datetime(2026, 2, 4)
+        new_v = vm.calculate_version("beta", vm.get_current_version(), now=now)
         self.assertEqual(new_v, "2026.2.1b1")
 
     @patch("subprocess.check_output")
     def test_beta_to_stable(self, mock_git):
         # 2026.2.1b1 -> bump stable -> 2026.2.1
         mock_git.return_value = b"2026.2.1b1\n"
-        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.UTC)
-        new_v = vm.calculate_version("stable", now=now)
+        now = datetime.datetime(2026, 2, 4)
+        new_v = vm.calculate_version("stable", vm.get_current_version(), now=now)
         self.assertEqual(new_v, "2026.2.1")
 
     @patch("subprocess.check_output")
     def test_stable_to_dev(self, mock_git):
         # 2026.2.1 -> bump dev -> 2026.2.2-dev0
         mock_git.return_value = b"2026.2.1\n"
-        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.UTC)
-        new_v = vm.calculate_version("dev", now=now)
+        now = datetime.datetime(2026, 2, 4)
+        new_v = vm.calculate_version("dev", vm.get_current_version(), now=now)
         self.assertEqual(new_v, "2026.2.2-dev0")
 
     @patch("subprocess.check_output")
     def test_dev_to_beta(self, mock_git):
         # 2026.2.2-dev0 -> bump beta -> 2026.2.2b0
         mock_git.return_value = b"2026.2.2-dev0\n"
-        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.UTC)
-        new_v = vm.calculate_version("beta", now=now)
+        now = datetime.datetime(2026, 2, 4)
+        new_v = vm.calculate_version("beta", vm.get_current_version(), now=now)
         self.assertEqual(new_v, "2026.2.2b0")
 
     @patch("subprocess.check_output")
     def test_rollover_new_month(self, mock_git):
         # 2026.1.2 -> bump stable in Feb -> 2026.2.0
         mock_git.return_value = b"2026.1.2\n"
-        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.UTC)
-        new_v = vm.calculate_version("stable", now=now)
+        now = datetime.datetime(2026, 2, 4)
+        new_v = vm.calculate_version("stable", vm.get_current_version(), now=now)
         self.assertEqual(new_v, "2026.2.0")
 
     @patch("subprocess.check_output")
     def test_rollover_new_month_beta(self, mock_git):
         # 2026.1.2 -> bump beta in Feb -> 2026.2.0b0
         mock_git.return_value = b"2026.1.2\n"
-        now = datetime.datetime(2026, 2, 4, tzinfo=datetime.UTC)
-        new_v = vm.calculate_version("beta", now=now)
+        now = datetime.datetime(2026, 2, 4)
+        new_v = vm.calculate_version("beta", vm.get_current_version(), now=now)
         self.assertEqual(new_v, "2026.2.0b0")
 
 

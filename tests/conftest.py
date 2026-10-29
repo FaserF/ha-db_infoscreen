@@ -1,22 +1,13 @@
-import os
+"""Global fixtures and mocks for db_infoscreen integration tests."""
+
 import sys
+import os
 import types
-from unittest.mock import AsyncMock, MagicMock
-
+from unittest.mock import MagicMock, AsyncMock
 import pytest
-
-# Prevent pytest-socket from blocking local loopback on Windows
-if os.name == "nt":
-    try:
-        import pytest_socket
-
-        pytest_socket.disable_socket = lambda *args, **kwargs: None
-    except ImportError:
-        pass
 
 # Try to import pytest-homeassistant-custom-component
 import importlib.util
-from datetime import UTC
 
 PYTEST_HA_AVAILABLE = (
     importlib.util.find_spec("pytest_homeassistant_custom_component") is not None
@@ -110,7 +101,7 @@ if not PYTEST_HA_AVAILABLE:
                 name,
                 update_interval=None,
                 update_method=None,
-                request_refresh_debouncer=None,
+                request_refresh_debouncer=None
             ):
                 self.hass = hass
                 self.logger = logger
@@ -210,10 +201,6 @@ if not PYTEST_HA_AVAILABLE:
         sys.modules["homeassistant.helpers.selector"] = MagicMock()
     if "homeassistant.helpers.network" not in sys.modules:
         sys.modules["homeassistant.helpers.network"] = MagicMock()
-    if "homeassistant.helpers.device_registry" not in sys.modules:
-        sys.modules["homeassistant.helpers.device_registry"] = MagicMock()
-    if "homeassistant.helpers.entity_registry" not in sys.modules:
-        sys.modules["homeassistant.helpers.entity_registry"] = MagicMock()
 
     # Mock util
     if "homeassistant.util" not in sys.modules:
@@ -223,7 +210,7 @@ if not PYTEST_HA_AVAILABLE:
 
     # Create a real stub for homeassistant.util.dt with datetime functions
     if "homeassistant.util.dt" not in sys.modules:
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         ha_util_dt = types.ModuleType("homeassistant.util.dt")
 
@@ -236,12 +223,12 @@ if not PYTEST_HA_AVAILABLE:
                 if dt_str.endswith("Z"):
                     dt_str = dt_str[:-1] + "+00:00"
                 return datetime.fromisoformat(dt_str)
-            except ValueError, AttributeError:
+            except (ValueError, AttributeError):
                 return None
 
         def now():
             """Return current timezone-aware datetime."""
-            return datetime.now(UTC)
+            return datetime.now(timezone.utc)
 
         def as_local(dt):
             """Return local datetime."""
@@ -252,7 +239,7 @@ if not PYTEST_HA_AVAILABLE:
 
         def utc_from_timestamp(timestamp):
             """Return UTC datetime from timestamp."""
-            return datetime.fromtimestamp(timestamp, UTC)
+            return datetime.fromtimestamp(timestamp, timezone.utc)
 
         ha_util_dt.parse_datetime = parse_datetime  # type: ignore[attr-defined]
         ha_util_dt.now = now  # type: ignore[attr-defined]
@@ -322,7 +309,7 @@ def setup_frame_helper():
             frame._REPORTED_INTEGRATIONS = set()
         if getattr(frame, "_INTEGRATION_FRAME", None) is None:
             frame._INTEGRATION_FRAME = {}  # type: ignore[attr-defined]
-    except ImportError, AttributeError:
+    except (ImportError, AttributeError):
         pass
     yield
 
@@ -346,7 +333,7 @@ def enable_custom_integrations(monkeypatch):
             frame, "report_non_thread_safe_operation", MagicMock(), raising=False
         )
         monkeypatch.setattr(frame, "verify_core_config", MagicMock(), raising=False)
-    except ImportError, AttributeError:
+    except (ImportError, AttributeError):
         pass
     yield
 
@@ -379,36 +366,9 @@ def hass():
         }
     )
 
-    async def async_add_executor_job(target, *args, **kwargs):
-        return target(*args, **kwargs)
-
-    mock_hass.async_add_executor_job = async_add_executor_job
-
-    def async_create_task(target, *args, **kwargs):
-        # If target is a coroutine, close it to avoid unawaited coroutine warnings in tests
-        import inspect
-
-        if inspect.iscoroutine(target):
-            target.close()
-        return MagicMock()
-
-    mock_hass.async_create_task = async_create_task
-
     mock_hass.config_entries.async_entries.return_value = []
     mock_hass.data = {"integrations": {}, "custom_components": {}}
     return mock_hass
-
-
-@pytest.fixture(autouse=True)
-def mock_fetch_server_version():
-    """Globally mock async_fetch_server_version to avoid unawaited coroutine warnings in tests."""
-    from unittest.mock import patch
-
-    with patch(
-        "custom_components.db_infoscreen.DBInfoScreenCoordinator.async_fetch_server_version",
-        AsyncMock(return_value=None),
-    ):
-        yield
 
 
 @pytest.fixture
@@ -429,5 +389,5 @@ def clear_cache():
         from custom_components.db_infoscreen import RESPONSE_CACHE
 
         RESPONSE_CACHE.clear()
-    except ImportError, AttributeError:
+    except (ImportError, AttributeError):
         pass

@@ -1,7 +1,6 @@
 """Tests to ensure documentation formatting remains clean."""
 
 import os
-
 import pytest
 
 DOCS_DIR = "docs"
@@ -21,7 +20,7 @@ def get_all_markdown_files():
 @pytest.mark.parametrize("file_path", get_all_markdown_files())
 def test_markdown_paragraph_spacing(file_path):
     """Verify that markdown files have proper spacing between elements."""
-    with open(file_path, encoding="utf-8") as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
 
     lines = content.splitlines()
@@ -29,16 +28,16 @@ def test_markdown_paragraph_spacing(file_path):
         line_raw = lines[i]
         prev_line = lines[i - 1].strip()
 
+        # Rule: Top-level headers or bullets following a text line must have a blank line
         if (
             line_raw.startswith(("- ", "* ", "1. ", "### ", "## ", "# "))
-            and prev_line
-            and not prev_line.startswith(
+        ) and prev_line:
+            if not prev_line.startswith(
                 ("- ", "* ", "1. ", "#", ">", "|", "!", "<", "---", "```", "{%", "%}")
-            )
-        ):
-            raise AssertionError(
-                f"Missing blank line before top-level element in {file_path} at line {i + 1}"
-            )
+            ):
+                assert (
+                    False
+                ), f"Missing blank line before top-level element in {file_path} at line {i+1}"
 
 
 def test_specific_user_reported_case():
@@ -47,7 +46,7 @@ def test_specific_user_reported_case():
     if not os.path.exists(limitations_path):
         pytest.skip("limitations.md not found")
 
-    with open(limitations_path, encoding="utf-8") as f:
+    with open(limitations_path, "r", encoding="utf-8") as f:
         content = f.read()
 
     assert (

@@ -5,98 +5,109 @@ This module provides the core logic and coordinator for fetching train departure
 information from the Deutsche Bahn (DBF) API and regional providers.
 """
 
+from typing import Any
+import async_timeout
 import asyncio
 import copy
-import json
 import logging
+import json
 import re
-from datetime import UTC, datetime, timedelta
-from typing import Any
+import voluptuous as vol
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlencode, urlparse
+import os
 
-import async_timeout
-import homeassistant.helpers.config_validation as cv
-
-try:
-    import probatio as vol
-except ImportError:
-    import voluptuous as vol  # type: ignore[no-redef]
 from homeassistant import config_entries
+from homeassistant.components import repairs
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.network import get_url
-from homeassistant.helpers.update_coordinator import (
-    DataUpdateCoordinator,
-    UpdateFailed,
-)
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from . import repairs
 from .const import (
-    CONF_ADMODE,
-    CONF_CACHE_TTL,
-    CONF_CALENDAR_EVENT_DURATION,
-    CONF_CALENDAR_ONLY_DELAYED,
-    CONF_CALENDAR_ONLY_FAVORITES,
-    CONF_DATA_SOURCE,
-    CONF_DEDUPLICATE_DEPARTURES,
-    CONF_DEDUPLICATE_KEY,
-    CONF_DETAILED,
-    CONF_DIRECTION,
-    CONF_DROP_LATE_TRAINS,
-    CONF_EXCLUDE_CANCELLED,
-    CONF_EXCLUDED_DIRECTIONS,
-    CONF_FAVORITE_TRAINS,
-    CONF_HIDE_LOW_DELAY,
-    CONF_IGNORED_TRAINTYPES,
-    CONF_KEEP_ENDSTATION,
-    CONF_KEEP_ROUTE,
-    CONF_MAX_SIZE_BYTES,
-    CONF_NEXT_DEPARTURES,
-    CONF_OFFSET,
-    CONF_PAST_60_MINUTES,
-    CONF_PAUSED,
-    CONF_PLATFORMS,
-    CONF_SERVER_TYPE,
-    CONF_SERVER_URL,
-    CONF_SHOW_OCCUPANCY,
+    DOMAIN,
     CONF_STATION,
+    CONF_NEXT_DEPARTURES,
     CONF_UPDATE_INTERVAL,
-    CONF_VIA_STATIONS,
-    CONF_VIA_STATIONS_LOGIC,
-    CONF_WALK_TIME,
-    DATA_SOURCE_MAP,
-    DEFAULT_CACHE_TTL,
-    DEFAULT_CALENDAR_EVENT_DURATION,
-    DEFAULT_DEDUPLICATE_KEY,
-    DEFAULT_MAX_SIZE_BYTES,
+    DEFAULT_UPDATE_INTERVAL,
     DEFAULT_NEXT_DEPARTURES,
     DEFAULT_OFFSET,
-    DEFAULT_UPDATE_INTERVAL,
-    DOMAIN,
+    CONF_HIDE_LOW_DELAY,
+    CONF_DETAILED,
+    CONF_PAST_60_MINUTES,
+    CONF_DATA_SOURCE,
+    CONF_OFFSET,
+    CONF_PLATFORMS,
+    CONF_ADMODE,
     MIN_UPDATE_INTERVAL,
-    SERVER_TYPE_CUSTOM,
-    SERVER_TYPE_FASERF,
-    SERVER_TYPE_OFFICIAL,
-    SERVER_URL_FASERF,
-    SERVER_URL_OFFICIAL,
+    CONF_VIA_STATIONS,
+    CONF_DIRECTION,
+    CONF_EXCLUDED_DIRECTIONS,
+    CONF_IGNORED_TRAINTYPES,
+    CONF_DROP_LATE_TRAINS,
+    CONF_KEEP_ROUTE,
+    CONF_KEEP_ENDSTATION,
+    CONF_DEDUPLICATE_DEPARTURES,
+    CONF_DEDUPLICATE_KEY,
+    DEFAULT_DEDUPLICATE_KEY,
+    CONF_VIA_STATIONS_LOGIC,
     TRAIN_TYPE_MAPPING,
+    CONF_EXCLUDE_CANCELLED,
+    CONF_SHOW_OCCUPANCY,
+    CONF_FAVORITE_TRAINS,
+    CONF_SERVER_TYPE,
+    CONF_SERVER_URL,
+    SERVER_TYPE_CUSTOM,
+    SERVER_TYPE_OFFICIAL,
+    SERVER_TYPE_FASERF,
+    SERVER_URL_OFFICIAL,
+    SERVER_URL_FASERF,
     normalize_data_source,
+    DATA_SOURCE_MAP,
 )
-from .utils import (
-    normalize_whitespace,
-    parse_datetime_flexible,
-    prune_response_cache,
-    simple_serializer,
-)
+from .utils import parse_datetime_flexible, prune_response_cache, simple_serializer
 
 _LOGGER = logging.getLogger(__name__)
 
 # Key: URL, Value: (Timestamp, Data)
 RESPONSE_CACHE: dict[str, Any] = {}
 CACHE_TTL = timedelta(seconds=55)
+
+
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the DB Infoscreen integration."""
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN].setdefault("setup_lock", asyncio.Lock())
+
+    # Register Lovelace Strategies
+    # Note: These are consumed by the frontend; we only ensure the module is importable
+    try:
+        from .lovelace import (  # noqa: F401
+            DBInfoscreenDashboardStrategy,
+            DBInfoscreenViewStrategy,
+        )
+    except ImportError:
+        _LOGGER.debug(
+            "Could not import Lovelace strategies (this is normal if not using Lovelace)"
+        )
+
+    # Register Custom Card (Static Path)
+    # This allows users to add the card via /db_infoscreen/card.js
+    card_path = os.path.join(os.path.dirname(__file__), "www", "db-infoscreen-card.js")
+    if await hass.async_add_executor_job(os.path.exists, card_path):
+        from homeassistant.components.http import StaticPathConfig
+        from homeassistant.components.frontend import add_extra_js_url
+
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig("/db_infoscreen/card.js", card_path, False)]
+        )
+        _LOGGER.debug("Registered static path for DB Infoscreen Card")
+        add_extra_js_url(hass, "/db_infoscreen/card.js")
+        hass.data[DOMAIN]["extra_js_registered"] = True
+
+    return True
 
 
 async def async_setup_entry(
@@ -122,8 +133,9 @@ async def async_setup_entry(
     )
 
     # Add an update listener for options
-    config_entry.async_on_unload(config_entry.add_update_listener(update_listener))
+    config_entry.add_update_listener(update_listener)
 
+    # Register Services (only once)
     if not hass.services.has_service(DOMAIN, "watch_train"):
 
         async def async_watch_train(service_call):
@@ -211,41 +223,18 @@ async def async_setup_entry(
             "refresh_departures",
             async_refresh_departures,
         )
-
     if not hass.services.has_service(DOMAIN, "set_offset"):
 
         async def async_set_offset(service_call):
             """Handle the set_offset service call to dynamically adjust time offset."""
-            target_station = normalize_whitespace(service_call.data.get("station"))
+            target_station = service_call.data.get("station")
             new_offset = service_call.data.get("offset", "00:00")
-
-            # Resolve entities/devices to entry IDs
-            target_entry_ids = set()
-            if "entity_id" in service_call.data:
-                ent_reg = er.async_get(hass)
-                for entity_id in service_call.data["entity_id"]:
-                    if (
-                        ent_entry := ent_reg.async_get(entity_id)
-                    ) and ent_entry.platform == DOMAIN:
-                        target_entry_ids.add(ent_entry.config_entry_id)
-            if "device_id" in service_call.data:
-                dev_reg = dr.async_get(hass)
-                for device_id in service_call.data["device_id"]:
-                    if device := dev_reg.async_get(device_id):
-                        target_entry_ids.update(device.config_entries)
 
             for coord in hass.data[DOMAIN].values():
                 if isinstance(coord, DBInfoScreenCoordinator):
-                    if (target_station or target_entry_ids) and not (
-                        (
-                            target_station
-                            and str(coord.station).lower()
-                            == str(target_station).lower()
-                        )
-                        or (
-                            coord.config_entry
-                            and coord.config_entry.entry_id in target_entry_ids
-                        )
+                    if (
+                        target_station
+                        and str(coord.station).lower() != str(target_station).lower()
                     ):
                         continue
 
@@ -266,69 +255,7 @@ async def async_setup_entry(
             schema=vol.Schema(
                 {
                     vol.Optional("station"): cv.string,
-                    vol.Optional("entity_id"): cv.entity_ids,
-                    vol.Optional("device_id"): vol.All(cv.ensure_list, [cv.string]),
                     vol.Required("offset"): cv.string,
-                }
-            ),
-        )
-
-    if not hass.services.has_service(DOMAIN, "set_paused"):
-
-        async def async_set_paused(service_call):
-            """Handle the set_paused service call to toggle periodic updates."""
-            target_station = normalize_whitespace(service_call.data.get("station"))
-            paused = service_call.data["paused"]
-
-            # Resolve entities/devices to entry IDs
-            target_entry_ids = set()
-            if "entity_id" in service_call.data:
-                ent_reg = er.async_get(hass)
-                for entity_id in service_call.data["entity_id"]:
-                    if (
-                        ent_entry := ent_reg.async_get(entity_id)
-                    ) and ent_entry.platform == DOMAIN:
-                        target_entry_ids.add(ent_entry.config_entry_id)
-            if "device_id" in service_call.data:
-                dev_reg = dr.async_get(hass)
-                for device_id in service_call.data["device_id"]:
-                    if device := dev_reg.async_get(device_id):
-                        target_entry_ids.update(device.config_entries)
-
-            for entry in hass.config_entries.async_entries(DOMAIN):
-                coordinator = hass.data[DOMAIN].get(entry.entry_id)
-                if not coordinator:
-                    continue
-
-                if (target_station or target_entry_ids) and not (
-                    (
-                        target_station
-                        and str(coordinator.station).lower()
-                        == str(target_station).lower()
-                    )
-                    or (entry and entry.entry_id in target_entry_ids)
-                ):
-                    continue
-
-                # Merge new paused state into existing options
-                new_options = {**entry.options, CONF_PAUSED: paused}
-                hass.config_entries.async_update_entry(entry, options=new_options)
-                _LOGGER.info(
-                    "Setting paused state for station %s to %s",
-                    coordinator.station,
-                    paused,
-                )
-
-        hass.services.async_register(
-            DOMAIN,
-            "set_paused",
-            async_set_paused,
-            schema=vol.Schema(
-                {
-                    vol.Optional("station"): cv.string,
-                    vol.Optional("entity_id"): cv.entity_ids,
-                    vol.Optional("device_id"): vol.All(cv.ensure_list, [cv.string]),
-                    vol.Required("paused"): cv.boolean,
                 }
             ),
         )
@@ -364,7 +291,8 @@ async def async_migrate_entry(
                 d[CONF_SERVER_URL] = url
 
             # Clean up old key
-            d.pop("custom_api_url", None)
+            if "custom_api_url" in d:
+                del d["custom_api_url"]
 
         migrate_dict(new_data)
         migrate_dict(new_options)
@@ -410,7 +338,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
     """
 
     def __init__(self, hass: HomeAssistant, config_entry: config_entries.ConfigEntry):
-        """Initialize coordinator state from a config entry."""
+        """
+        Initialize coordinator state from a config entry, build the API endpoint, and configure the DataUpdateCoordinator.
+
+        Reads runtime configuration and options from the provided config entry to set coordinator attributes (for example: station, next_departures, hide_low_delay, detailed, past_60_minutes, data_source, offset, via_stations, direction, ignored_train_types, drop_late_trains, final-stop exclusion, size limits), adjusts departure/arrival times for delays, and prunes detail fields according to configuration. The most recent valid result is cached and used as a fallback when no valid departures can be produced.
+
+        Parameters:
+            hass (HomeAssistant): Home Assistant core instance.
+            config_entry (config_entries.ConfigEntry): Integration config entry providing `data` and `options` used to configure the coordinator.
+        """
         self.config_entry = config_entry
 
         # Get config from data and options
@@ -430,8 +366,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         self.watched_trips: dict[str, dict[str, Any]] = {}
         self.tracked_connections: dict[str, dict[str, Any]] = {}
         self.departure_history: dict[str, Any] = {}
-        self.station_messages: list[dict[str, Any]] = []
-        self.raw_elevator_issues: list[str] = []
         self.hide_low_delay: bool = bool(config.get(CONF_HIDE_LOW_DELAY, False))
         self.detailed: bool = bool(config.get(CONF_DETAILED, False))
         self.past_60_minutes: bool = bool(config.get(CONF_PAST_60_MINUTES, False))
@@ -441,17 +375,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         self.offset = self.convert_offset_to_seconds(
             str(config.get(CONF_OFFSET, DEFAULT_OFFSET))
         )
-        via_raw = config.get(CONF_VIA_STATIONS, [])
-        if isinstance(via_raw, str):
-            self.via_stations = [
-                s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
-            ]
-        elif isinstance(via_raw, list):
-            self.via_stations = [
-                s.strip() for s in via_raw if isinstance(s, str) and s.strip()
-            ]
-        else:
-            self.via_stations = []
+        self.via_stations = config.get(CONF_VIA_STATIONS, [])
         self.direction = config.get(CONF_DIRECTION, "")
         self.excluded_directions = config.get(CONF_EXCLUDED_DIRECTIONS, "")
 
@@ -471,27 +395,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         self.exclude_cancelled = config.get(CONF_EXCLUDE_CANCELLED, False)
         self.show_occupancy = config.get(CONF_SHOW_OCCUPANCY, False)
         self.platforms = config.get(CONF_PLATFORMS, "")
-        self.paused = bool(config.get(CONF_PAUSED, False))
         self.via_stations_logic = config.get(CONF_VIA_STATIONS_LOGIC, "OR")
-        self.admode = config.get(CONF_ADMODE, "preferred departure")
-        self.walk_time = int(config.get(CONF_WALK_TIME, 0))
-        self.max_size_bytes = int(
-            config.get(CONF_MAX_SIZE_BYTES, DEFAULT_MAX_SIZE_BYTES)
-        )
-        self.calendar_event_duration = int(
-            config.get(CONF_CALENDAR_EVENT_DURATION, DEFAULT_CALENDAR_EVENT_DURATION)
-        )
-        self.calendar_only_favorites = bool(
-            config.get(CONF_CALENDAR_ONLY_FAVORITES, False)
-        )
-        self.calendar_only_delayed = bool(config.get(CONF_CALENDAR_ONLY_DELAYED, False))
-        self.cache_ttl = timedelta(
-            seconds=int(config.get(CONF_CACHE_TTL, DEFAULT_CACHE_TTL))
-        )
+        admode = config.get(CONF_ADMODE, "")
         raw_update_interval = config.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
         update_interval = int(max(raw_update_interval, MIN_UPDATE_INTERVAL))
         self._api_update_interval = update_interval * 60
-        self._last_api_fetch = 0.0
+        self._last_api_fetch = 0
         self._raw_api_data = None
 
         # Fixed local update interval for calculation/pruning (30 seconds)
@@ -500,8 +409,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
         station_cleaned = " ".join(str(self.station).split())
         encoded_station = quote(station_cleaned, safe="-:,")
-        if encoded_station.endswith("."):
-            encoded_station = encoded_station[:-1] + "%2E"
         self._last_valid_value: list[dict[str, Any]] = []
         # Use the server URL from the config entry, fall back to official if missing
         self._base_url = config.get(CONF_SERVER_URL, SERVER_URL_OFFICIAL)
@@ -511,9 +418,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
         # Assemble Fetch URL (Generic for caching)
         fetch_params = {}
-        if self.admode == "arrival":
+        if admode == "arrival":
             fetch_params["admode"] = "arr"
-        elif self.admode in ["departure", "preferred departure"]:
+        elif admode == "departure":
             fetch_params["admode"] = "dep"
 
         # Check if the data source is in the HAFAS list
@@ -522,6 +429,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         elif self.data_source in data_source_map:
             key, value = data_source_map[self.data_source].split("=")
             fetch_params[key] = value
+        elif "=" in str(self.data_source):
+            # Support raw strings like "efa=AVV" directly
+            try:
+                key, value = str(self.data_source).split("=", 1)
+                fetch_params[key] = value
+            except ValueError:
+                pass
 
         if self.detailed:
             fetch_params["detailed"] = "1"
@@ -555,13 +469,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         super().__init__(
             hass,
             _LOGGER,
-            config_entry=config_entry,
             name=f"DB-Infoscreen {self.station}",
             update_interval=local_calc_interval,
         )
         self.config_entry = config_entry
         self._consecutive_errors = 0
-        self._last_error_message: str | None = None
         self._last_successful_update: datetime | None = None
         self._stale_issue_raised = False
         self.server_version: str | None = None
@@ -591,7 +503,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                             url = url.replace("127.0.0.1", local_ip).replace(
                                 "localhost", local_ip
                             )
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     _LOGGER.debug("Could not resolve local IP for web_url: %s", e)
             return url
         return None
@@ -602,26 +514,19 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         try:
             # Try the suggested workaround endpoint
             about_url = f"{self._base_url}/_about.json"
-            headers = {
-                "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
-            }
-            async with (
-                async_timeout.timeout(20),
-                session.get(
-                    about_url, headers=headers, allow_redirects=True
-                ) as response,
-            ):
-                if response.status < 500:
-                    data = await response.json()
-                    if isinstance(data, dict):
-                        # Search for version strings in the response
-                        v = data.get("version")
-                        av = data.get("api_version")
-                        if v and v != "???":
-                            self.server_version = str(v)
-                        elif av:
-                            self.server_version = f"API v{av}"
-        except Exception as e:  # noqa: BLE001
+            async with async_timeout.timeout(10):
+                async with session.get(about_url, allow_redirects=True) as response:
+                    if response.status < 500:
+                        data = await response.json()
+                        if isinstance(data, dict):
+                            # Search for version strings in the response
+                            v = data.get("version")
+                            av = data.get("api_version")
+                            if v and v != "???":
+                                self.server_version = str(v)
+                            elif av:
+                                self.server_version = f"API v{av}"
+        except Exception as e:
             _LOGGER.debug(
                 "Could not fetch server version from %s: %s", self._base_url, e
             )
@@ -683,7 +588,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 sectors_bistro.update(sections)
 
         def format_sectors(sectors: set) -> str:
-            sorted_sectors = sorted(sectors)
+            sorted_sectors = sorted(list(sectors))
             if not sorted_sectors:
                 return ""
             if len(sorted_sectors) > 1:
@@ -709,29 +614,36 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         return {
             "text": " | ".join(parts),
             "structured": {
-                "first_class": sorted(sectors_first_class),
-                "second_class": sorted(sectors_second_class),
-                "bistro": sorted(sectors_bistro),
+                "first_class": sorted(list(sectors_first_class)),
+                "second_class": sorted(list(sectors_second_class)),
+                "bistro": sorted(list(sectors_bistro)),
             },
         }
 
     async def _async_update_data(self):
-        """Retrieve and process next departures for the configured station."""
-        if self.paused:
-            _LOGGER.debug("Updates are paused for %s", self.station)
-            return self._last_valid_value or []
+        """
+        Retrieve and process next departures for the configured station.
+
+        Fetches JSON from the coordinator's API, parses and normalizes departure times, optionally deduplicates entries, applies configured filters (direction, ignored train types, offset, final-stop exclusion, size limits), adjusts departure/arrival times for delays, and prunes detail fields according to configuration. The most recent valid result is cached and used as a fallback when no valid departures can be produced.
+
+        Returns:
+            list[dict]: Processed departure objects limited to the configured `next_departures` count. If no valid departures can be produced, returns the last cached valid list or an empty list.
+        """
         now = dt_util.now()
 
         # Periodic cleanup of global cache
-        prune_response_cache(RESPONSE_CACHE, self.cache_ttl)
+        prune_response_cache(RESPONSE_CACHE, CACHE_TTL)
 
-        # Fetch server version in background task if we don't have it yet to avoid delaying initial startup
+        # Fetch server version if we don't have it yet
         if self.server_version is None:
-            self.hass.async_create_task(self.async_fetch_server_version())
+            await self.async_fetch_server_version()
 
-        do_api_fetch = (
-            now.timestamp() - self._last_api_fetch >= self._api_update_interval
-        )
+        do_api_fetch = False
+        if (
+            self._raw_api_data is None
+            or now.timestamp() - self._last_api_fetch >= self._api_update_interval
+        ):
+            do_api_fetch = True
 
         if not do_api_fetch:
             _LOGGER.debug(
@@ -742,11 +654,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 ),
             )
             data = self._raw_api_data
-            if data is None:
-                return self._last_valid_value or []
         elif self.fetch_url in RESPONSE_CACHE:
             timestamp, cached_data = RESPONSE_CACHE[self.fetch_url]
-            if now - timestamp < self.cache_ttl:
+            if now - timestamp < CACHE_TTL:
                 _LOGGER.debug("Using globally cached response for %s", self.fetch_url)
                 data = copy.deepcopy(cached_data)
                 self._raw_api_data = data
@@ -762,32 +672,21 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             import aiohttp
 
             session = async_get_clientsession(self.hass)
-            max_retries = 3
-            retry_delay = 2
+            max_retries = 2
+            retry_delay = 1
 
             for attempt in range(max_retries + 1):
                 try:
-                    headers = {
-                        "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
-                    }
                     async with session.get(
-                        self.fetch_url,
-                        headers=headers,
-                        timeout=aiohttp.ClientTimeout(total=30),
+                        self.fetch_url, timeout=aiohttp.ClientTimeout(total=30)
                     ) as response:
                         if response.status == 429:
-                            self._last_api_fetch = now.timestamp()
                             _LOGGER.warning(
                                 "Rate limit hit for %s (429 Too Many Requests). Skipping retries for this cycle.",
                                 self.fetch_url,
                             )
-                            if self._last_valid_value:
-                                return self._last_valid_value
-                            raise UpdateFailed(
-                                f"Rate limited (429) while fetching {self.fetch_url}"
-                            )
+                            return self._last_valid_value or []
 
-                        response.raise_for_status()
                         data = await response.json()
                         if asyncio.iscoroutine(data) or (
                             hasattr(data, "__await__")
@@ -801,22 +700,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         break  # Success, exit retry loop
                 except aiohttp.ClientResponseError as err:
                     if err.status == 429:
-                        self._last_api_fetch = now.timestamp()
                         _LOGGER.warning(
-                            "Rate limit hit for %s (429 Too Many Requests). Skipping retries.",
+                            "Rate limit hit for %s (429 Too Many Requests). skipping retries.",
                             self.fetch_url,
                         )
-                        if self._last_valid_value:
-                            return self._last_valid_value
-                        raise UpdateFailed(
-                            f"Rate limited (429) while fetching {self.fetch_url}"
-                        )
-                    if err.status in (502, 503, 504):
-                        _LOGGER.warning(
-                            "Temporary gateway error (%s) fetching %s. Retrying...",
-                            err.status,
-                            self.fetch_url,
-                        )
+                        return self._last_valid_value or []
                     if attempt < max_retries:
                         _LOGGER.warning(
                             "Attempt %d failed fetching data from %s: %s. Retrying in %d seconds...",
@@ -834,19 +722,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                             max_retries,
                             err,
                         )
-                        if err.status not in (502, 503, 504):
-                            # Activate Repairs issue only for non-gateway errors
-                            self._handle_update_error(str(err))
-                        # Throttle the next API fetch so repeated failures respect
-                        # the configured interval instead of hammering the server.
-                        self._last_api_fetch = now.timestamp()
-                        if self._last_valid_value is not None:
-                            return self._last_valid_value
-                        return []
-                except UpdateFailed:
-                    raise
+                        # Activate Repairs issue
+                        self._handle_update_error(str(err))
+                        return self._last_valid_value or []
                 except (
-                    TimeoutError,
+                    asyncio.TimeoutError,
                     aiohttp.ClientError,
                     ValueError,
                     Exception,
@@ -870,18 +750,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         )
                         # Activate Repairs issue
                         self._handle_update_error(str(err))
-                        # Throttle the next API fetch so repeated failures respect
-                        # the configured interval instead of hammering the server.
-                        self._last_api_fetch = now.timestamp()
-                        if self._last_valid_value is not None:
-                            return self._last_valid_value
-                        return []
+                        return self._last_valid_value or []
 
         if not isinstance(data, dict):
             _LOGGER.error("Expected dict from API, got %s", type(data))
-            if self._last_valid_value:
-                return self._last_valid_value
-            raise UpdateFailed(f"Expected dict from API, got {type(data)}")
+            return self._last_valid_value or []
 
         raw_departures = data.get("departures", [])
         if raw_departures is None:
@@ -900,11 +773,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
         # Success! Clear any error tracking and repair issues
         self._consecutive_errors = 0
-        self._last_error_message = None
         self._last_successful_update = now
         self._stale_issue_raised = False
-        if self.config_entry:
-            repairs.clear_all_issues_for_entry(self.hass, self.config_entry.entry_id)
         # --- PRE-PROCESSING: Parse time for all departures ---
         departures_with_time = []
         # Use a deep copy to avoid modifying the cached/mock objects in-place
@@ -1039,111 +909,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 len(departures_to_process),
             )
 
-        # --- EXTRACT MESSAGES & DISTURBANCES ---
-        station_messages_list = []
-        seen_messages = set()
-        raw_elevator_issues_list = []
-        seen_elevator_issues = set()
-
-        for departure in departures_to_process:
-            train_name = departure.get("train", "")
-            messages = departure.get("messages", {})
-            if isinstance(messages, dict):
-                for msg_type, msg_list in messages.items():
-                    if isinstance(msg_list, list):
-                        for m in msg_list:
-                            msg_text = ""
-                            if isinstance(m, dict):
-                                msg_text = m.get("text", "")
-                            elif isinstance(m, str):
-                                msg_text = m
-
-                            if msg_text:
-                                msg_key = (msg_text, msg_type, train_name)
-                                if msg_key not in seen_messages:
-                                    seen_messages.add(msg_key)
-                                    station_messages_list.append(
-                                        {
-                                            "text": msg_text,
-                                            "type": msg_type,
-                                            "train": train_name,
-                                        }
-                                    )
-
-                                # Process for elevator/escalator issues
-                                lower_text = msg_text.lower()
-                                keywords = [
-                                    "aufzug",
-                                    "aufzüge",
-                                    "fahrstuhl",
-                                    "lift",
-                                    "rolltreppe",
-                                ]
-                                if any(k in lower_text for k in keywords):
-                                    working_keywords = [
-                                        "in betrieb",
-                                        "ok",
-                                        "behoben",
-                                        "funktioniert wieder",
-                                        "verfügbar",
-                                    ]
-                                    if (
-                                        not any(
-                                            wk in lower_text for wk in working_keywords
-                                        )
-                                        and msg_text not in seen_elevator_issues
-                                    ):
-                                        seen_elevator_issues.add(msg_text)
-                                        raw_elevator_issues_list.append(msg_text)
-            elif isinstance(messages, list):
-                for m in messages:
-                    msg_text = ""
-                    msg_type = "general"
-                    if isinstance(m, dict):
-                        msg_text = m.get("text", "")
-                        msg_type = m.get("type", "general")
-                    elif isinstance(m, str):
-                        msg_text = m
-
-                    if msg_text:
-                        msg_key = (msg_text, msg_type, train_name)
-                        if msg_key not in seen_messages:
-                            seen_messages.add(msg_key)
-                            station_messages_list.append(
-                                {
-                                    "text": msg_text,
-                                    "type": msg_type,
-                                    "train": train_name,
-                                }
-                            )
-
-                        # Process for elevator/escalator issues
-                        lower_text = msg_text.lower()
-                        keywords = [
-                            "aufzug",
-                            "aufzüge",
-                            "fahrstuhl",
-                            "lift",
-                            "rolltreppe",
-                        ]
-                        if any(k in lower_text for k in keywords):
-                            working_keywords = [
-                                "in betrieb",
-                                "ok",
-                                "behoben",
-                                "funktioniert wieder",
-                                "verfügbar",
-                            ]
-                            if (
-                                not any(wk in lower_text for wk in working_keywords)
-                                and msg_text not in seen_elevator_issues
-                            ):
-                                seen_elevator_issues.add(msg_text)
-                                raw_elevator_issues_list.append(msg_text)
-
-        self.station_messages = station_messages_list
-        self.raw_elevator_issues = raw_elevator_issues_list
-
         # --- MAIN FILTERING AND PROCESSING ---
         filtered_departures: list[dict[str, Any]] = []
         current_size = 2  # Estimate for empty list '[]'
@@ -1158,22 +923,16 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         # Some data sources might use other values, ensure compatibility.
         if "S" in ignored_train_types:
             mapped_ignored_train_types.add("S-Bahn")
-            mapped_ignored_train_types.add("s_bahn")
         if "StadtBus" in ignored_train_types:
             mapped_ignored_train_types.add("MetroBus")
-            mapped_ignored_train_types.add("bus")
-        if "F" in ignored_train_types:
-            mapped_ignored_train_types.add("Fernverkehr")
-            mapped_ignored_train_types.add("long_distance")
-        if "N" in ignored_train_types:
-            mapped_ignored_train_types.add("Regionalverkehr")
-            mapped_ignored_train_types.add("regional_db")
 
         if mapped_ignored_train_types:
             _LOGGER.debug(
                 "Ignoring train types (mapped): %s",
                 mapped_ignored_train_types,
             )
+
+        MAX_SIZE_BYTES = 16000
 
         for departure in departures_to_process:
             _LOGGER.debug("Processing departure: %s", departure)
@@ -1193,11 +952,9 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     continue
 
             if not self.keep_endstation:
-                dest = str(departure.get("destination", "")).strip().lower()
-                stat = str(self.station).strip().lower()
-                if dest == stat:
+                if departure.get("destination") == self.station:
                     _LOGGER.debug(
-                        "Skipping departure as %s is the final stop (normalized destination match).",
+                        "Skipping departure as %s is the final stop.",
                         self.station,
                     )
                     continue
@@ -1209,12 +966,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             )
             departure["is_cancelled"] = is_cancelled  # Normalize
 
-            if self.exclude_cancelled and is_cancelled:
-                _LOGGER.debug(
-                    "Skipping cancelled departure: %s",
-                    departure,
-                )
-                continue
+            if self.exclude_cancelled:
+                if is_cancelled:
+                    _LOGGER.debug(
+                        "Skipping cancelled departure: %s",
+                        departure,
+                    )
+                    continue
 
             # Platform filter (LOCAL)
             if self.platforms and not self._platforms_filtered_server_side:
@@ -1284,56 +1042,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             if isinstance(train_classes, str):
                 train_classes = [train_classes]
 
-            # Check if this departure represents a bus or rail replacement service
-            train_name_raw = str(departure.get("train", ""))
-            train_name_upper = train_name_raw.upper()
-            is_bus_or_sev = (
-                train_name_upper.startswith("BUS ")
-                or train_name_upper == "BUS"
-                or "ERSATZVERKEHR" in train_name_upper
-                or "SEV" in train_name_upper
-            )
-
-            # Check messages for replacement service (code SV or text Ersatzverkehr)
-            raw_dep_messages = departure.get("messages", [])
-            dep_msg_list: list[dict[str, Any]] = []
-            if isinstance(raw_dep_messages, dict):
-                for m_sub in raw_dep_messages.values():
-                    if isinstance(m_sub, list):
-                        dep_msg_list.extend([m for m in m_sub if isinstance(m, dict)])
-            elif isinstance(raw_dep_messages, list):
-                dep_msg_list.extend(
-                    [m for m in raw_dep_messages if isinstance(m, dict)]
-                )
-
-            has_sev_message = any(
-                str(m.get("code", "")).upper() == "SV"
-                or "ersatzverkehr" in str(m.get("text", "")).lower()
-                for m in dep_msg_list
-            )
-            is_replacement = is_bus_or_sev or has_sev_message
-            departure["is_replacement"] = is_replacement
-
-            # If the API returns an empty list, we try to infer it from the train name.
-            if is_bus_or_sev:
-                api_classes_to_process = ["Bus"]
-            elif not train_classes and isinstance(train_classes, list):
-                train_name = train_name_upper
-                if (
-                    "ICE" in train_name
-                    or "IC" in train_name
-                    or "EC" in train_name
-                    or "TGV" in train_name
-                ):
-                    api_classes_to_process = ["ICE"]
-                elif "RE" in train_name:
-                    api_classes_to_process = ["RE"]
-                elif "RB" in train_name:
-                    api_classes_to_process = ["RB"]
-                elif "S " in train_name or "S1" in train_name or "S2" in train_name:
-                    api_classes_to_process = ["S"]
-                else:
-                    api_classes_to_process = [""]
+            # If the API returns an empty list, we treat it as an "unknown" type,
+            # represented by an empty string, so it can be filtered.
+            if not train_classes and isinstance(train_classes, list):
+                api_classes_to_process = [""]
             else:
                 api_classes_to_process = train_classes
 
@@ -1383,12 +1095,10 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     if departure_time_adjusted.date() != today
                     else departure_time_adjusted.strftime("%H:%M")
                 )
-                # Add new machine-readable Unix timestamp (Real-time)
+                # Add new machine-readable Unix timestamp
                 departure["departure_timestamp"] = int(
                     departure_time_adjusted.timestamp()
                 )
-                # Add stable scheduled timestamp for history tracking
-                departure["scheduled_timestamp"] = int(departure_time.timestamp())
 
             if self.show_occupancy:
                 occupancy = departure.get("occupancy")
@@ -1442,54 +1152,28 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
             for text in msg_texts:
                 lower_text = text.lower()
-                if ("wlan" in lower_text or "wifi" in lower_text) and (
-                    "nicht" in lower_text
-                    or "gestört" in lower_text
-                    or "ausfall" in lower_text
-                    or "defekt" in lower_text
-                ):
-                    facilities["wifi"] = False
+                if "wlan" in lower_text or "wifi" in lower_text:
+                    if (
+                        "nicht" in lower_text
+                        or "gestört" in lower_text
+                        or "ausfall" in lower_text
+                        or "defekt" in lower_text
+                    ):
+                        facilities["wifi"] = False
                 if (
                     "bistro" in lower_text
                     or "restaurant" in lower_text
                     or "catering" in lower_text
-                ) and (
-                    "nicht" in lower_text
-                    or "gestört" in lower_text
-                    or "geschlossen" in lower_text
                 ):
-                    facilities["bistro"] = False
+                    if (
+                        "nicht" in lower_text
+                        or "gestört" in lower_text
+                        or "geschlossen" in lower_text
+                    ):
+                        facilities["bistro"] = False
 
             if facilities:
                 departure["facilities"] = facilities
-
-            # Retain simplified departure messages (text and code) for templates and conditions
-            dep_messages_cleaned = []
-            if isinstance(departure.get("messages"), list):
-                for m in departure["messages"]:
-                    if isinstance(m, dict):
-                        txt = m.get("text") or m.get("short") or ""
-                        if txt:
-                            item = {"text": txt}
-                            if m.get("code"):
-                                item["code"] = m["code"]
-                            dep_messages_cleaned.append(item)
-                    elif isinstance(m, str) and m.strip():
-                        dep_messages_cleaned.append({"text": m.strip()})
-            elif isinstance(departure.get("messages"), dict):
-                for m_list in departure["messages"].values():
-                    if isinstance(m_list, list):
-                        for m in m_list:
-                            if isinstance(m, dict):
-                                txt = m.get("text") or m.get("short") or ""
-                                if txt:
-                                    item = {"text": txt}
-                                    if m.get("code"):
-                                        item["code"] = m["code"]
-                                    dep_messages_cleaned.append(item)
-                            elif isinstance(m, str) and m.strip():
-                                dep_messages_cleaned.append({"text": m.strip()})
-            departure["messages"] = dep_messages_cleaned
 
             # Real-time Route Progress
             route_details = []
@@ -1575,6 +1259,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     "stop_id_num",
                     "stateless",
                     "key",
+                    "messages",
                     "mot",
                 ]:
                     departure.pop(key, None)
@@ -1591,8 +1276,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     "dep",
                     "datetime",
                     "trip_id",  # Ensure trip_id is allowed to be None
-                    "platform",
-                    "scheduledPlatform",
                 }
                 keys_to_remove = [
                     k
@@ -1607,8 +1290,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 for key in ["route", "via", "prev_route", "next_route"]:
                     departure.pop(key, None)
 
-            # departure_datetime is needed for _update_history below,
-            # so we don't pop it here anymore. It's cleaned up after the loop if needed.
+            # Remove temporary datetime object
+            departure.pop("departure_datetime", None)
 
             departure_seconds = (effective_departure_time - now).total_seconds()
             if departure_seconds >= self.offset:
@@ -1624,11 +1307,11 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
                     potential_size = current_size + item_size + overhead
 
-                    if potential_size > self.max_size_bytes:
+                    if potential_size > MAX_SIZE_BYTES:
                         _LOGGER.info(
                             "Filtered departures JSON size would exceed limit: %d bytes (limit %d) for entry: %s. Stopping here.",
                             potential_size,
-                            self.max_size_bytes,
+                            MAX_SIZE_BYTES,
                             self.station,
                         )
                         break
@@ -1650,15 +1333,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         # that depart later. This helps users find backup options.
         if self.detailed and len(filtered_departures) > 1:
             for i, dep in enumerate(filtered_departures):
-                dest_search: str | None = dep.get("destination")
-                if not dest_search:
+                dest = dep.get("destination")
+                if not dest:
                     continue
 
                 alternatives = []
                 for j, other_dep in enumerate(filtered_departures):
                     if i == j:
                         continue
-                    if other_dep.get("destination") == dest_search:
+                    if other_dep.get("destination") == dest:
                         # Only include if it departs later
                         my_time = dep.get("departure_timestamp")
                         other_time = other_dep.get("departure_timestamp")
@@ -1682,11 +1365,6 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         # We track history for ALL departures that passed deduplication,
         # so the stats represent the station overall, not just the filtered subset.
         self._update_history(departures_to_process)
-
-        # Cleanup temporary objects used for history calculation
-        for dep in departures_to_process:
-            dep.pop("departure_datetime", None)
-            dep.pop("scheduled_timestamp", None)
 
         # Favorite Trains Filtering
         if self.favorite_trains:
@@ -1737,13 +1415,20 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
             return list(filtered_departures)[: int(self.next_departures)]
         else:
-            _LOGGER.debug(
+            _LOGGER.warning(
                 "Departures fetched but all were filtered out. Using cached data."
             )
             return self._last_valid_value or []
 
     async def _check_watched_trips(self, departures):
-        """Check for important updates on watched trains and send notifications."""
+        """
+        Check for important updates on watched trains and send notifications.
+
+        Compares current departures against the 'watched_trips' list. If a delay
+        passes the threshold, a platform changes, or a train is cancelled, it
+        triggers a notification via the configured Home Assistant notify service.
+        Includes a retry/stale check for trains that disappear from the board.
+        """
         if not self.watched_trips:
             return
 
@@ -1804,7 +1489,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         notify = True
                         message += f"Delay is now {delay_int} min. "
                         watch_config["last_notified_delay"] = delay_int
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 pass
 
             # 2. Check Platform
@@ -1851,7 +1536,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     _LOGGER.info(
                         "Sent notification for trip %s: %s", train_id_to_watch, message
                     )
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     _LOGGER.error(
                         "Failed to send notification for trip %s: %s",
                         train_id_to_watch,
@@ -1871,14 +1556,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         """
         station_cleaned = " ".join(station.split())
         encoded_station = quote(station_cleaned, safe=",-")
-        if encoded_station.endswith("."):
-            encoded_station = encoded_station[:-1] + "%2E"
         url = f"{self._base_url}/{encoded_station}.json"
 
         # Check cache
         if url in RESPONSE_CACHE:
             timestamp, cached_data = RESPONSE_CACHE[url]
-            if dt_util.now() - timestamp < self.cache_ttl:
+            if dt_util.now() - timestamp < CACHE_TTL:
                 _LOGGER.debug("Using cached response for cascaded fetch at %s", url)
                 data = copy.deepcopy(cached_data)
             else:
@@ -1892,11 +1575,8 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 import aiohttp
 
                 session = async_get_clientsession(self.hass)
-                headers = {
-                    "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
-                }
                 async with session.get(
-                    url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)
+                    url, timeout=aiohttp.ClientTimeout(total=10)
                 ) as response:
                     # Handle both sync and async raise_for_status for better test compatibility
                     response.raise_for_status()
@@ -1922,7 +1602,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             for dep in data.get("departures", []):
                 if dep.get("train") == train_id or dep.get("trip_id") == train_id:
                     return dep
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             _LOGGER.debug("Failed to fetch cascaded data for %s: %s", station, e)
         return None
 
@@ -1933,7 +1613,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
         Records the final seen status (delay, cancellation) for each train instance.
         Used to calculate percentage-based punctuality metrics in sensors.
         """
-        now_utc = datetime.now(UTC)
+        now_utc = datetime.now(timezone.utc)
         threshold_24h = now_utc - timedelta(hours=24)
 
         # 1. Purge old history
@@ -1945,93 +1625,45 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
 
         # 2. Record/Update current departures
         for dep in departures:
-            # Fallback to multiple fields for APIs like AVV buses (EFA/HAFAS)
-            train = (
-                dep.get("train")
-                or dep.get("line")
-                or dep.get("number")
-                or dep.get("name")
-                or dep.get("label")
-            )
-            trip_id = dep.get("trip_id") or dep.get("tripId") or dep.get("trainId")
+            # Create a unique key for this specific departure instance
+            # Use trip_id if available, otherwise train + normalized scheduled timestamp
+            train = dep.get("train")
+            trip_id = dep.get("trip_id")
 
-            # Use scheduled timestamp for a stable history key (ignores delay changes)
-            timestamp = (
-                dep.get("scheduled_timestamp")
-                or dep.get("departure_timestamp")
-                or dep.get("arrival_timestamp")
-            )
+            # Using the machine-readable timestamp ensures the key is stable across updates
+            # even if the raw 'scheduledDeparture' string format oscillates.
+            timestamp = dep.get("departure_timestamp") or dep.get("arrival_timestamp")
 
-            if timestamp is None:
-                dt_obj = dep.get("departure_datetime")
-                if dt_obj is not None:
-                    try:
-                        timestamp = int(dt_obj.timestamp())
-                    except AttributeError, OSError, OverflowError:
-                        timestamp = None
-
-            history_key = (
-                trip_id if trip_id else (f"{train}_{timestamp}" if timestamp else None)
-            )
+            # Key should be unique for the specific instance (e.g. today's 10:00 train)
+            history_key = trip_id if trip_id else f"{train}_{timestamp}"
 
             if not history_key or not train:
-                _LOGGER.debug(
-                    "_update_history: skipping entry with no stable key. train=%s, trip_id=%s, timestamp=%s",
-                    train,
-                    trip_id,
-                    timestamp,
-                )
                 continue
 
-            # Local normalization for entries skipped in main loop
-            raw_delay = (
-                dep.get("delay")
-                or dep.get("delayDeparture")
-                or dep.get("dep_delay")
-                or dep.get("delay_dep")
-                or dep.get("departureDelay")
-                or 0
-            )
-            try:
-                # Handle cases where delay might be a string with units or symbols
-                if isinstance(raw_delay, str):
-                    # Extract numeric part if it's something like "+5" or "5 min"
-                    match = re.search(r"([+-]?\d+)", raw_delay)
-                    delay_val = int(match.group(1)) if match else 0
-                else:
-                    delay_val = int(raw_delay) if raw_delay not in (None, "") else 0
-            except ValueError, TypeError:
-                delay_val = 0
-
-            is_cancelled_val = bool(
-                dep.get("is_cancelled")
-                or dep.get("cancelled")
-                or dep.get("isCancelled")
-            )
-
+            # We store the latest known status.
+            # In a real system, we'd record it when it departs, but we don't always know when it's "gone".
+            # So we just keep the latest info we saw for this train.
+            # Use the train's actual timestamp for history to ensure a cleaner 24h window
             self.departure_history[history_key] = {
                 "train": train,
                 "timestamp": (
-                    dt_util.utc_from_timestamp(timestamp)
-                    if isinstance(timestamp, (int, float))
-                    else now_utc
+                    dt_util.utc_from_timestamp(timestamp) if timestamp else now_utc
                 ),
-                "delay": delay_val,
+                "delay": dep.get("delay", 0),
                 "delay_arrival": dep.get("delay_arrival", 0),
-                "is_cancelled": is_cancelled_val,
+                "is_cancelled": dep.get("is_cancelled", False),
             }
 
     def _handle_update_error(self, error_message: str) -> None:
-        """Register a data fetch error and check for stale data issues."""
+        """
+        Register a data fetch error and check for stale data issues.
+
+        Increments consecutive error counts and raises a Home Assistant repair
+        issue if the data has not been successfully updated for more than 24 hours.
+        """
         if "429" in error_message or "Too Many Requests" in error_message:
             return
 
-        clean_error = error_message.strip() if error_message else ""
-        self._last_error_message = (
-            clean_error
-            if clean_error
-            else "Unknown error occurred while connecting to the departure board API."
-        )
         self._consecutive_errors += 1
         now = dt_util.now()
         if self.config_entry is None:
@@ -2067,20 +1699,15 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     self.station,
                     self.data_source,
                 )
-                if self._consecutive_errors == 10:
-                    _LOGGER.warning(
-                        "Station %s has failed %d times. May no longer be supported.",
-                        self.station,
-                        self._consecutive_errors,
-                    )
-            else:
-                has_via = (
-                    bool(self.via_stations) if hasattr(self, "via_stations") else False
+                _LOGGER.warning(
+                    "Station %s has failed %d times. May no longer be supported.",
+                    self.station,
+                    self._consecutive_errors,
                 )
+            else:
                 repairs.create_api_error_issue(
                     self.hass,
                     entry_id,
                     self.station,
-                    self._last_error_message,
-                    has_via=has_via,
+                    error_message,
                 )

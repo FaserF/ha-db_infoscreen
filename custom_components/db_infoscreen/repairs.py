@@ -5,27 +5,25 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-try:
-    import probatio as vol
-except ImportError:
-    import voluptuous as vol  # type: ignore[no-redef]
+import voluptuous as vol
+from homeassistant import data_entry_flow
 from homeassistant.components.repairs import RepairsFlow
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult as RepairsFlowResult
 from homeassistant.helpers import issue_registry as ir
+
 from homeassistant.helpers.selector import (
-    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
+    SelectOptionDict,
     SelectSelectorMode,
 )
 
 from .const import (
-    CONF_DATA_SOURCE,
-    CONF_STATION,
-    DATA_SOURCE_OPTIONS,
     DOMAIN,
     GITHUB_ISSUES_URL,
+    CONF_STATION,
+    CONF_DATA_SOURCE,
+    DATA_SOURCE_OPTIONS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,7 +31,6 @@ _LOGGER = logging.getLogger(__name__)
 # Issue IDs
 ISSUE_STALE_DATA = "stale_data"
 ISSUE_API_ERROR = "api_error"
-ISSUE_API_ERROR_VIA = "api_error_via"
 ISSUE_STATION_UNSUPPORTED = "station_unsupported"
 ISSUE_CONNECTION_ERROR = "connection_error"
 
@@ -56,7 +53,7 @@ def create_stale_data_issue(
         severity=ir.IssueSeverity.WARNING,
         translation_key=ISSUE_STALE_DATA,
         translation_placeholders={
-            "station": station or "Unknown station",
+            "station": station,
             "hours": str(hours_stale),
         },
         learn_more_url=GITHUB_ISSUES_URL,
@@ -68,15 +65,8 @@ def create_api_error_issue(
     entry_id: str,
     station: str,
     error_message: str,
-    has_via: bool = False,
 ) -> None:
     """Create a repair issue for persistent API errors."""
-    clean_error = error_message.strip() if error_message else ""
-    if not clean_error:
-        clean_error = (
-            "Unknown error occurred while connecting to the departure board API."
-        )
-    issue_key = ISSUE_API_ERROR_VIA if has_via else ISSUE_API_ERROR
     ir.async_create_issue(
         hass,
         DOMAIN,
@@ -84,10 +74,10 @@ def create_api_error_issue(
         is_fixable=True,
         is_persistent=True,
         severity=ir.IssueSeverity.ERROR,
-        translation_key=issue_key,
+        translation_key=ISSUE_API_ERROR,
         translation_placeholders={
-            "station": station or "Unknown station",
-            "error": clean_error,
+            "station": station,
+            "error": error_message,
         },
         learn_more_url=GITHUB_ISSUES_URL,
     )
@@ -177,7 +167,7 @@ class ConfirmRepairFlow(RepairsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> RepairsFlowResult:
+    ) -> data_entry_flow.FlowResult:
         """Handle the initial step."""
         if user_input is not None:
             return self.async_create_entry(data={})
@@ -196,9 +186,8 @@ class StaleDataRepairFlow(RepairsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> RepairsFlowResult:
+    ) -> data_entry_flow.FlowResult:
         """Handle the initial step - offer to retry or change settings."""
-        entry = self.hass.config_entries.async_get_entry(self._entry_id)
         if user_input is not None:
             if user_input.get("action") == "retry":
                 # Attempt to refresh the coordinator
@@ -228,12 +217,6 @@ class StaleDataRepairFlow(RepairsFlow):
                     )
                 }
             ),
-            description_placeholders={
-                "station": (
-                    entry.data.get(CONF_STATION, "Unknown") if entry else "Unknown"
-                ),
-                "hours": "24+",
-            },
         )
 
 
@@ -247,9 +230,8 @@ class APIErrorRepairFlow(RepairsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> RepairsFlowResult:
+    ) -> data_entry_flow.FlowResult:
         """Handle the initial step."""
-        entry = self.hass.config_entries.async_get_entry(self._entry_id)
         if user_input is not None:
             if user_input.get("action") == "retry":
                 if self._entry_id in self.hass.data.get(DOMAIN, {}):
@@ -259,13 +241,6 @@ class APIErrorRepairFlow(RepairsFlow):
                 return self.async_create_entry(data={})
             elif user_input.get("action") == "change_source":
                 return await self.async_step_change_source()
-
-        # Retrieve error from coordinator or issue if available
-        error_msg = "Unknown error"
-        if self._entry_id in self.hass.data.get(DOMAIN, {}):
-            coordinator = self.hass.data[DOMAIN][self._entry_id]
-            if getattr(coordinator, "_last_error_message", None):
-                error_msg = coordinator._last_error_message
 
         return self.async_show_form(
             step_id="init",
@@ -285,17 +260,11 @@ class APIErrorRepairFlow(RepairsFlow):
                     )
                 }
             ),
-            description_placeholders={
-                "station": (
-                    entry.data.get(CONF_STATION, "Unknown") if entry else "Unknown"
-                ),
-                "error": error_msg,
-            },
         )
 
     async def async_step_change_source(
         self, user_input: dict[str, Any] | None = None
-    ) -> RepairsFlowResult:
+    ) -> data_entry_flow.FlowResult:
         """Allow user to change the data source."""
         if user_input is not None:
             # Update the config entry with new data source
@@ -331,7 +300,7 @@ class StationUnsupportedRepairFlow(RepairsFlow):
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> RepairsFlowResult:
+    ) -> data_entry_flow.FlowResult:
         """Handle the initial step."""
         entry = self.hass.config_entries.async_get_entry(self._entry_id)
         if user_input is not None:
@@ -384,7 +353,7 @@ class StationUnsupportedRepairFlow(RepairsFlow):
 
     async def async_step_change_source(
         self, user_input: dict[str, Any] | None = None
-    ) -> RepairsFlowResult:
+    ) -> data_entry_flow.FlowResult:
         """Allow user to change the data source."""
         if user_input is not None:
             entry = self.hass.config_entries.async_get_entry(self._entry_id)

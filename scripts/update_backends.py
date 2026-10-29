@@ -1,7 +1,7 @@
-import html
-import os
 import re
 import urllib.request
+import os
+import html
 from urllib.parse import parse_qs
 
 # Source URL
@@ -71,7 +71,7 @@ def fetch_backends():
         with urllib.request.urlopen(req, timeout=10) as response:
             html_content = response.read().decode("utf-8")
         return html_content
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         print(f"Error fetching URL: {e}")
         return None
 
@@ -127,7 +127,7 @@ def update_const_file(backends):
         print(f"Error: {CONST_FILE} not found!")
         return
 
-    with open(CONST_FILE, encoding="utf-8") as f:
+    with open(CONST_FILE, "r", encoding="utf-8") as f:
         content = f.read()
 
     data_map = {}
@@ -210,7 +210,7 @@ def update_readme(backends):
     if not os.path.exists(README_FILE):
         return
 
-    with open(README_FILE, encoding="utf-8") as f:
+    with open(README_FILE, "r", encoding="utf-8") as f:
         content = f.read()
 
     md_list = generate_readme_content(backends)
@@ -231,7 +231,7 @@ def update_readme(backends):
         with open(README_FILE, "w", encoding="utf-8") as f:
             f.write(new_content)
         print(f"Successfully updated {README_FILE}")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         print(f"Failed to update README: {e}")
 
 
@@ -239,7 +239,7 @@ def update_docs_config(backends):
     if not os.path.exists(DOCS_CONFIG_FILE):
         return
 
-    with open(DOCS_CONFIG_FILE, encoding="utf-8") as f:
+    with open(DOCS_CONFIG_FILE, "r", encoding="utf-8") as f:
         content = f.read()
 
     md_list = generate_readme_content(backends)
@@ -264,7 +264,7 @@ def update_docs_config(backends):
             f.write(new_content)
         os.replace(tmp_file, DOCS_CONFIG_FILE)
         print(f"Successfully updated {DOCS_CONFIG_FILE}")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         print(f"Failed to update {DOCS_CONFIG_FILE}: {e}")
 
 

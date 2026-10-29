@@ -1,295 +1,83 @@
----
 name: Release
 
 on:
   workflow_dispatch:
     inputs:
       release_type:
-        description: "Type of release (stable, beta, nightly)"
+        description: 'Release Type'
         required: true
-        default: "beta"
         type: choice
         options:
           - stable
           - beta
           - nightly
 
-      version_override:
-        description: "Manually override new version (e.g. 2026.8.2 or 2026.8.2b1). Leave empty to use automatic CalVer (Year.Month.Patch)."
-        required: false
-        type: string
-  push:
-    branches:
-      - main
-      - master
-    paths-ignore:
-      - '**/manifest.json'
-      - '**/translations/**'
-      - 'CHANGELOG.md'
-      - '.github/workflows/issue-orchestrator.yml'
-      - '.github/ISSUE_TEMPLATE/**'
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-release
-  cancel-in-progress: true
-
 jobs:
-  versioning:
-    name: Determine Version
-    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && contains(github.event.head_commit.message, '[bump-version]'))
+  release:
+    name: Create Release
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     permissions:
       contents: write
-    outputs:
-      version: ${{ steps.get_version.outputs.version }}
-      tag: ${{ steps.get_version.outputs.tag }}
-      is_prerelease: ${{ steps.get_version.outputs.is_prerelease }}
-      release_body: ${{ steps.get_version.outputs.release_body }}
+      packages: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.15'
+          python-version: '3.14'
 
-      - name: Calculate Version and Release Details
-        id: get_version
-        shell: bash
-        env:
-          RELEASE_TYPE: ${{ github.event.inputs.release_type || (contains(github.event.head_commit.message, '[bump-version]') && 'stable' || 'beta') }}
-          BUMP_LEVEL: patch
-          VERSION_OVERRIDE: ${{ inputs.version_override }}
-          REPO: ${{ github.repository }}
-          OWNER: ${{ github.repository_owner }}
-          REPO_NAME: ${{ github.event.repository.name }}
+      - name: Calculate Version
+        id: version
         run: |
-          python .github/scripts/calculate_release_details.py
+          NEW_VERSION=$(python .github/scripts/version_manager.py bump --type ${{ inputs.release_type }})
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Upload Release Body
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-body
-          path: release_body.md
-
-  sync-version:
-    name: Sync Repository Version
-    needs: versioning
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
-        with:
-          python-version: '3.15'
-
-      - name: Configure Git and pull latest
+      - name: Create Release Tag
+        if: inputs.release_type != 'nightly'
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git reset --hard HEAD
-          git pull --rebase origin ${{ github.ref_name }}
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git commit -am "chore(release): bump version to ${{ steps.version.outputs.version }}"
+          git tag ${{ steps.version.outputs.version }}
+          git push origin ${{ steps.version.outputs.version }}
+          git push origin main
 
-      - name: Update Files
-        shell: bash
+      - name: 📝 Find Previous Tag
+        id: pre_tag
         run: |
-          python .github/scripts/version_manager.py bump --type ${{ github.event.inputs.release_type || (contains(github.event.head_commit.message, '[bump-version]') && 'stable' || 'beta') }} --level patch --override "${{ github.event.inputs.version_override || '' }}"
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
 
-          if [ -f .github/scripts/update_templates.py ]; then
-            python .github/scripts/update_templates.py "${{ needs.versioning.outputs.version }}"
-          fi
-
-      - name: Upload Updated Components
-
-
-        uses: actions/upload-artifact@v7
-
-
-        with:
-
-
-          name: updated-components
-
-
-          path: custom_components/
-
-
-          retention-days: 1
-
-
-
-      - name: Commit and Push
+      - name: 📝 Generate Changelog
+        if: inputs.release_type != 'nightly'
         run: |
-          git add custom_components/*/manifest.json .github/ISSUE_TEMPLATE/*.yml .github/ISSUE_TEMPLATE/*.yaml 2>/dev/null || true
-          if ! git diff --staged --quiet; then
-            git commit -m "chore: release version ${{ needs.versioning.outputs.version }} [skip ci]"
-            git push origin HEAD:${{ github.ref_name }} || (git pull --rebase origin ${{ github.ref_name }} && git push origin HEAD:${{ github.ref_name }})
-          fi
-
-      - name: Download Release Body
-        uses: actions/download-artifact@v8
-        with:
-          name: release-body
-
-      - name: Update Draft Status (Zipping Integration)
-        shell: bash
-        run: |
-          cp release_body.md updated_draft_body.md
-
-      - name: Create Draft Release on GitHub
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          TAG: ${{ needs.versioning.outputs.tag }}
-          VERSION: ${{ needs.versioning.outputs.version }}
-          IS_PRERELEASE: ${{ needs.versioning.outputs.is_prerelease }}
-        shell: bash
-        run: |
-          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
-          git tag -d "$TAG" 2>/dev/null || true
-          git push --delete origin "$TAG" 2>/dev/null || true
-
-          prerelease_arg=""
-          if [ "$IS_PRERELEASE" = "true" ]; then
-            prerelease_arg="--prerelease"
-          fi
-          gh release create "$TAG" \
-            --target "${{ github.ref_name }}" \
-            --title "Release $VERSION" \
-            --notes-file "updated_draft_body.md" \
-            --draft \
-            $prerelease_arg
-
-
-  gh-release:
-    needs: [versioning, sync-version]
-    if: always() && needs.versioning.result == 'success' && needs.sync-version.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: write
-      actions: write
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.ref_name }}
-          fetch-depth: 0
-
-      - name: Pull latest changes
-        run: |
-          git pull --rebase origin ${{ github.ref_name }}
-
-      - name: Download Updated Components
-        uses: actions/download-artifact@v8
-        with:
-          name: updated-components
-          path: custom_components/
+          python .github/scripts/changelog_builder.py \
+            --from-tag "${{ steps.pre_tag.outputs.tag }}" \
+            --repo-url "https://github.com/${{ github.repository }}" \
+            --output "CHANGELOG_BODY.md"
 
       - name: 📦 Zip Component
+        if: inputs.release_type != 'nightly'
         run: |
-          DOMAIN=$(python -c "import json, glob; print(json.load(open(glob.glob('custom_components/*/manifest.json')[0]))['domain'])")
-          cd "custom_components/$DOMAIN"
-          zip -r "../../$DOMAIN.zip" .
-          cd ../..
-          mv "$DOMAIN.zip" "$DOMAIN.zip" || true
-          # Keep domain-named zip for backward compatibility
-          cp "$DOMAIN.zip" "$DOMAIN.zip" 2>/dev/null || true
+          cd custom_components
+          zip -r ../db_infoscreen.zip db_infoscreen
+          cd ..
 
-      - name: Download Release Body Artifact
-        uses: actions/download-artifact@v8
+      - name: Create Release Notes
+        uses: softprops/action-gh-release@v3
+        if: inputs.release_type != 'nightly'
         with:
-          name: release-body
+          tag_name: ${{ steps.version.outputs.version }}
+          body_path: CHANGELOG_BODY.md
+          prerelease: ${{ inputs.release_type == 'beta' }}
+          files: db_infoscreen.zip
 
-      - name: Create GitHub Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          TAG: ${{ needs.versioning.outputs.tag }}
-          VERSION: ${{ needs.versioning.outputs.version }}
-          IS_PRERELEASE: ${{ needs.versioning.outputs.is_prerelease }}
-        shell: bash
-        run: |
-          DOMAIN=$(python -c "import json, glob; print(json.load(open(glob.glob('custom_components/*/manifest.json')[0]))['domain'])")
-          prerelease_arg=""
-          if [ "$IS_PRERELEASE" = "true" ]; then
-            prerelease_arg="--prerelease"
-          fi
-          
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" \
-              --title "Release $VERSION" \
-              --notes-file "release_body.md" \
-              --draft=false \
-              $prerelease_arg
-            gh release upload "$TAG" "$DOMAIN.zip" --clobber
-          else
-            gh release create "$TAG" \
-              --target "${{ github.ref_name }}" \
-              --title "Release $VERSION" \
-              --notes-file "release_body.md" \
-              $prerelease_arg \
-              "$DOMAIN.zip"
-          fi
-
- 
       - name: Post-Release Dev Bump
+        if: inputs.release_type != 'nightly'
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git reset --hard HEAD
-          git pull --rebase origin ${{ github.ref_name }}
-          git fetch --tags
-          NEW_DEV=$(python .github/scripts/version_manager.py bump --type dev --level patch)
-
-          if [ -f .github/scripts/update_templates.py ]; then
-            python .github/scripts/update_templates.py "${{ needs.versioning.outputs.version }}"
-          fi
-          if ! git diff --quiet; then
-            git commit -am "chore(dev): bump to $NEW_DEV [skip ci]"
-            git push origin HEAD:${{ github.ref_name }} || (git pull --rebase origin ${{ github.ref_name }} && git push origin HEAD:${{ github.ref_name }})
-          fi
-
-  cleanup-release:
-    needs: [versioning, sync-version, gh-release]
-    if: always() && needs.versioning.result == 'success' && (needs.sync-version.result == 'failure' || needs.gh-release.result == 'failure' || cancelled())
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      actions: write
-    steps:
-      - name: Delete Draft Release and Tag
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ needs.versioning.outputs.tag }}
-        shell: bash
-        run: |
-          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
-          git tag -d "$TAG" 2>/dev/null || true
-          git push --delete origin "$TAG" 2>/dev/null || true
-      - name: Delete Component Artifact
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const { data: artifacts } = await github.rest.actions.listWorkflowRunArtifacts({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: context.runId,
-            });
-            const target = artifacts.artifacts.find(a => a.name === "updated-components");
-            if (target) {
-              await github.rest.actions.deleteArtifact({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                artifact_id: target.id,
-              });
-            }
+          NEW_DEV=$(python .github/scripts/version_manager.py bump --type dev)
+          git commit -am "chore(dev): bump to $NEW_DEV"
+          git push origin main

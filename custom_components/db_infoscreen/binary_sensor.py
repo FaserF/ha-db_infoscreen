@@ -34,7 +34,6 @@ async def async_setup_entry(
             DBInfoScreenDelayBinarySensor(coordinator, config_entry),
             DBInfoScreenCancellationBinarySensor(coordinator, config_entry),
             DBInfoScreenConnectionBinarySensor(coordinator, config_entry),
-            DBInfoScreenPausedBinarySensor(coordinator, config_entry),
         ]
     )
 
@@ -100,7 +99,7 @@ class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
             try:
                 if delay and int(delay) > 0:
                     return True
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 pass
         return False
 
@@ -128,7 +127,7 @@ class DBInfoScreenDelayBinarySensor(DBInfoScreenBaseBinarySensor):
                         }
                     )
                     max_delay = max(max_delay, delay_int)
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 pass
 
         return {
@@ -158,7 +157,10 @@ class DBInfoScreenCancellationBinarySensor(DBInfoScreenBaseBinarySensor):
         departures: list[dict[str, Any]] = cast(
             list[dict[str, Any]], self.coordinator.data or []
         )
-        return any(departure.get("is_cancelled", False) for departure in departures)
+        for departure in departures:
+            if departure.get("is_cancelled", False):
+                return True
+        return False
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -224,26 +226,6 @@ class DBInfoScreenConnectionBinarySensor(DBInfoScreenBaseBinarySensor):
         }
 
 
-class DBInfoScreenPausedBinarySensor(DBInfoScreenBaseBinarySensor):
-    """Binary sensor that indicates if updates are paused."""
-
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_has_entity_name = True
-    _attr_entity_registry_enabled_default = False
-
-    def __init__(self, coordinator, config_entry: ConfigEntry) -> None:
-        """Initialize the paused sensor."""
-        super().__init__(coordinator, config_entry)
-        self._attr_unique_id = f"db_infoscreen_paused_{config_entry.entry_id}"
-        self._attr_translation_key = "paused"
-        self._attr_icon = "mdi:pause-circle-outline"
-
-    @property
-    def is_on(self) -> bool:
-        """Return True if updates are paused."""
-        return getattr(self.coordinator, "paused", False)
-
-
 class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
     """Binary sensor that indicates if an elevator/escalator is broken."""
 
@@ -294,56 +276,66 @@ class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
 
     def _compute_issues(self) -> list[str]:
         """Parse departures for relevant elevator issues."""
+        departures: list[dict[str, Any]] = cast(
+            list[dict[str, Any]], self.coordinator.data or []
+        )
         issues = set()
+
+        # Keywords to look for
         keywords = ["aufzug", "aufzüge", "fahrstuhl", "lift", "rolltreppe"]
-        working_keywords = [
-            "in betrieb",
-            "ok",
-            "behoben",
-            "funktioniert wieder",
-            "verfügbar",
-        ]
 
-        # Use pre-extracted raw elevator issues from coordinator if available
-        raw_issues = getattr(self.coordinator, "raw_elevator_issues", None)
-        if isinstance(raw_issues, list):
-            texts = raw_issues
-        else:
-            departures: list[dict[str, Any]] = cast(
-                list[dict[str, Any]], self.coordinator.data or []
-            )
+        for departure in departures:
+            messages = departure.get("messages", {})
+            # Collect all message texts
             texts = []
-            for departure in departures:
-                messages = departure.get("messages", {})
-                if isinstance(messages, dict):
-                    for msg_type in messages:
-                        msg_list = messages[msg_type]
-                        if isinstance(msg_list, list):
-                            for m in msg_list:
-                                if isinstance(m, dict):
-                                    texts.append(m.get("text", ""))
-                                elif isinstance(m, str):
-                                    texts.append(m)
+            if isinstance(messages, dict):
+                for msg_type in messages:
+                    msg_list = messages[msg_type]
+                    if isinstance(msg_list, list):
+                        for m in msg_list:
+                            if isinstance(m, dict):
+                                texts.append(m.get("text", ""))
+                            elif isinstance(m, str):
+                                texts.append(m)
 
-        for text in texts:
-            lower_text = text.lower()
-            if any(k in lower_text for k in keywords):
-                if any(wk in lower_text for wk in working_keywords):
-                    continue
+            for text in texts:
+                lower_text = text.lower()
+                # Check for elevator keywords
+                if any(k in lower_text for k in keywords):
+                    # Robustness: Skip messages that indicate the elevator is working/restored
+                    working_keywords = [
+                        "in betrieb",
+                        "ok",
+                        "behoben",
+                        "funktioniert wieder",
+                        "verfügbar",
+                    ]
+                    if any(wk in lower_text for wk in working_keywords):
+                        continue
+                    # Check for platform relevance
+                    # If we filter by platform, only include if matches platform OR is global?
+                    # "Aufzug Gleis 1 defekt" -> Match "1"
 
-                is_relevant = False
-                if self.platform_filter:
-                    match = re.search(r"(?:gleis|bahnsteig)\s*(\d+)", lower_text)
-                    if match:
-                        if match.group(1) == self.platform_filter:
-                            is_relevant = True
+                    is_relevant = False
+                    if self.platform_filter:
+                        # Check strictly for this platform
+                        # Regex to find platform number in text
+                        match = re.search(r"(?:gleis|bahnsteig)\s*(\d+)", lower_text)
+                        if match:
+                            if match.group(1) == self.platform_filter:
+                                is_relevant = True
+                        else:
+                            # No platform mentioned?
+                            # If we are filtering for a specific platform, assume specific messages only
+                            # unless we explicitly decide otherwise.
+                            # Changing default behavior as requested:
+                            is_relevant = False
                     else:
-                        is_relevant = False
-                else:
-                    is_relevant = True
+                        # No filter -> All matches are relevant
+                        is_relevant = True
 
-                if is_relevant:
-                    issues.add(text)
+                    if is_relevant:
+                        issues.add(text)
 
         return sorted(issues)
 
@@ -351,27 +343,7 @@ class DBInfoScreenElevatorBinarySensor(DBInfoScreenBaseBinarySensor):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return details about elevator issues."""
         issues = self._issues
-        defective_facilities = []
-        for text in issues:
-            lower_text = text.lower()
-            facility_type = "escalator" if "rolltreppe" in lower_text else "elevator"
-
-            platform = None
-            match = re.search(r"(?:gleis|bahnsteig)\s*(\d+)", lower_text)
-            if match:
-                platform = match.group(1)
-
-            defective_facilities.append(
-                {
-                    "facility_type": facility_type,
-                    "platform": platform,
-                    "text": text,
-                    "status": "defective",
-                }
-            )
-
         return {
             "issues": issues,
             "issue_count": len(issues),
-            "defective_facilities": defective_facilities,
         }

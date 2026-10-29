@@ -1,32 +1,21 @@
-import copy
+from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
 from homeassistant.util import dt as dt_util
+import copy
 
 from custom_components.db_infoscreen import DBInfoScreenCoordinator
 from custom_components.db_infoscreen.const import (
-    CONF_DATA_SOURCE,
-    CONF_DETAILED,
-    CONF_FAVORITE_TRAINS,
-    CONF_HIDE_LOW_DELAY,
-    CONF_NEXT_DEPARTURES,
     CONF_STATION,
+    CONF_NEXT_DEPARTURES,
     CONF_UPDATE_INTERVAL,
     CONF_VIA_STATIONS,
+    CONF_DATA_SOURCE,
+    CONF_DETAILED,
+    CONF_HIDE_LOW_DELAY,
+    CONF_FAVORITE_TRAINS,
 )
 from tests.common import patch_session
-
-
-def _mock_response(status=200, data=None):
-    """Create a minimal async context manager response."""
-    resp = MagicMock()
-    resp.status = status
-    resp.json = AsyncMock(return_value=data if data is not None else {})
-    resp.__aenter__ = AsyncMock(return_value=resp)
-    resp.__aexit__ = AsyncMock(return_value=None)
-    return resp
 
 
 @pytest.fixture(autouse=True)
@@ -129,92 +118,6 @@ async def test_coordinator_update_data(hass, mock_config_entry):
 
 
 @pytest.mark.asyncio
-async def test_coordinator_429_counts_as_api_fetch(hass, mock_config_entry):
-    """Test that 429 responses throttle the next local update tick."""
-    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    coordinator.server_version = "test"
-    coordinator._last_valid_value = [{"destination": "Cached Dest"}]
-
-    with patch_session(side_effect=lambda *_args, **_kwargs: _mock_response(429)):
-        data = await coordinator._async_update_data()
-
-    assert data == [{"destination": "Cached Dest"}]
-    assert coordinator._last_api_fetch > 0
-
-
-@pytest.mark.asyncio
-async def test_coordinator_429_exception_counts_as_api_fetch(hass, mock_config_entry):
-    """Test that 429 exception (aiohttp.ClientResponseError) throttled updates."""
-    import aiohttp
-
-    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    coordinator.server_version = "test"
-    coordinator._last_valid_value = [{"destination": "Cached Dest"}]
-
-    def raise_429(*_args, **_kwargs):
-        raise aiohttp.ClientResponseError(
-            request_info=None,
-            history=(),
-            status=429,
-            message="Too Many Requests",
-        )
-
-    with patch_session(side_effect=raise_429):
-        data = await coordinator._async_update_data()
-
-    assert data == [{"destination": "Cached Dest"}]
-    assert coordinator._last_api_fetch > 0
-
-
-@pytest.mark.asyncio
-async def test_coordinator_429_without_cache_raises_updatefailed(
-    hass, mock_config_entry
-):
-    """A 429 with no previously cached data must fail the update.
-
-    Regression: previously this returned an empty list that the coordinator
-    treated as a *successful* update, leaving sensors stuck at ``no_data``
-    (e.g. after a restart while the shared User-Agent is rate limited).
-    """
-    from homeassistant.helpers.update_coordinator import UpdateFailed
-
-    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    coordinator.server_version = "test"
-
-    with (
-        patch_session(
-            side_effect=lambda *_args, **_kwargs: _mock_response(429)
-        ) as mock_session,
-        pytest.raises(UpdateFailed),
-    ):
-        await coordinator._async_update_data()
-
-    assert mock_session.get.call_count == 1
-    # The next fetch is still throttled so failures don't hammer the server.
-    assert coordinator._last_api_fetch > 0
-
-
-@pytest.mark.asyncio
-async def test_coordinator_missing_raw_data_without_fetch_returns_last_valid(
-    hass, mock_config_entry
-):
-    """Test that throttled local ticks do not fetch again without raw cache data."""
-    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    coordinator.server_version = "test"
-    coordinator._api_update_interval = 60
-    coordinator._last_api_fetch = dt_util.now().timestamp()
-    coordinator._raw_api_data = None
-    coordinator._last_valid_value = [{"destination": "Cached Dest"}]
-
-    with patch_session(
-        side_effect=lambda *_args, **_kwargs: pytest.fail("Unexpected API fetch")
-    ):
-        data = await coordinator._async_update_data()
-
-    assert data == [{"destination": "Cached Dest"}]
-
-
-@pytest.mark.asyncio
 async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
     """Test excluding cancelled trains."""
     from custom_components.db_infoscreen.const import CONF_EXCLUDE_CANCELLED
@@ -222,9 +125,9 @@ async def test_coordinator_exclude_cancelled(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
-                    "%Y-%m-%dT%H:%M"
-                ),
+                "scheduledDeparture": (
+                    (dt_util.now() + timedelta(minutes=15))
+                ).strftime("%Y-%m-%dT%H:%M"),
                 "destination": "Valid Train",
                 "train": "ICE 1",
                 "cancelled": False,
@@ -263,9 +166,9 @@ async def test_coordinator_occupancy(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
-                    "%Y-%m-%dT%H:%M"
-                ),
+                "scheduledDeparture": (
+                    (dt_util.now() + timedelta(minutes=15))
+                ).strftime("%Y-%m-%dT%H:%M"),
                 "destination": "Test Dest",
                 "train": "ICE 1",
                 "occupancy": {"1": 1, "2": 4},  # 1st class low, 2nd class full
@@ -295,9 +198,9 @@ async def test_coordinator_platform_change(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
-                    "%Y-%m-%dT%H:%M"
-                ),
+                "scheduledDeparture": (
+                    (dt_util.now() + timedelta(minutes=15))
+                ).strftime("%Y-%m-%dT%H:%M"),
                 "destination": "Changed Platform",
                 "train": "ICE 1",
                 "platform": "5",
@@ -329,9 +232,9 @@ async def test_coordinator_wagon_order(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
-                    "%Y-%m-%dT%H:%M"
-                ),
+                "scheduledDeparture": (
+                    (dt_util.now() + timedelta(minutes=15))
+                ).strftime("%Y-%m-%dT%H:%M"),
                 "destination": "With Sectors",
                 "train": "ICE 1",
                 "platform": "Gl. 5 A-C",
@@ -379,9 +282,9 @@ async def test_coordinator_qos(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
-                    "%Y-%m-%dT%H:%M"
-                ),
+                "scheduledDeparture": (
+                    (dt_util.now() + timedelta(minutes=15))
+                ).strftime("%Y-%m-%dT%H:%M"),
                 "destination": "QoS Train",
                 "train": "ICE 1",
                 "qos": {"wifi": True},
@@ -420,9 +323,9 @@ async def test_coordinator_route_details(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
-                    "%Y-%m-%dT%H:%M"
-                ),
+                "scheduledDeparture": (
+                    (dt_util.now() + timedelta(minutes=15))
+                ).strftime("%Y-%m-%dT%H:%M"),
                 "destination": "Route Train",
                 "train": "ICE 1",
                 "route": [
@@ -465,9 +368,9 @@ async def test_coordinator_trip_id(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
-                    "%Y-%m-%dT%H:%M"
-                ),
+                "scheduledDeparture": (
+                    (dt_util.now() + timedelta(minutes=15))
+                ).strftime("%Y-%m-%dT%H:%M"),
                 "destination": "ID Train",
                 "train": "ICE 1",
                 "trainId": "123456789",  # Common field
@@ -501,9 +404,9 @@ async def test_coordinator_alternative_connections(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
-                    "%Y-%m-%dT%H:%M"
-                ),
+                "scheduledDeparture": (
+                    (dt_util.now() + timedelta(minutes=15))
+                ).strftime("%Y-%m-%dT%H:%M"),
                 "destination": "München Hbf",
                 "train": "ICE 1",
             },
@@ -554,9 +457,9 @@ async def test_coordinator_favorite_trains_filter(hass, mock_config_entry):
     mock_data = {
         "departures": [
             {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=15)).strftime(
-                    "%Y-%m-%dT%H:%M"
-                ),
+                "scheduledDeparture": (
+                    (dt_util.now() + timedelta(minutes=15))
+                ).strftime("%Y-%m-%dT%H:%M"),
                 "destination": "Berlin",
                 "train": "ICE 1",
             },
@@ -587,9 +490,8 @@ async def test_coordinator_favorite_trains_filter(hass, mock_config_entry):
 @pytest.mark.asyncio
 async def test_coordinator_retry(hass, mock_config_entry):
     """Test retry logic on transient failures."""
-
     import aiohttp
-
+    import asyncio
     from tests.common import patch_session
 
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
@@ -614,133 +516,46 @@ async def test_coordinator_retry(hass, mock_config_entry):
         nonlocal counts
         counts += 1
         if counts == 1:
-            raise TimeoutError("Transient Timeout")
+            raise asyncio.TimeoutError("Transient Timeout")
         if counts == 2:
             raise aiohttp.ClientError("Transient Error")
         return mock_data
 
-    with (
-        patch_session(side_effect=side_effect) as mock_session,
-        patch("asyncio.sleep", AsyncMock()) as mock_sleep,
-    ):
-        # Mock version fetch to avoid consuming side_effect counts
-        coordinator.async_fetch_server_version = AsyncMock()  # type: ignore[method-assign]
+    with patch_session(side_effect=side_effect) as mock_session:
+        with patch("asyncio.sleep", AsyncMock()) as mock_sleep:
+            # Mock version fetch to avoid consuming side_effect counts
+            coordinator.async_fetch_server_version = AsyncMock()  # type: ignore[method-assign]
 
-        data = await coordinator._async_update_data()
+            data = await coordinator._async_update_data()
 
-        assert len(data) == 1
-        assert data[0]["destination"] == "Success"
-        assert mock_session.get.call_count == 3
-        assert mock_sleep.call_count == 2
+            assert len(data) == 1
+            assert data[0]["destination"] == "Success"
+            assert mock_session.get.call_count == 3
+            assert mock_sleep.call_count == 2
 
 
 @pytest.mark.asyncio
 async def test_coordinator_retry_max_failure(hass, mock_config_entry):
     """Test that it returns cached data after max retries fail."""
-
+    import asyncio
     from tests.common import patch_session
 
     coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
     coordinator._last_valid_value = [{"train": "Cached"}]
 
     def side_effect(url, **kwargs):
-        raise TimeoutError("Perm timeout")
+        raise asyncio.TimeoutError("Perm timeout")
 
-    with (
-        patch_session(side_effect=side_effect) as mock_session,
-        patch("asyncio.sleep", AsyncMock()) as mock_sleep,
-    ):
-        # Mock version fetch
-        coordinator.async_fetch_server_version = AsyncMock()  # type: ignore[method-assign]
+    with patch_session(side_effect=side_effect) as mock_session:
+        with patch("asyncio.sleep", AsyncMock()) as mock_sleep:
+            # Mock version fetch
+            coordinator.async_fetch_server_version = AsyncMock()  # type: ignore[method-assign]
 
-        data = await coordinator._async_update_data()
+            data = await coordinator._async_update_data()
 
-        # Should have tried 4 times (initial + 3 retries)
-        assert mock_session.get.call_count == 4
-        assert mock_sleep.call_count == 3
-        # Should return cached data
-        assert len(data) == 1
-        assert data[0]["train"] == "Cached"
-
-
-@pytest.mark.asyncio
-async def test_coordinator_max_size_bytes(hass, mock_config_entry):
-    """Test that max_size_bytes limits the output payload size properly."""
-    from custom_components.db_infoscreen.const import CONF_MAX_SIZE_BYTES
-    from tests.common import patch_session
-
-    mock_config_entry.options[CONF_MAX_SIZE_BYTES] = 600
-    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    coordinator.server_version = "test"
-
-    mock_data = {
-        "departures": [
-            {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=10)).strftime(
-                    "%Y-%m-%dT%H:%M"
-                ),
-                "destination": "Berlin",
-                "train": "ICE 1",
-                "delayDeparture": 0,
-            },
-            {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=20)).strftime(
-                    "%Y-%m-%dT%H:%M"
-                ),
-                "destination": "Munich",
-                "train": "ICE 2",
-                "delayDeparture": 0,
-            },
-            {
-                "scheduledDeparture": (dt_util.now() + timedelta(minutes=30)).strftime(
-                    "%Y-%m-%dT%H:%M"
-                ),
-                "destination": "Hamburg",
-                "train": "ICE 3",
-                "delayDeparture": 0,
-            },
-        ]
-    }
-
-    with patch_session(mock_data):
-        data = await coordinator._async_update_data()
-        assert len(data) == 1
-        assert data[0]["train"] == "ICE 1"
-
-
-@pytest.mark.asyncio
-async def test_coordinator_departures_without_platform(hass, mock_config_entry):
-    """Test that departures without a platform (e.g. SEV buses) are kept by the coordinator."""
-    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
-    coordinator.server_version = "test"
-
-    dep_time = (dt_util.now() + timedelta(minutes=15)).strftime("%Y-%m-%dT%H:%M")
-    mock_data = {
-        "departures": [
-            {
-                "scheduledDeparture": dep_time,
-                "train": "Bus L31",
-                "destination": "Südbahnhof, Trier",
-                "platform": None,
-                "scheduledPlatform": None,
-                "messages": [{"code": "SV", "text": "Ersatzverkehr", "type": "A"}],
-            },
-            {
-                "scheduledDeparture": dep_time,
-                "train": "RB83",
-                "destination": "Wittlich Hbf",
-                "platform": "202",
-                "scheduledPlatform": "202",
-            },
-        ]
-    }
-
-    with patch_session(mock_data):
-        data = await coordinator._async_update_data()
-        assert len(data) == 2
-        bus_dep = next(d for d in data if d["train"] == "Bus L31")
-        assert bus_dep["platform"] is None
-        assert bus_dep["scheduledPlatform"] is None
-        assert "bus" in bus_dep["trainClasses"]
-        assert bus_dep["is_replacement"] is True
-        assert any(m.get("code") == "SV" for m in bus_dep.get("messages", []))
+            # Should have tried 3 times (initial + 2 retries)
+            assert mock_session.get.call_count == 3
+            assert mock_sleep.call_count == 2
+            # Should return cached data
+            assert len(data) == 1
+            assert data[0]["train"] == "Cached"

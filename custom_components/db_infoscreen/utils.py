@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import asyncio
-import difflib
-import json
 import logging
+import json
 import re
-from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+import difflib
+import asyncio
+import async_timeout
 from urllib.parse import quote, unquote
+from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -18,16 +19,6 @@ STATION_AUTOCOMPLETE_PATH = "/dyn/v110/autocomplete.js"
 CACHE_KEY_DATA = "db_infoscreen_stations"
 CACHE_KEY_UPDATE = "db_infoscreen_stations_last_update"
 CACHE_DURATION = timedelta(hours=24)
-
-
-def normalize_whitespace(value: Any) -> str:
-    """
-    Remove double spaces and leading/trailing whitespace.
-    Returns an empty string if value is None.
-    """
-    if value is None:
-        return ""
-    return " ".join(str(value).split()).strip()
 
 
 def parse_datetime_flexible(value: Any, now: datetime) -> datetime | None:
@@ -78,7 +69,7 @@ def parse_datetime_flexible(value: Any, now: datetime) -> datetime | None:
                 except ValueError:
                     pass
 
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         pass
 
     return None
@@ -107,57 +98,11 @@ def simple_serializer(obj: Any) -> Any:
     raise TypeError(f"Type {type(obj)} not serializable")
 
 
-async def async_get_autocomplete_path(hass: HomeAssistant, base_url: str) -> str:
-    """Dynamically discover the autocomplete.js path from the server's homepage HTML."""
-    from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-    default_path = "/dyn/v110/autocomplete.js"
-    cache_key = f"db_infoscreen_autocomplete_path_{base_url}"
-
-    if cache_key in hass.data:
-        return str(hass.data[cache_key])
-
-    try:
-        session = async_get_clientsession(hass)
-        # Use a realistic User-Agent
-        headers = {
-            "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
-        }
-        async with asyncio.timeout(10):
-            async with session.get(base_url, headers=headers) as response:
-                if response.status == 200:
-                    html = await response.text()
-                    # Search for autocomplete.js in src attribute
-                    match = re.search(
-                        r'src=["\']([^"\']*autocomplete\.js[^"\']*)["\']', html
-                    )
-                    if match:
-                        path = match.group(1)
-                        if not path.startswith("/"):
-                            path = f"/{path}"
-                        hass.data[cache_key] = path
-                        _LOGGER.debug(
-                            "Dynamically discovered autocomplete path for %s: %s",
-                            base_url,
-                            path,
-                        )
-                        return path
-    except Exception as e:  # noqa: BLE001
-        _LOGGER.warning(
-            "Failed to dynamically discover autocomplete path for %s, using fallback: %s",
-            base_url,
-            e,
-        )
-
-    return default_path
-
-
 async def async_verify_server(hass: HomeAssistant, base_url: str) -> bool:
     """Verify that a server is reachable and specifically a DBF instance."""
     from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-    autocomplete_path = await async_get_autocomplete_path(hass, base_url)
-    station_url = f"{base_url}{autocomplete_path}"
+    station_url = f"{base_url}{STATION_AUTOCOMPLETE_PATH}"
     _LOGGER.debug("Verifying server at %s", station_url)
 
     # Use a realistic User-Agent to avoid being blocked by simple scrapers/rate-limiters
@@ -168,7 +113,7 @@ async def async_verify_server(hass: HomeAssistant, base_url: str) -> bool:
     try:
         session = async_get_clientsession(hass)
         # Bumping timeout to 12s for the official server which can be slow
-        async with asyncio.timeout(12):
+        async with async_timeout.timeout(12):
             async with session.get(station_url, headers=headers) as response:
                 # We expect 200 and some content containing 'stations='
                 _LOGGER.debug(
@@ -188,10 +133,10 @@ async def async_verify_server(hass: HomeAssistant, base_url: str) -> bool:
                     "Server at %s returned status %s", base_url, response.status
                 )
                 return False
-    except TimeoutError:
+    except asyncio.TimeoutError:
         _LOGGER.warning("Server verification timed out for %s (12s limit)", base_url)
         return False
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         _LOGGER.warning("Server verification failed for %s: %s", base_url, e)
         return False
 
@@ -204,9 +149,8 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
     """
     from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-    now = datetime.now(UTC)
-    autocomplete_path = await async_get_autocomplete_path(hass, base_url)
-    station_url = f"{base_url}{autocomplete_path}"
+    now = datetime.now(timezone.utc)
+    station_url = f"{base_url}{STATION_AUTOCOMPLETE_PATH}"
 
     # Use a per-server cache key to avoid mixing stations from different providers
     server_slug = re.sub(r"[^a-zA-Z0-9]", "_", base_url)
@@ -217,48 +161,17 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
         last_update = hass.data[update_key]
         if now - last_update < CACHE_DURATION:
             _LOGGER.debug(
-                "Using in-memory cached station list for %s (age: %s)",
+                "Using cached station list for %s (age: %s)",
                 base_url,
                 now - last_update,
             )
             return hass.data[data_key]
 
-    from homeassistant.helpers.storage import Store
-
-    storage_key = f"db_infoscreen_stations_{server_slug}"
-    store: Store[dict[str, Any]] = Store(hass, 1, storage_key)
-
-    try:
-        stored_data = await store.async_load()
-    except Exception as store_err:  # noqa: BLE001
-        _LOGGER.warning("Failed to load station cache for %s: %s", base_url, store_err)
-        stored_data = None
-
-    if stored_data and "stations" in stored_data and "last_update" in stored_data:
-        try:
-            last_update = datetime.fromisoformat(stored_data["last_update"])
-            if now - last_update < CACHE_DURATION:
-                hass.data[data_key] = stored_data["stations"]
-                hass.data[update_key] = last_update
-                _LOGGER.debug(
-                    "Using persistent cached station list for %s (age: %s)",
-                    base_url,
-                    now - last_update,
-                )
-                return stored_data["stations"]
-        except (ValueError, TypeError) as format_err:
-            _LOGGER.warning(
-                "Malformed persistent cache timestamp for %s: %s", base_url, format_err
-            )
-
     _LOGGER.debug("Downloading station list from %s", station_url)
     try:
         session = async_get_clientsession(hass)
-        headers = {
-            "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
-        }
-        async with asyncio.timeout(10):
-            async with session.get(station_url, headers=headers) as response:
+        async with async_timeout.timeout(10):
+            async with session.get(station_url) as response:
                 response.raise_for_status()
                 content = await response.text()
 
@@ -273,16 +186,6 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
                     stations = json.loads(json_str)
                     hass.data[data_key] = stations
                     hass.data[update_key] = now
-                    try:
-                        await store.async_save(
-                            {"stations": stations, "last_update": now.isoformat()}
-                        )
-                    except Exception as save_err:  # noqa: BLE001
-                        _LOGGER.warning(
-                            "Failed to save station cache for %s: %s",
-                            base_url,
-                            save_err,
-                        )
                     _LOGGER.debug("Parsed and cached %d stations", len(stations))
                     return stations
                 else:
@@ -292,7 +195,7 @@ async def async_get_stations(hass: HomeAssistant, base_url: str) -> list[str]:
                     if data_key in hass.data:
                         return hass.data[data_key]
                     return []
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         _LOGGER.error("Error downloading station list from %s: %s", base_url, e)
         if data_key in hass.data:
             return hass.data[data_key]
@@ -308,8 +211,6 @@ def find_station_matches(stations, query):
     if not query or not stations:
         return []
 
-    # Normalize whitespace: remove double spaces and leading/trailing whitespace
-    query = " ".join(str(query).split()).strip()
     query_lower = query.lower()
 
     # 1. Exact match (case-insensitive)
@@ -356,11 +257,11 @@ async def async_get_station_candidates(
     if source == "IRIS-TTS":
         source_param = ""  # Default is IRIS
 
-    # Normalize whitespace
-    station = " ".join(str(station).split()).strip()
+    # If it's a raw parameter like "efa=AVV", ensure it is used correctly in the query
+    if "=" not in source_param and source_param:
+        pass
+
     encoded_station = quote(station)
-    if encoded_station.endswith("."):
-        encoded_station = encoded_station[:-1] + "%2E"
 
     # We try different lookup patterns to ensure compatibility
     lookups = [
@@ -378,12 +279,10 @@ async def async_get_station_candidates(
         # Clean up double question marks or ampersands
         url = url.replace("??", "?").replace("?&", "?").replace("&&", "&").rstrip("?&")
         _LOGGER.debug("Trying candidate lookup: %s", url)
+
         try:
-            headers = {
-                "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
-            }
-            async with asyncio.timeout(10):
-                async with session.get(url, headers=headers) as response:
+            async with async_timeout.timeout(10):
+                async with session.get(url) as response:
                     content_type = response.headers.get("Content-Type", "")
 
                     if "text/html" in content_type or response.status in [
@@ -397,16 +296,20 @@ async def async_get_station_candidates(
                         if (
                             "inoffizieller Abfahrtsmonitor" in text
                             or "Oder hier eine Station angeben" in text
-                        ) and not any(
-                            x in text
-                            for x in [
-                                "Wählen Sie",
-                                "Multiple Choice",
-                                "Mehrdeutige Eingabe",
-                            ]
                         ):
-                            _LOGGER.debug("Detected landing page at %s, skipping", url)
-                            continue
+                            # If it's the home page, but NOT a choice page, skip it
+                            if not any(
+                                x in text
+                                for x in [
+                                    "Wählen Sie",
+                                    "Multiple Choice",
+                                    "Mehrdeutige Eingabe",
+                                ]
+                            ):
+                                _LOGGER.debug(
+                                    "Detected landing page at %s, skipping", url
+                                )
+                                continue
 
                         # Detect Multiple Choice page - Broadened detection for localized/older versions
                         if (
@@ -421,9 +324,7 @@ async def async_get_station_candidates(
                             )
                             or response.status == 300
                         ):
-                            candidates = await hass.async_add_executor_job(
-                                parse_dbf_multiple_choices, text
-                            )
+                            candidates = parse_dbf_multiple_choices(text)
                             if candidates:
                                 return candidates
 
@@ -448,32 +349,32 @@ async def async_get_station_candidates(
                         try:
                             data = await response.json()
                             # Candidates in JSON
-                            if data.get("candidates"):
+                            if "candidates" in data and data["candidates"]:
                                 return [
                                     {"name": c["name"], "code": c["code"]}
                                     for c in data["candidates"]
                                 ]
 
                             # Direct match JSON
-                            if response.status == 200 and (
-                                "departures" in data
-                                or "arrivals" in data
-                                or "station" in data
-                            ):
-                                official_name = station
-                                if "station" in data and isinstance(
-                                    data["station"], dict
+                            if response.status == 200:
+                                if (
+                                    "departures" in data
+                                    or "arrivals" in data
+                                    or "station" in data
                                 ):
-                                    official_name = data["station"].get("name", station)
-                                return [{"name": official_name, "code": station}]
-                        except Exception as json_err:  # noqa: BLE001
-                            _LOGGER.debug(
-                                "Failed to parse JSON response for station %s: %s",
-                                station,
-                                json_err,
-                            )
+                                    official_name = station
+                                    if "station" in data and isinstance(
+                                        data["station"], dict
+                                    ):
+                                        official_name = data["station"].get(
+                                            "name", station
+                                        )
+                                    return [{"name": official_name, "code": station}]
+                        except Exception:
+                            # Re-check text if JSON fail just in case
+                            pass
 
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             _LOGGER.debug("Lookup failed for %s: %s", url, e)
 
     return []

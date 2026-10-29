@@ -3,11 +3,10 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 from custom_components.db_infoscreen import DBInfoScreenCoordinator
 from custom_components.db_infoscreen.const import (
-    CONF_NEXT_DEPARTURES,
     CONF_STATION,
+    CONF_NEXT_DEPARTURES,
     CONF_UPDATE_INTERVAL,
 )
 from tests.common import patch_session
@@ -25,7 +24,6 @@ def mock_config_entry():
         CONF_NEXT_DEPARTURES: 5,
     }
     entry.entry_id = "mock_entry_id"
-    entry.async_on_unload = MagicMock()
     return entry
 
 
@@ -36,7 +34,7 @@ async def test_coordinator_handles_api_errors(hass, mock_config_entry):
 
     # Simulate a network error
     def side_effect_error(*args, **kwargs):
-        raise RuntimeError("Network Error")
+        raise Exception("Network Error")
 
     with patch_session(side_effect=side_effect_error):
         # Should not raise exception

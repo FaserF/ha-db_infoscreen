@@ -2,157 +2,58 @@
 
 import logging
 import re
+import voluptuous as vol
 from typing import Any
-
-import homeassistant.helpers.config_validation as cv
-
-try:
-    import probatio as vol
-except ImportError:
-    import voluptuous as vol  # type: ignore[no-redef]
 from homeassistant import config_entries
-
-try:
-    from homeassistant.helpers.service_info.hassio import HassioServiceInfo
-except ImportError:
-    HassioServiceInfo = Any  # type: ignore[misc,assignment]
-
-try:
-    from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
-except ImportError:
-    ZeroconfServiceInfo = Any  # type: ignore[misc,assignment]
-
+import homeassistant.helpers.config_validation as cv
 from .const import (
-    CONF_ADMODE,
-    CONF_CACHE_TTL,
-    CONF_CALENDAR_EVENT_DURATION,
-    CONF_CALENDAR_ONLY_DELAYED,
-    CONF_CALENDAR_ONLY_FAVORITES,
+    DOMAIN,
+    CONF_STATION,
+    CONF_NEXT_DEPARTURES,
+    CONF_UPDATE_INTERVAL,
+    DEFAULT_NEXT_DEPARTURES,
+    DEFAULT_UPDATE_INTERVAL,
+    DEFAULT_OFFSET,
+    MAX_SENSORS,
+    CONF_HIDE_LOW_DELAY,
+    CONF_DETAILED,
+    CONF_PAST_60_MINUTES,
     CONF_DATA_SOURCE,
+    CONF_OFFSET,
+    CONF_PLATFORMS,
+    CONF_ADMODE,
+    DATA_SOURCE_OPTIONS,
+    CONF_VIA_STATIONS,
+    CONF_DIRECTION,
+    CONF_EXCLUDED_DIRECTIONS,
+    CONF_IGNORED_TRAINTYPES,
+    CONF_DROP_LATE_TRAINS,
+    CONF_KEEP_ROUTE,
+    CONF_KEEP_ENDSTATION,
     CONF_DEDUPLICATE_DEPARTURES,
     CONF_DEDUPLICATE_KEY,
-    CONF_DETAILED,
-    CONF_DIRECTION,
-    CONF_DROP_LATE_TRAINS,
+    DEFAULT_DEDUPLICATE_KEY,
     CONF_ENABLE_TEXT_VIEW,
+    CONF_TEXT_VIEW_TEMPLATE,
+    DEFAULT_TEXT_VIEW_TEMPLATE,
     CONF_EXCLUDE_CANCELLED,
-    CONF_EXCLUDED_DIRECTIONS,
+    CONF_SHOW_OCCUPANCY,
     CONF_FAVORITE_TRAINS,
-    CONF_HIDE_LOW_DELAY,
-    CONF_IGNORED_TRAINTYPES,
-    CONF_KEEP_ENDSTATION,
-    CONF_KEEP_ROUTE,
-    CONF_MAX_SIZE_BYTES,
-    CONF_NEXT_DEPARTURES,
-    CONF_OFFSET,
-    CONF_PAST_60_MINUTES,
-    CONF_PAUSED,
-    CONF_PLATFORMS,
+    CONF_VIA_STATIONS_LOGIC,
+    IGNORED_TRAINTYPES_OPTIONS,
+    CONF_WALK_TIME,
     CONF_SERVER_TYPE,
     CONF_SERVER_URL,
-    CONF_SHOW_OCCUPANCY,
-    CONF_STATION,
-    CONF_TEXT_VIEW_TEMPLATE,
-    CONF_UPDATE_INTERVAL,
-    CONF_VIA_STATIONS,
-    CONF_VIA_STATIONS_LOGIC,
-    CONF_WALK_TIME,
-    DATA_SOURCE_OPTIONS,
-    DEFAULT_CACHE_TTL,
-    DEFAULT_CALENDAR_EVENT_DURATION,
-    DEFAULT_DEDUPLICATE_KEY,
-    DEFAULT_MAX_SIZE_BYTES,
-    DEFAULT_NEXT_DEPARTURES,
-    DEFAULT_OFFSET,
-    DEFAULT_TEXT_VIEW_TEMPLATE,
-    DEFAULT_UPDATE_INTERVAL,
-    DOMAIN,
-    IGNORED_TRAINTYPES_OPTIONS,
-    MAX_SENSORS,
     SERVER_TYPE_CUSTOM,
-    SERVER_TYPE_FASERF,
     SERVER_TYPE_OFFICIAL,
-    SERVER_URL_FASERF,
+    SERVER_TYPE_FASERF,
     SERVER_URL_OFFICIAL,
+    SERVER_URL_FASERF,
     normalize_data_source,
 )
-from .utils import async_get_stations, find_station_matches, normalize_whitespace
+from .utils import async_get_stations, find_station_matches
 
 _LOGGER = logging.getLogger(__name__)
-
-ADDON_STABLE_SLUG = "605cee21_dbf"
-ADDON_EDGE_SLUG = "edfe50eb_dbf"
-ADDON_DEV_SLUG = "local_dbf"
-ADDON_KNOWN_SLUGS = [
-    "605cee21_dbf",
-    "edfe50eb_dbf",
-    "c1e285b7_dbf",
-    "7da084a7_dbf",
-    "local_dbf",
-    "dbf",
-]
-ADDON_NAME = "DBF (DB-Infoscreen)"
-ADDON_REPOSITORY = "https://github.com/FaserF/hassio-addons"
-DEFAULT_PORT = 8092
-
-
-def _normalize_host_for_comparison(host: str) -> str:
-    """Normalize host string for comparison (handling localhost, 127.0.0.1, etc.)."""
-    host = host.strip().lower()
-    if host in (
-        "localhost",
-        "127.0.0.1",
-        "::1",
-        "homeassistant.local",
-        "homeassistant",
-    ):
-        return "local"
-    return host
-
-
-def _urls_match_service(url1: str, url2: str) -> bool:
-    """Check if two server URLs point to the same DBF service."""
-    if not url1 or not url2:
-        return False
-    clean1 = url1.strip().rstrip("/")
-    clean2 = url2.strip().rstrip("/")
-    if clean1.lower() == clean2.lower():
-        return True
-
-    m1 = re.match(r"^https?://([^:/]+)(?::(\d+))?", clean1, re.IGNORECASE)
-    m2 = re.match(r"^https?://([^:/]+)(?::(\d+))?", clean2, re.IGNORECASE)
-    if not m1 or not m2:
-        return False
-
-    host1, port1 = (
-        m1.group(1),
-        int(m1.group(2) or (443 if clean1.startswith("https") else 80)),
-    )
-    host2, port2 = (
-        m2.group(1),
-        int(m2.group(2) or (443 if clean2.startswith("https") else 80)),
-    )
-
-    if port1 != port2:
-        return False
-
-    norm_h1 = _normalize_host_for_comparison(host1)
-    norm_h2 = _normalize_host_for_comparison(host2)
-    if norm_h1 == norm_h2:
-        return True
-
-    # If both use the dedicated DBF default port (8092) and either is local or an addon hostname,
-    # consider them the same local instance
-    is_h1_addon_or_local = (
-        norm_h1 == "local" or norm_h1.endswith("-dbf") or norm_h1 == "dbf"
-    )
-    is_h2_addon_or_local = (
-        norm_h2 == "local" or norm_h2.endswith("-dbf") or norm_h2 == "dbf"
-    )
-    if port1 == DEFAULT_PORT and (is_h1_addon_or_local or is_h2_addon_or_local):
-        return True
-
-    return False
 
 
 def _generate_entry_title(data: dict) -> str:
@@ -173,115 +74,6 @@ def _generate_entry_title(data: dict) -> str:
         title_parts.append(f"direction {direction}")
 
     return " ".join(title_parts)
-
-
-async def async_validate_station_on_url(
-    hass, server_url: str, station: str, data_source: str
-) -> dict:
-    """
-    Validate that the station can be reached with the given data source on the specified server URL.
-    Returns {"valid": True} or {"valid": False, "error": "description"}
-    """
-    from urllib.parse import quote
-
-    from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-    from .const import DATA_SOURCE_MAP, SERVER_URL_FASERF, SERVER_URL_OFFICIAL
-
-    # Clean station name
-    station_str: str = str(station)
-    # Remove any trailing provider suffix like (MVV) or (IRIS-TTS)
-    station_str = re.sub(r"\s+\([^)]+\)$", "", station_str).strip()
-
-    station_cleaned = " ".join(station_str.split())
-    encoded_station = quote(station_cleaned, safe="-:")
-    if encoded_station.endswith("."):
-        encoded_station = encoded_station[:-1] + "%2E"
-
-    url = f"{server_url}/{encoded_station}.json"
-
-    params: dict[str, str] = {}
-    if data_source in DATA_SOURCE_MAP:
-        key, value = DATA_SOURCE_MAP[data_source].split("=")
-        params[key] = value
-    elif data_source == "hafas=1":
-        params["hafas"] = "1"
-
-    try:
-        import aiohttp
-
-        session = async_get_clientsession(hass)
-        headers = {
-            "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
-        }
-        async with session.get(
-            url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=30)
-        ) as response:
-            if response.status == 200:
-                data = await response.json()
-                if "error" in data:
-                    return {
-                        "valid": False,
-                        "error": data.get("error", "Unknown API error"),
-                    }
-                if "departures" not in data and "arrivals" not in data:
-                    is_german = getattr(hass.config, "language", "en") == "de"
-                    if is_german:
-                        err_msg = f"Keine Abfahrtsdaten für '{station}' mit Datenquelle '{data_source}' gefunden. Bitte prüfe Stationsname und Datenquelle."
-                    else:
-                        err_msg = f"No departure data found for '{station}' with data source '{data_source}'. Please check the station name and data source."
-                    return {
-                        "valid": False,
-                        "error": err_msg,
-                    }
-                return {"valid": True}
-            elif response.status == 300:
-                return {
-                    "valid": False,
-                    "ambiguous": True,
-                    "error": f"Station '{station}' is ambiguous (Status 300).",
-                }
-            elif response.status == 404:
-                return {
-                    "valid": False,
-                    "error": f"Station '{station}' not found. Please check the spelling or try a different data source.",
-                }
-            else:
-                return {
-                    "valid": False,
-                    "error": f"API returned status {response.status}. Please try again later.",
-                }
-    except Exception as e:  # noqa: BLE001
-        _LOGGER.error("Validation request failed: %s", e)
-        is_german = getattr(hass.config, "language", "en") == "de"
-
-        # Check if server is FaserF or Official
-        is_private = False
-        for priv_url in [SERVER_URL_OFFICIAL, SERVER_URL_FASERF]:
-            if priv_url.lower() in server_url.lower():
-                is_private = True
-                break
-
-        if is_private:
-            if is_german:
-                err_msg = (
-                    "Verbindung zum Server fehlgeschlagen. Der FaserF/Official Server ist ein "
-                    "privat gehosteter Server. Eine 24/7-Verfügbarkeit kann nicht garantiert "
-                    "werden, es wird jedoch versucht. Fehler: "
-                )
-            else:
-                err_msg = (
-                    "Connection to server failed. The FaserF/Official server is a privately "
-                    "hosted server. 24/7 availability cannot be guaranteed, but we try. "
-                    "Error: "
-                )
-            return {"valid": False, "error": f"{err_msg}{e!s}"}
-        else:
-            if is_german:
-                err_msg = "Verbindung zum API-Server fehlgeschlagen: "
-            else:
-                err_msg = "Could not connect to API server: "
-            return {"valid": False, "error": f"{err_msg}{e!s}"}
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
@@ -313,16 +105,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         self.station_query: str = ""
         self.data_source: str = "IRIS-TTS"
         self._station_map: dict[str, str] = {}
-        self.discovery_info: dict[str, Any] = {}
 
     async def async_step_user(self, user_input=None):
         """
         Handle the first step: Server Selection.
         """
         errors = {}
-
-        suggested_url = self.discovery_info.get(CONF_SERVER_URL, "")
-        suggested_type = self.discovery_info.get(CONF_SERVER_TYPE, SERVER_TYPE_CUSTOM)
 
         if user_input is not None:
             server_type = user_input.get(CONF_SERVER_TYPE)
@@ -340,7 +128,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 url = f"https://{url}"
 
             # Remove trailing slash
-            url = url.removesuffix("/")
+            if url.endswith("/"):
+                url = url[:-1]
 
             if not url:
                 errors[CONF_SERVER_URL] = "invalid_url"
@@ -348,37 +137,22 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 # Availability check
                 valid = await self._validate_server_url(url)
                 if not valid:
-                    if (
-                        server_type == SERVER_TYPE_OFFICIAL
-                        or "finalrewind" in url.lower()
-                    ):
-                        errors["base"] = "cannot_connect_official"
-                    elif (
-                        server_type == SERVER_TYPE_FASERF or "fabiseitz" in url.lower()
-                    ):
-                        errors["base"] = "cannot_connect_faserf"
-                    else:
-                        errors["base"] = "cannot_connect"
+                    errors["base"] = "cannot_connect"
                 else:
                     self.server_url = url
                     self.server_type = server_type
                     return await self.async_step_station_search()
 
-        schema_fields: dict[Any, Any] = {
-            vol.Required(CONF_SERVER_TYPE, default=suggested_type): vol.In(
-                [SERVER_TYPE_CUSTOM, SERVER_TYPE_OFFICIAL, SERVER_TYPE_FASERF]
-            ),
-        }
-        if suggested_url:
-            schema_fields[vol.Optional(CONF_SERVER_URL, default=suggested_url)] = (
-                cv.string
-            )
-        else:
-            schema_fields[vol.Optional(CONF_SERVER_URL)] = cv.string
-
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(schema_fields),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_SERVER_TYPE, default=SERVER_TYPE_CUSTOM): vol.In(
+                        [SERVER_TYPE_CUSTOM, SERVER_TYPE_OFFICIAL, SERVER_TYPE_FASERF]
+                    ),
+                    vol.Optional(CONF_SERVER_URL): cv.string,
+                }
+            ),
             errors=errors,
         )
 
@@ -397,7 +171,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             )
 
         if user_input is not None:
-            station_query = normalize_whitespace(user_input.get(CONF_STATION))
+            station_query = user_input.get(CONF_STATION)
             data_source = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
 
             # Save state for possible "Go Back"
@@ -415,22 +189,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                 if data_source == "IRIS-TTS":
                     stations = await async_get_stations(self.hass, self.server_url)
                     if not stations:
-                        if (
-                            self.server_type == SERVER_TYPE_OFFICIAL
-                            or "finalrewind" in self.server_url.lower()
-                        ):
-                            errors["base"] = "cannot_connect_official"
-                        elif (
-                            self.server_type == SERVER_TYPE_FASERF
-                            or "fabiseitz" in self.server_url.lower()
-                        ):
-                            errors["base"] = "cannot_connect_faserf"
-                        else:
-                            errors["base"] = "cannot_connect"
+                        errors["base"] = "cannot_connect"
                     else:
-                        matches = await self.hass.async_add_executor_job(
-                            find_station_matches, stations, station_query
-                        )
+                        matches = find_station_matches(stations, station_query)
                         if not matches:
                             self.found_stations = [f"{station_query} (Manual Entry)"]
                             self.no_match = True
@@ -733,7 +494,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         if hasattr(self, "selected_code") and self.selected_code:
             user_input[CONF_STATION] = self.selected_code
         else:
-            user_input[CONF_STATION] = normalize_whitespace(display_name)
+            user_input[CONF_STATION] = display_name
 
         # Validate station data can be retrieved
         station_raw = user_input.get(CONF_STATION, "")
@@ -793,28 +554,19 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         via_raw = user_input.get(CONF_VIA_STATIONS, "")
         if isinstance(via_raw, str):
             user_input[CONF_VIA_STATIONS] = [
-                normalize_whitespace(s) for s in re.split(r",|\|", via_raw) if s.strip()
+                s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
             ]
 
         user_input[CONF_SERVER_URL] = self.server_url
         user_input[CONF_SERVER_TYPE] = self.server_type
         via = user_input.get(CONF_VIA_STATIONS, [])
         user_input[CONF_VIA_STATIONS] = via
-        direction = normalize_whitespace(user_input.get(CONF_DIRECTION, ""))
+        direction = user_input.get(CONF_DIRECTION, "")
         user_input[CONF_DIRECTION] = direction
         excluded_directions = user_input.get(CONF_EXCLUDED_DIRECTIONS, "")
-        if isinstance(excluded_directions, str):
-            excluded_directions = ", ".join(
-                [normalize_whitespace(s) for s in excluded_directions.split(",")]
-            )
         user_input[CONF_EXCLUDED_DIRECTIONS] = excluded_directions
         platforms = user_input.get(CONF_PLATFORMS, "")
-        user_input[CONF_PLATFORMS] = str(platforms).replace(" ", "")
-        fav_trains = user_input.get(CONF_FAVORITE_TRAINS, "")
-        if isinstance(fav_trains, str):
-            user_input[CONF_FAVORITE_TRAINS] = ", ".join(
-                [normalize_whitespace(s) for s in fav_trains.split(",")]
-            )
+        user_input[CONF_PLATFORMS] = platforms
 
         # Ensure we keep the valid data_source correctly tracked for the final entry
         user_input[CONF_DATA_SOURCE] = data_source
@@ -887,7 +639,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
                     ): cv.positive_int,
                     vol.Optional("advanced", default=False): cv.boolean,
                     vol.Optional(CONF_WALK_TIME, default=0): cv.positive_int,
-                    vol.Optional(CONF_PAUSED, default=False): cv.boolean,
                 }
             )
 
@@ -913,9 +664,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             vol.Optional(CONF_DIRECTION, default=""): cv.string,
             vol.Optional(CONF_EXCLUDED_DIRECTIONS, default=""): cv.string,
             vol.Optional(CONF_FAVORITE_TRAINS, default=""): cv.string,
-            vol.Optional(
-                CONF_MAX_SIZE_BYTES, default=DEFAULT_MAX_SIZE_BYTES
-            ): cv.positive_int,
         }
 
         # Data source is only editable in Options Flow, as it's already selected
@@ -932,9 +680,69 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
         Validate that the station can be reached with the given data source.
         Returns {"valid": True} or {"valid": False, "error": "description"}
         """
-        return await async_validate_station_on_url(
-            self.hass, self.server_url, station, data_source
-        )
+        from urllib.parse import quote
+        from homeassistant.helpers.aiohttp_client import async_get_clientsession
+        from .const import DATA_SOURCE_MAP
+
+        # Clean station name
+        station_str: str = str(station)
+        # Remove any trailing provider suffix like (MVV) or (IRIS-TTS)
+        station_str = re.sub(r"\s+\([^)]+\)$", "", station_str).strip()
+
+        station_cleaned = " ".join(station_str.split())
+        encoded_station = quote(station_cleaned, safe="-:")
+
+        base_url = self.server_url
+        url = f"{base_url}/{encoded_station}.json"
+
+        params: dict[str, str] = {}
+        if data_source in DATA_SOURCE_MAP:
+            key, value = DATA_SOURCE_MAP[data_source].split("=")
+            params[key] = value
+        elif data_source == "hafas=1":
+            params["hafas"] = "1"
+
+        try:
+            import aiohttp
+
+            session = async_get_clientsession(self.hass)
+            async with session.get(
+                url, params=params, timeout=aiohttp.ClientTimeout(total=30)
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if "error" in data:
+                        return {
+                            "valid": False,
+                            "error": data.get("error", "Unknown API error"),
+                        }
+                    if "departures" not in data and "arrivals" not in data:
+                        return {
+                            "valid": False,
+                            "error": f"No departure data found for '{station}' with data source '{data_source}'. Please check the station name and data source.",
+                        }
+                    return {"valid": True}
+                elif response.status == 300:
+                    return {
+                        "valid": False,
+                        "ambiguous": True,
+                        "error": f"Station '{station}' is ambiguous (Status 300).",
+                    }
+                elif response.status == 404:
+                    return {
+                        "valid": False,
+                        "error": f"Station '{station}' not found. Please check the spelling or try a different data source.",
+                    }
+                else:
+                    return {
+                        "valid": False,
+                        "error": f"API returned status {response.status}. Please try again later.",
+                    }
+        except Exception as e:
+            _LOGGER.error("Validation request failed: %s", e)
+            return {"valid": False, "error": f"Could not connect to API: {str(e)}"}
+
+        return {"valid": False, "error": "Unknown verification error"}
 
     async def _validate_server_url(self, url: str) -> bool:
         """Verify that the server is reachable and looks like a DBF instance."""
@@ -946,406 +754,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
     def async_get_options_flow(config_entry):
         """Return the options flow handler."""
         return OptionsFlowHandler(config_entry)
-
-    async def async_step_reconfigure(
-        self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
-        """Handle reconfiguration of an existing entry (station, server, data source)."""
-        reconfigure_entry = self._get_reconfigure_entry()
-        errors: dict[str, str] = {}
-
-        if user_input is not None:
-            server_type = user_input.get(CONF_SERVER_TYPE, SERVER_TYPE_CUSTOM)
-            url = ""
-
-            if server_type == SERVER_TYPE_OFFICIAL:
-                url = SERVER_URL_OFFICIAL
-            elif server_type == SERVER_TYPE_FASERF:
-                url = SERVER_URL_FASERF
-            else:
-                url = user_input.get(CONF_SERVER_URL, "")
-
-            if url and not url.startswith(("http://", "https://")):
-                url = f"https://{url}"
-            url = url.removesuffix("/")
-
-            if not url:
-                errors[CONF_SERVER_URL] = "invalid_url"
-            else:
-                # Validate server reachability
-                from .utils import async_verify_server
-
-                valid_server = await async_verify_server(self.hass, url)
-                if not valid_server:
-                    if (
-                        server_type == SERVER_TYPE_OFFICIAL
-                        or "finalrewind" in url.lower()
-                    ):
-                        errors["base"] = "cannot_connect_official"
-                    elif (
-                        server_type == SERVER_TYPE_FASERF or "fabiseitz" in url.lower()
-                    ):
-                        errors["base"] = "cannot_connect_faserf"
-                    else:
-                        errors["base"] = "cannot_connect"
-                else:
-                    station_raw = normalize_whitespace(user_input.get(CONF_STATION, ""))
-                    ds_raw = user_input.get(CONF_DATA_SOURCE, "IRIS-TTS")
-                    data_source = normalize_data_source(ds_raw)
-
-                    validation_result = await async_validate_station_on_url(
-                        self.hass, url, station_raw, data_source
-                    )
-                    if not validation_result["valid"]:
-                        errors["base"] = (
-                            "station_ambiguous"
-                            if validation_result.get("ambiguous")
-                            else "station_invalid"
-                        )
-                    else:
-                        data_updates = dict(reconfigure_entry.data)
-                        data_updates[CONF_SERVER_TYPE] = server_type
-                        data_updates[CONF_SERVER_URL] = url
-                        data_updates[CONF_STATION] = station_raw
-                        data_updates[CONF_DATA_SOURCE] = data_source
-
-                        return self.async_update_reload_and_abort(
-                            reconfigure_entry,
-                            data_updates=data_updates,
-                        )
-
-        # Pre-fill from existing entry
-        existing = reconfigure_entry.data
-        current_server_type = existing.get(CONF_SERVER_TYPE, SERVER_TYPE_CUSTOM)
-        # Infer server type from URL for backward compat
-        current_url = existing.get(CONF_SERVER_URL, "")
-        if not current_server_type or current_server_type == SERVER_TYPE_CUSTOM:
-            if current_url == SERVER_URL_OFFICIAL:
-                current_server_type = SERVER_TYPE_OFFICIAL
-            elif current_url == SERVER_URL_FASERF:
-                current_server_type = SERVER_TYPE_FASERF
-
-        return self.async_show_form(
-            step_id="reconfigure",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_STATION,
-                        default=existing.get(CONF_STATION, ""),
-                    ): cv.string,
-                    vol.Required(
-                        CONF_SERVER_TYPE,
-                        default=current_server_type,
-                    ): vol.In(
-                        [SERVER_TYPE_CUSTOM, SERVER_TYPE_OFFICIAL, SERVER_TYPE_FASERF]
-                    ),
-                    vol.Optional(
-                        CONF_SERVER_URL,
-                        default=current_url,
-                    ): cv.string,
-                    vol.Optional(
-                        CONF_DATA_SOURCE,
-                        default=existing.get(CONF_DATA_SOURCE, "IRIS-TTS"),
-                    ): vol.In(DATA_SOURCE_OPTIONS),
-                }
-            ),
-            errors=errors,
-            description_placeholders={
-                "station": existing.get(CONF_STATION, ""),
-            },
-        )
-
-    async def _async_get_addon_manager(self, slug: str) -> Any:
-        """Return the addon manager."""
-        try:
-            from homeassistant.components.hassio import AddonManager
-
-            return AddonManager(self.hass, _LOGGER, ADDON_NAME, slug)
-        except ImportError, AttributeError:
-            return None
-
-    async def _async_find_installed_addon(self) -> str | None:
-        """Find slug of an installed DBF addon if any."""
-        # 1. Try Supervisor client installed addons list
-        try:
-            from homeassistant.components.hassio import get_supervisor_client
-
-            client = get_supervisor_client(self.hass)
-            installed = await client.addons.list()
-            for addon in installed:
-                slug = getattr(addon, "slug", None)
-                if slug and (
-                    slug == "dbf" or slug.endswith("_dbf") or slug in ADDON_KNOWN_SLUGS
-                ):
-                    return slug
-        except (ImportError, AttributeError, Exception) as err:  # noqa: BLE001
-            _LOGGER.debug("Could not get supervisor installed addons list: %s", err)
-
-        # 2. Try get_addons_list
-        try:
-            from homeassistant.components.hassio import get_addons_list
-
-            installed_addons: list[Any] = get_addons_list(self.hass)  # type: ignore[assignment]
-            for addon in installed_addons:
-                slug = (
-                    addon.get("slug")
-                    if isinstance(addon, dict)
-                    else getattr(addon, "slug", None)
-                )
-                if slug and (
-                    slug == "dbf" or slug.endswith("_dbf") or slug in ADDON_KNOWN_SLUGS
-                ):
-                    return slug
-        except (ImportError, AttributeError, Exception) as err:  # noqa: BLE001
-            _LOGGER.debug("Could not get get_addons_list: %s", err)
-
-        # 3. Fallback: Query AddonManager for known slugs
-        try:
-            from homeassistant.components.hassio import AddonError, AddonState
-
-            for slug in ADDON_KNOWN_SLUGS:
-                addon_manager = await self._async_get_addon_manager(slug)
-                if addon_manager is None:
-                    continue
-                try:
-                    addon_info = await addon_manager.async_get_addon_info()
-                    if addon_info.state != AddonState.NOT_INSTALLED:
-                        return slug
-                except (AddonError, Exception) as err:  # noqa: BLE001
-                    _LOGGER.debug("Could not check addon info for %s: %s", slug, err)
-        except (ImportError, AttributeError, Exception) as err:  # noqa: BLE001
-            _LOGGER.debug("Could not check addon state via AddonManager: %s", err)
-
-        return None
-
-    async def async_step_hassio(
-        self, discovery_info: HassioServiceInfo | None = None
-    ) -> config_entries.ConfigFlowResult:
-        """Handle Hass.io discovery."""
-        if discovery_info is not None:
-            uuid = getattr(discovery_info, "uuid", None)
-            if uuid:
-                await self.async_set_unique_id(uuid)
-                self._abort_if_unique_id_configured()
-
-            slug = getattr(discovery_info, "slug", None)
-            config = getattr(discovery_info, "config", {})
-            if not slug and isinstance(config, dict):
-                slug = config.get("addon")
-
-            if slug and (
-                slug == "dbf" or slug.endswith("_dbf") or slug in ADDON_KNOWN_SLUGS
-            ):
-                await self._async_prefill_addon_info(slug)
-                server_url = self.discovery_info.get(CONF_SERVER_URL)
-                if not isinstance(self.context, dict):
-                    self.context = (
-                        dict(self.context)
-                        if hasattr(self, "context") and self.context is not None
-                        else {}
-                    )
-                self.context["title_placeholders"] = {
-                    "host": f"DBF Add-on ({slug})",
-                    "url": server_url or slug,
-                }
-                existing_entries = self.hass.config_entries.async_entries(DOMAIN)
-                if existing_entries:
-                    return self.async_abort(reason="already_configured")
-                if server_url:
-                    if any(
-                        _urls_match_service(e.data.get(CONF_SERVER_URL, ""), server_url)
-                        for e in existing_entries
-                    ):
-                        return self.async_abort(reason="already_configured")
-                return await self.async_step_user()
-
-        # Check if DBF add-on is already installed
-        installed_slug = await self._async_find_installed_addon()
-        if installed_slug:
-            await self._async_prefill_addon_info(installed_slug)
-            server_url = self.discovery_info.get(CONF_SERVER_URL)
-            if server_url:
-                existing_entries = self.hass.config_entries.async_entries(DOMAIN)
-                if any(
-                    _urls_match_service(e.data.get(CONF_SERVER_URL, ""), server_url)
-                    for e in existing_entries
-                ):
-                    return self.async_abort(reason="already_configured")
-            return await self.async_step_user()
-
-        # If invoked via discovery and not installed, do NOT prompt to install
-        if discovery_info is not None:
-            return self.async_abort(reason="not_supported")
-
-        # Only prompt to install if user explicitly triggered hassio step
-        return await self.async_step_hassio_confirm()
-
-    async def _async_prefill_addon_info(self, slug: str) -> None:
-        """Pre-fill addon info from Supervisor."""
-        host = slug.replace("_", "-")
-        port = DEFAULT_PORT
-
-        # Try to query network info directly from supervisor client
-        try:
-            from homeassistant.components.hassio import get_supervisor_client
-
-            client = get_supervisor_client(self.hass)
-            addon_info = await client.addons.addon_info(slug)
-            network = getattr(addon_info, "network", None)
-            if isinstance(network, dict):
-                for internal, external in network.items():
-                    if internal.startswith(f"{DEFAULT_PORT}/") and external:
-                        port = external
-                        break
-        except (ImportError, AttributeError, Exception) as err:  # noqa: BLE001
-            _LOGGER.debug(
-                "Could not get network info via supervisor client for %s: %s",
-                slug,
-                err,
-            )
-            # Fall back to addon_manager
-            addon_manager = await self._async_get_addon_manager(slug)
-            if addon_manager is not None:
-                try:
-                    addon_info = await addon_manager.async_get_addon_info()
-                    if addon_info.network:
-                        for internal, external in addon_info.network.items():
-                            if internal.startswith(f"{DEFAULT_PORT}/") and external:
-                                port = external
-                                break
-                except Exception as e:  # noqa: BLE001
-                    _LOGGER.debug(
-                        "Could not get network info for addon %s: %s", slug, e
-                    )
-
-        self.discovery_info[CONF_SERVER_URL] = f"http://{host}:{port}"
-        self.discovery_info[CONF_SERVER_TYPE] = SERVER_TYPE_CUSTOM
-        _LOGGER.debug("Pre-filled addon info: %s", self.discovery_info)
-
-    async def async_step_hassio_confirm(self, user_input: dict[str, Any] | None = None):
-        """Confirm installation of the official addon."""
-        errors: dict[str, str] = {}
-        if user_input is not None:
-            # First, check if addon is already installed before trying to install
-            installed_slug = await self._async_find_installed_addon()
-            if installed_slug:
-                await self._async_prefill_addon_info(installed_slug)
-                return await self.async_step_user()
-
-            # Ensure repository is available in Supervisor store
-            try:
-                from homeassistant.components.hassio import get_supervisor_client
-
-                client = get_supervisor_client(self.hass)
-                try:
-                    from aiohasupervisor.models.addons import StoreAddRepository
-
-                    repo_payload: Any = StoreAddRepository(repository=ADDON_REPOSITORY)
-                except ImportError:
-                    repo_payload = ADDON_REPOSITORY
-
-                try:
-                    await client.store.add_repository(repo_payload)
-                except Exception as repo_err:  # noqa: BLE001
-                    _LOGGER.debug(
-                        "Could not add addon repository %s: %s",
-                        ADDON_REPOSITORY,
-                        repo_err,
-                    )
-            except ImportError, AttributeError, Exception:
-                pass
-
-            installed_slug = None
-            last_error = None
-            for slug in [
-                ADDON_STABLE_SLUG,
-                ADDON_EDGE_SLUG,
-                "c1e285b7_dbf",
-            ]:
-                addon_manager = await self._async_get_addon_manager(slug)
-                if addon_manager is None:
-                    continue
-                try:
-                    await addon_manager.async_install_addon()
-                    await addon_manager.async_start_addon()
-                    installed_slug = slug
-                    break
-                except Exception as e:  # noqa: BLE001
-                    _LOGGER.debug(
-                        "Failed to install DBF addon candidate (%s): %s", slug, e
-                    )
-                    last_error = e
-
-            if installed_slug is None:
-                _LOGGER.error("Failed to install DBF addon: %s", last_error)
-                errors["base"] = "addon_install_error"
-                return self.async_show_form(
-                    step_id="hassio_confirm",
-                    errors=errors,
-                )
-            # After installation, pre-fill info
-            await self._async_prefill_addon_info(installed_slug)
-            return await self.async_step_user()
-
-        return self.async_show_form(
-            step_id="hassio_confirm",
-            description_placeholders={"addon_name": ADDON_NAME},
-        )
-
-    async def async_step_zeroconf(
-        self, discovery_info: ZeroconfServiceInfo
-    ) -> config_entries.ConfigFlowResult:
-        """Handle zeroconf discovery for DBF add-on."""
-        host = discovery_info.host
-        port = discovery_info.port
-
-        server_url = f"http://{host}:{port}"
-        self.discovery_info[CONF_SERVER_URL] = server_url
-        self.discovery_info[CONF_SERVER_TYPE] = SERVER_TYPE_CUSTOM
-        self.server_url = server_url
-        self.server_type = SERVER_TYPE_CUSTOM
-
-        await self.async_set_unique_id(f"dbf_{host}_{port}")
-        self._abort_if_unique_id_configured(updates={CONF_SERVER_URL: server_url})
-
-        # Set title placeholders so HA discovery tile shows the host/IP
-        host_label = f"DBF ({host}:{port})"
-        if not isinstance(self.context, dict):
-            self.context = (
-                dict(self.context)
-                if hasattr(self, "context") and self.context is not None
-                else {}
-            )
-        self.context["title_placeholders"] = {"host": host_label, "url": server_url}
-
-        # Also abort if any existing entry already points to this server URL.
-        # Existing entries use station-based unique IDs, so the ID-based check
-        # above alone will not catch them and the discovery tile would persist.
-        existing_entries = self.hass.config_entries.async_entries(DOMAIN)
-        if any(
-            _urls_match_service(e.data.get(CONF_SERVER_URL, ""), server_url)
-            for e in existing_entries
-        ):
-            return self.async_abort(reason="already_configured")
-
-        return await self.async_step_discovery_confirm()
-
-    async def async_step_discovery_confirm(
-        self, user_input: dict[str, Any] | None = None
-    ) -> config_entries.ConfigFlowResult:
-        """Confirm zeroconf discovery and proceed to station search."""
-        server_url = self.discovery_info.get(CONF_SERVER_URL, "")
-
-        if user_input is not None:
-            self.server_url = server_url
-            self.server_type = SERVER_TYPE_CUSTOM
-            return await self.async_step_station_search()
-
-        return self.async_show_form(
-            step_id="discovery_confirm",
-            data_schema=vol.Schema({}),
-            description_placeholders={"url": server_url},
-        )
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
@@ -1370,36 +778,6 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 and not str(user_input.get(CONF_DEDUPLICATE_KEY, "")).strip()
             ):
                 user_input[CONF_DEDUPLICATE_KEY] = DEFAULT_DEDUPLICATE_KEY
-
-            # Normalize text inputs
-            for key in [CONF_DIRECTION, CONF_STATION]:
-                if key in user_input:
-                    user_input[key] = normalize_whitespace(user_input[key])
-
-            if CONF_PLATFORMS in user_input:
-                user_input[CONF_PLATFORMS] = str(user_input[CONF_PLATFORMS]).replace(
-                    " ", ""
-                )
-
-            if CONF_VIA_STATIONS in user_input:
-                via_raw = user_input.get(CONF_VIA_STATIONS, "")
-                if isinstance(via_raw, str):
-                    user_input[CONF_VIA_STATIONS] = [
-                        normalize_whitespace(s)
-                        for s in re.split(r",|\|", via_raw)
-                        if s.strip()
-                    ]
-                elif via_raw is None:
-                    user_input[CONF_VIA_STATIONS] = []
-
-            for key in [CONF_EXCLUDED_DIRECTIONS, CONF_FAVORITE_TRAINS]:
-                if key in user_input:
-                    val = user_input[key]
-                    if isinstance(val, str):
-                        user_input[key] = ", ".join(
-                            [normalize_whitespace(s) for s in val.split(",")]
-                        )
-
             self._options.update(user_input)
 
         # Recalculate title based on merged data and options
@@ -1410,7 +788,12 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if f"({merged_config.get(CONF_DATA_SOURCE)})" in self._config_entry.title:
             new_title += f" ({merged_config.get(CONF_DATA_SOURCE)})"
 
-        return self.async_create_entry(title=new_title, data=self._options)
+        if new_title != self._config_entry.title:
+            self.hass.config_entries.async_update_entry(
+                self._config_entry, title=new_title
+            )
+
+        return self.async_create_entry(title="", data=self._options)
 
     def _get_config_value(self, key, default=None):
         """Get value from our updated options or fall back to config data."""
@@ -1473,42 +856,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         ),
                     ): cv.positive_int,
                     vol.Optional(
-                        CONF_CACHE_TTL,
-                        default=self._get_config_value(
-                            CONF_CACHE_TTL, DEFAULT_CACHE_TTL
-                        ),
-                    ): cv.positive_int,
-                    vol.Optional(
                         CONF_OFFSET,
                         default=self._get_config_value(CONF_OFFSET, DEFAULT_OFFSET),
                     ): cv.string,
                     vol.Optional(
-                        CONF_PAUSED,
-                        default=self._get_config_value(CONF_PAUSED, False),
-                    ): cv.boolean,
-                    vol.Optional(
                         CONF_WALK_TIME,
                         default=self._get_config_value(CONF_WALK_TIME, 0),
                     ): cv.positive_int,
-                    vol.Optional(
-                        CONF_CALENDAR_EVENT_DURATION,
-                        default=self._get_config_value(
-                            CONF_CALENDAR_EVENT_DURATION,
-                            DEFAULT_CALENDAR_EVENT_DURATION,
-                        ),
-                    ): cv.positive_int,
-                    vol.Optional(
-                        CONF_CALENDAR_ONLY_FAVORITES,
-                        default=self._get_config_value(
-                            CONF_CALENDAR_ONLY_FAVORITES, False
-                        ),
-                    ): cv.boolean,
-                    vol.Optional(
-                        CONF_CALENDAR_ONLY_DELAYED,
-                        default=self._get_config_value(
-                            CONF_CALENDAR_ONLY_DELAYED, False
-                        ),
-                    ): cv.boolean,
                 }
             ),
         )
@@ -1532,7 +886,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                 url = f"https://{url}"
 
             # Remove trailing slash
-            url = url.removesuffix("/")
+            if url.endswith("/"):
+                url = url[:-1]
 
             if not url:
                 errors[CONF_SERVER_URL] = "invalid_url"
@@ -1542,57 +897,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
                 valid = await async_verify_server(self.hass, url)
                 if not valid:
-                    if (
-                        server_type == SERVER_TYPE_OFFICIAL
-                        or "finalrewind" in url.lower()
-                    ):
-                        errors["base"] = "cannot_connect_official"
-                    elif (
-                        server_type == SERVER_TYPE_FASERF or "fabiseitz" in url.lower()
-                    ):
-                        errors["base"] = "cannot_connect_faserf"
-                    else:
-                        errors["base"] = "cannot_connect"
+                    errors["base"] = "cannot_connect"
                 else:
-                    # Validate that the configured station is reachable on the new server URL
-                    station_raw = self._get_config_value(CONF_STATION)
-                    ds_raw = self._get_config_value(CONF_DATA_SOURCE, "IRIS-TTS")
-                    data_source = normalize_data_source(ds_raw)
-
-                    validation_result = await async_validate_station_on_url(
-                        self.hass, url, station_raw, data_source
-                    )
-                    if not validation_result["valid"]:
-                        errors["base"] = "station_invalid"
-                        return self.async_show_form(
-                            step_id="server_options",
-                            data_schema=vol.Schema(
-                                {
-                                    vol.Required(
-                                        CONF_SERVER_TYPE,
-                                        default=server_type,
-                                    ): vol.In(
-                                        [
-                                            SERVER_TYPE_CUSTOM,
-                                            SERVER_TYPE_OFFICIAL,
-                                            SERVER_TYPE_FASERF,
-                                        ]
-                                    ),
-                                    vol.Optional(
-                                        CONF_SERVER_URL,
-                                        default=url,
-                                    ): cv.string,
-                                }
-                            ),
-                            errors={"base": "station_invalid"},
-                            description_placeholders={
-                                "error_detail": validation_result["error"]
-                            },
-                        )
-                    else:
-                        # Update options
-                        user_input[CONF_SERVER_URL] = url
-                        return await self._async_save_options(user_input)
+                    # Update options
+                    user_input[CONF_SERVER_URL] = url
+                    return await self._async_save_options(user_input)
 
         return self.async_show_form(
             step_id="server_options",
@@ -1621,25 +930,14 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             # Process via_stations from string to list if necessary
             if CONF_VIA_STATIONS in user_input:
                 via_raw = user_input.get(CONF_VIA_STATIONS, "")
-                if isinstance(via_raw, str):
-                    user_input[CONF_VIA_STATIONS] = [
-                        s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
-                    ]
-                elif isinstance(via_raw, list):
-                    user_input[CONF_VIA_STATIONS] = [
-                        s.strip() for s in via_raw if isinstance(s, str) and s.strip()
-                    ]
-                elif via_raw is None:
-                    user_input[CONF_VIA_STATIONS] = []
+                user_input[CONF_VIA_STATIONS] = [
+                    s.strip() for s in re.split(r",|\|", via_raw) if s.strip()
+                ]
             return await self._async_save_options(user_input)
 
         # Get via_stations list and join for display
         via_stations_list = self._get_config_value(CONF_VIA_STATIONS, [])
-        if isinstance(via_stations_list, str):
-            via_stations_list = [
-                s.strip() for s in re.split(r",|\|", via_stations_list) if s.strip()
-            ]
-        elif not isinstance(via_stations_list, list):
+        if via_stations_list is None:
             via_stations_list = []
         via_stations_str = ", ".join(via_stations_list)
 
@@ -1648,43 +946,43 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if isinstance(ignored_types, str):
             ignored_types = [t.strip() for t in ignored_types.split(",") if t.strip()]
 
-        schema = vol.Schema(
-            {
-                vol.Optional(CONF_PLATFORMS): cv.string,
-                vol.Optional(CONF_VIA_STATIONS): cv.string,
-                vol.Optional(CONF_VIA_STATIONS_LOGIC): vol.In(["OR", "AND"]),
-                vol.Optional(CONF_DIRECTION): cv.string,
-                vol.Optional(CONF_EXCLUDED_DIRECTIONS): cv.string,
-                vol.Optional(CONF_IGNORED_TRAINTYPES): cv.multi_select(
-                    IGNORED_TRAINTYPES_OPTIONS
-                ),
-                vol.Optional(CONF_EXCLUDE_CANCELLED): cv.boolean,
-                vol.Optional(CONF_FAVORITE_TRAINS): cv.string,
-            }
-        )
-
         return self.async_show_form(
             step_id="filter_options",
-            data_schema=self.add_suggested_values_to_schema(
-                schema,
+            data_schema=vol.Schema(
                 {
-                    CONF_PLATFORMS: self._get_config_value(CONF_PLATFORMS, ""),
-                    CONF_VIA_STATIONS: via_stations_str,
-                    CONF_VIA_STATIONS_LOGIC: self._get_config_value(
-                        CONF_VIA_STATIONS_LOGIC, "OR"
-                    ),
-                    CONF_DIRECTION: self._get_config_value(CONF_DIRECTION, ""),
-                    CONF_EXCLUDED_DIRECTIONS: self._get_config_value(
-                        CONF_EXCLUDED_DIRECTIONS, ""
-                    ),
-                    CONF_IGNORED_TRAINTYPES: ignored_types,
-                    CONF_EXCLUDE_CANCELLED: self._get_config_value(
-                        CONF_EXCLUDE_CANCELLED, False
-                    ),
-                    CONF_FAVORITE_TRAINS: self._get_config_value(
-                        CONF_FAVORITE_TRAINS, ""
-                    ),
-                },
+                    vol.Optional(
+                        CONF_PLATFORMS,
+                        default=self._get_config_value(CONF_PLATFORMS, ""),
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_VIA_STATIONS,
+                        default=via_stations_str,
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_VIA_STATIONS_LOGIC,
+                        default=self._get_config_value(CONF_VIA_STATIONS_LOGIC, "OR"),
+                    ): vol.In(["OR", "AND"]),
+                    vol.Optional(
+                        CONF_DIRECTION,
+                        default=self._get_config_value(CONF_DIRECTION, ""),
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_EXCLUDED_DIRECTIONS,
+                        default=self._get_config_value(CONF_EXCLUDED_DIRECTIONS, ""),
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_IGNORED_TRAINTYPES,
+                        default=ignored_types,
+                    ): cv.multi_select(IGNORED_TRAINTYPES_OPTIONS),
+                    vol.Optional(
+                        CONF_EXCLUDE_CANCELLED,
+                        default=self._get_config_value(CONF_EXCLUDE_CANCELLED, False),
+                    ): cv.boolean,
+                    vol.Optional(
+                        CONF_FAVORITE_TRAINS,
+                        default=self._get_config_value(CONF_FAVORITE_TRAINS, ""),
+                    ): cv.string,
+                }
             ),
         )
 
@@ -1731,70 +1029,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_advanced_options(self, user_input=None):
         """Handle advanced options."""
-        errors = {}
         if user_input is not None:
-            new_data_source = user_input.get(CONF_DATA_SOURCE)
-            if new_data_source:
-                station_raw = self._get_config_value(CONF_STATION)
-                url = self._get_config_value(CONF_SERVER_URL, "")
-                data_source = normalize_data_source(new_data_source)
-
-                validation_result = await async_validate_station_on_url(
-                    self.hass, url, station_raw, data_source
-                )
-                if not validation_result["valid"]:
-                    errors["base"] = "station_invalid"
-                    return self.async_show_form(
-                        step_id="advanced_options",
-                        data_schema=vol.Schema(
-                            {
-                                vol.Optional(
-                                    CONF_DEDUPLICATE_DEPARTURES,
-                                    default=user_input.get(
-                                        CONF_DEDUPLICATE_DEPARTURES, False
-                                    ),
-                                ): cv.boolean,
-                                vol.Optional(
-                                    CONF_DEDUPLICATE_KEY,
-                                    default=user_input.get(
-                                        CONF_DEDUPLICATE_KEY, DEFAULT_DEDUPLICATE_KEY
-                                    ),
-                                ): cv.string,
-                                vol.Optional(
-                                    CONF_KEEP_ROUTE,
-                                    default=user_input.get(CONF_KEEP_ROUTE, False),
-                                ): cv.boolean,
-                                vol.Optional(
-                                    CONF_KEEP_ENDSTATION,
-                                    default=user_input.get(CONF_KEEP_ENDSTATION, False),
-                                ): cv.boolean,
-                                vol.Optional(
-                                    CONF_DROP_LATE_TRAINS,
-                                    default=user_input.get(
-                                        CONF_DROP_LATE_TRAINS, False
-                                    ),
-                                ): cv.boolean,
-                                vol.Optional(
-                                    CONF_PAST_60_MINUTES,
-                                    default=user_input.get(CONF_PAST_60_MINUTES, False),
-                                ): cv.boolean,
-                                vol.Optional(
-                                    CONF_DATA_SOURCE,
-                                    default=new_data_source,
-                                ): vol.In(DATA_SOURCE_OPTIONS),
-                                vol.Optional(
-                                    CONF_MAX_SIZE_BYTES,
-                                    default=user_input.get(
-                                        CONF_MAX_SIZE_BYTES, DEFAULT_MAX_SIZE_BYTES
-                                    ),
-                                ): cv.positive_int,
-                            }
-                        ),
-                        errors={"base": "station_invalid"},
-                        description_placeholders={
-                            "error_detail": validation_result["error"]
-                        },
-                    )
             return await self._async_save_options(user_input)
 
         return self.async_show_form(
@@ -1833,15 +1068,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_DATA_SOURCE,
                         default=self._get_config_value(CONF_DATA_SOURCE, "IRIS-TTS"),
                     ): vol.In(DATA_SOURCE_OPTIONS),
-                    vol.Optional(
-                        CONF_MAX_SIZE_BYTES,
-                        default=self._get_config_value(
-                            CONF_MAX_SIZE_BYTES, DEFAULT_MAX_SIZE_BYTES
-                        ),
-                    ): cv.positive_int,
                 }
             ),
-            errors=errors,
         )
 
     async def async_step_finish(self, user_input=None):

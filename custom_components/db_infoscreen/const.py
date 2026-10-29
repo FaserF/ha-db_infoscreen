@@ -1,9 +1,7 @@
 DOMAIN = "db_infoscreen"
-GITHUB_ISSUES_URL: str = "https://github.com/FaserF/ha-db_infoscreen/issues"
+GITHUB_ISSUES_URL = "https://github.com/FaserF/ha-db_infoscreen/issues"
 CONF_SERVER_TYPE = "server_type"
 CONF_SERVER_URL = "server_url"
-CONF_CACHE_TTL = "cache_ttl"
-DEFAULT_CACHE_TTL = 55
 SERVER_TYPE_CUSTOM = "custom"
 SERVER_TYPE_OFFICIAL = "official"
 SERVER_TYPE_FASERF = "faserf"
@@ -45,13 +43,6 @@ DEFAULT_TEXT_VIEW_TEMPLATE = (
 CONF_EXCLUDE_CANCELLED = "exclude_cancelled"
 CONF_FAVORITE_TRAINS = "favorite_trains"
 CONF_WALK_TIME = "walk_time"
-CONF_MAX_SIZE_BYTES = "max_size_bytes"
-DEFAULT_MAX_SIZE_BYTES = 16384
-CONF_PAUSED = "paused"
-CONF_CALENDAR_EVENT_DURATION = "calendar_event_duration"
-CONF_CALENDAR_ONLY_FAVORITES = "calendar_only_favorites"
-CONF_CALENDAR_ONLY_DELAYED = "calendar_only_delayed"
-DEFAULT_CALENDAR_EVENT_DURATION = 5
 
 TRAIN_TYPE_MAPPING = {
     "S": "s_bahn",
@@ -60,23 +51,6 @@ TRAIN_TYPE_MAPPING = {
     "F": "long_distance",
     "Unknown": "unknown",
     "": "unknown",
-    # HAFAS / Common classes
-    "ICE": "long_distance",
-    "IC": "long_distance",
-    "EC": "long_distance",
-    "TGV": "long_distance",
-    "RJ": "long_distance",
-    "RJX": "long_distance",
-    "NJ": "long_distance",
-    "RE": "regional_db",
-    "RB": "regional_db",
-    "S-Bahn": "s_bahn",
-    "U-Bahn": "u_bahn",
-    "Tram": "tram",
-    "Bus": "bus",
-    "Stadtbus": "bus",
-    "Metrobus": "bus",
-    "Unbekannter Zugtyp": "unknown",
 }
 
 DATA_SOURCE_MAP = {

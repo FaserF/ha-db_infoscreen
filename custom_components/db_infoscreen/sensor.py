@@ -1,21 +1,19 @@
 """Sensor platform for DB Infoscreen integration."""
 
-import logging
-from typing import Any, cast
-
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.util import dt as dt_util
-
+from typing import Any, cast
 from .const import (
-    CONF_ENABLE_TEXT_VIEW,
-    CONF_TEXT_VIEW_TEMPLATE,
-    CONF_WALK_TIME,
-    DEFAULT_TEXT_VIEW_TEMPLATE,
     DOMAIN,
+    CONF_ENABLE_TEXT_VIEW,
+    CONF_WALK_TIME,
+    CONF_TEXT_VIEW_TEMPLATE,
+    DEFAULT_TEXT_VIEW_TEMPLATE,
 )
 from .entity import DBInfoScreenBaseEntity
 from .utils import parse_datetime_flexible
+import logging
+from homeassistant.util import dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -155,46 +153,30 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
 
                 _LOGGER.debug("Raw departure time: %s", departure_time)
 
-                # Use the admode from coordinator to determine the display format
-                admode = getattr(self.coordinator, "admode", "preferred departure")
+                # Format the departure time if it's valid
+                departure_time = self.format_departure_time(departure_time)
+                if departure_time is None:
+                    _LOGGER.debug("Formatted departure time is None, skipping update.")
+                    # If the time is not valid, return the last valid value or "invalid_time"
+                    return self._last_valid_value or "invalid_time"
 
-                if admode == "preferred departure":
-                    # For preferred departure, show actual time (scheduled + delay)
-                    # departure_timestamp already includes the delay
-                    actual_time = main_departure.get("departure_timestamp")
-                    departure_time = self.format_departure_time(actual_time)
-
-                    if departure_time is None:
-                        _LOGGER.debug(
-                            "Formatted departure time is None, skipping update."
-                        )
-                        return self._last_valid_value or "invalid_time"
-
+                # If there is no delay, update the last valid value with the departure time
+                if delay_departure in (0, None, "None"):
                     self._last_valid_value = departure_time
                 else:
-                    # For "departure" and "arrival" modes, show scheduled time + delay notation
-                    departure_time = self.format_departure_time(departure_time)
-                    if departure_time is None:
-                        _LOGGER.debug(
-                            "Formatted departure time is None, skipping update."
-                        )
-                        return self._last_valid_value or "invalid_time"
-
-                    if delay_departure in (0, None, "None"):
-                        self._last_valid_value = departure_time
-                    else:
-                        departure_time = f"{departure_time} +{delay_departure}"
-                        self._last_valid_value = departure_time
+                    # If there is a delay, append the delay to the departure time
+                    departure_time = f"{departure_time} +{delay_departure}"
+                    self._last_valid_value = departure_time
 
                 _LOGGER.debug("Sensor state updated: %s", self._last_valid_value)
                 return self._last_valid_value
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 _LOGGER.error("Exception during data parsing: %s", e)
                 return self._last_valid_value or "error"
         else:
             # If no new data is available, return the last valid value or a fallback value
             if self._last_valid_value:
-                _LOGGER.debug(
+                _LOGGER.warning(
                     "No departures found for station: %s. Keeping previous value: %s.",
                     self.station,
                     self._last_valid_value,
@@ -202,7 +184,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                 return self._last_valid_value
             else:
                 # If no data and no previous valid value, return a fallback message
-                _LOGGER.debug(
+                _LOGGER.warning(
                     "No departures found for station: %s. No previous value available.",
                     self.station,
                 )
@@ -238,7 +220,10 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
             next_departures.append(dep_copy)
 
         last_updated = getattr(self.coordinator, "last_update", None)
-        last_updated = last_updated.isoformat() if last_updated else "Unknown"
+        if last_updated:
+            last_updated = last_updated.isoformat()
+        else:
+            last_updated = "Unknown"
 
         attributes = {
             "next_departures": next_departures,
@@ -247,9 +232,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
             "direction": self.direction,
             "last_updated": last_updated,
             "attribution": attribution,
-            "is_paused": getattr(self.coordinator, "paused", False),
             "via_stations_logic": getattr(self.coordinator, "via_stations_logic", "OR"),
-            "station_messages": getattr(self.coordinator, "station_messages", []),
         }
 
         if self.enable_text_view:
@@ -257,9 +240,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
             for dep in raw_departures:
                 line = dep.get("line", "?")
                 destination = dep.get("destination", "?")
-                platform = dep.get("platform")
-                if platform is None or platform == "":
-                    platform = "?"
+                platform = dep.get("platform", "?")
                 time = (
                     dep.get("time")
                     or dep.get("departure_current")
@@ -281,7 +262,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                     try:
                         if int(delay) > 0:
                             delay_str = f" +{delay}"
-                    except ValueError, TypeError:
+                    except (ValueError, TypeError):
                         pass
 
                 class SafeDict(dict):
@@ -303,7 +284,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
 
                 try:
                     text = template.format_map(SafeDict(format_dict))
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     _LOGGER.warning("Failed to format next_departures_text: %s", e)
                     text = f"{line} -> {destination} (Pl {platform}): {time}{delay_str}"
 
@@ -371,9 +352,8 @@ class DBInfoScreenWatchdogSensor(DBInfoScreenBaseEntity, SensorEntity):
             return "No Departures"
 
         # Check for first departure since that's what we watch
-        coord_data = cast(list[dict[str, Any]], self.coordinator.data)
-        next_train = coord_data[0] if coord_data else {}
-        if not getattr(self.coordinator, "detailed", False):
+        next_train = self.coordinator.data[0] if self.coordinator.data else {}
+        if not self.coordinator.detailed:
             return "Enable Detailed Data"
 
         route = next_train.get("route", [])
