@@ -32,10 +32,6 @@ Basic update behavior and timing.
 -   **Offset (HH:MM)**: Shift the search window into the future. 
     -   *Example*: Use `00:15` if you want to skip all trains leaving in the next 15 minutes because you haven't left the house yet.
 -   **Travel Time (minutes)**: Used for the "Leave Now" alarm logic.
--   **Pause periodic updates**: A master switch to stop all API requests for this station.
-    -   *Why use this?*: To save server resources and prevent rate-limiting when you don't need the data (e.g., at night or when you are on vacation).
-    -   *Monitoring*: You can monitor the pause state via the `is_paused` attribute on the main departures sensor or the (disabled by default) `Update Status` binary sensor.
-    -   *How to automate?*: This is a simple `True/False` toggle. To create "schedules" or "location-based pausing", use Home Assistant automations. See the [Automation Cookbook](automations.md#smart-pausing) for "idiot-proof" examples.
 
 ### :material-filter-variant: Filter Options {: #filter-options }
 Refine which trains are shown on your dashboard.
@@ -55,13 +51,6 @@ Refine which trains are shown on your dashboard.
     -   `True`: Cancelled trains vanish from your dashboard entirely.
     -   `False` (Default): Cancelled trains stay in the list (marked as `isCancelled: true`).
 -   **Favorite Trains**: A comma-separated list of specific train names (e.g., `ICE 123, RE 5`) to filter the board for commuters.
-
-### :material-calendar-range: Calendar Options {: #calendar-options }
-Configure the integrated departure calendar.
-
--   **Calendar Event Duration**: The duration of the created calendar events (default: 15 minutes).
--   **Calendar: Only include favorite trains**: Only generate calendar events for trains in your **Favorite Trains** list.
--   **Calendar: Only include delayed trains**: Only generate calendar events for trains that are delayed.
 
 ### :material-monitor-dashboard: Display Options {: #display-options }
 Control how data is presented in Home Assistant entities.

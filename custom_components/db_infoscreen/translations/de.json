@@ -1,6 +1,6 @@
 {
   "config": {
-    "flow_title": "{host}",
+    "flow_title": "Abfahrtstafel hinzufügen",
     "step": {
       "user": {
         "title": "Server auswählen",
@@ -33,8 +33,7 @@
           "next_departures": "Anzahl der anzuzeigenden Abfahrten",
           "update_interval": "Aktualisierungsintervall (Minuten)",
           "walk_time": "Gehzeit zur Station (Minuten)",
-          "advanced": "Erweiterte Optionen anzeigen (Filter / Spezielle Handhabung)",
-          "paused": "Pausiere periodische Updates (Datenabfrage stoppen)"
+          "advanced": "Erweiterte Optionen anzeigen (Filter / Spezielle Handhabung)"
         }
       },
       "advanced": {
@@ -58,10 +57,9 @@
           "excluded_directions": "Endziele ausschließen",
           "ignored_train_types": "Ignorierte Zugtypen (z.B. 'ICE')",
           "show_occupancy": "Auslastung anzeigen (falls verfügbar)",
-          "max_size_bytes": "Maximale JSON-Größe (Bytes)",
           "exclude_cancelled": "Ausgefallene Züge entfernen",
           "favorite_trains": "Mehrere Favoriten-Züge (kommagetrennt e.g. 'ICE 1, RE 2')",
-          "deduplicate_key": "Eigener Deduplizierungs-Key (z.B. ｛line｝ - Leer für Standard: ｛journeyID｝｛journeyId｝｛id｝｛key｝｛trainNumber｝)"
+          "deduplicate_key": "Eigener Deduplizierungs-Key (z.B. {line} - Leer für Standard: {journeyID}{journeyId}{id}{key}{trainNumber})"
         }
       },
       "manual_config": {
@@ -75,24 +73,6 @@
           "via_stations": "Nach 'Über'-Stationen filtern",
           "via_stations_logic": "Filter-Logik"
         }
-      },
-      "hassio_confirm": {
-        "title": "Offizielles Add-on installieren",
-        "description": "Möchtest du das offizielle DBF (DB-Infoscreen) Add-on installieren? Dies ist der empfohlene Weg, um einen lokalen Server unter Home Assistant OS zu betreiben."
-      },
-      "discovery_confirm": {
-        "title": "DBF (DB-Infoscreen) entdeckt",
-        "description": "Lokale DBF-Instanz unter {url} entdeckt. Klicke auf Absenden, um mit der Stationssuche fortzufahren."
-      },
-      "reconfigure": {
-        "title": "Abfahrtstafel neu konfigurieren",
-        "description": "Kerneinstellungen für **{station}** aktualisieren. Alle anderen Optionen (Filter, Anzeige, Erweitert) bleiben unverändert und können über den ⚙ Konfigurieren-Knopf angepasst werden.",
-        "data": {
-          "station": "Stationsname / ID",
-          "server_type": "Server-Typ",
-          "server_url": "Server URL/IP",
-          "data_source": "Datenquelle"
-        }
       }
     },
     "error": {
@@ -100,20 +80,15 @@
       "unknown": "Ein unbekannter Fehler ist aufgetreten.",
       "no_stations_found": "Keine passenden Stationen gefunden.",
       "cannot_connect": "Verbindung zum Server fehlgeschlagen oder der Server ist keine gültige DB Infoscreen Instanz. Bitte prüfe die URL und deine Verbindung.",
-      "cannot_connect_official": "Verbindung zum offiziellen Server fehlgeschlagen. Bitte beachte: Der offizielle Server (dbf.finalrewind.org) is ein privat gehosteter Server. Eine 24/7-Verfügbarkeit kann nicht garantiert werden, es wird jedoch versucht.",
-      "cannot_connect_faserf": "Verbindung zum FaserF-Server fehlgeschlagen. Bitte beachte: Der FaserF-Server (dbf.fabiseitz.de) ist ein privat gehosteter Server. Eine 24/7-Verfügbarkeit kann nicht garantiert werden, es wird jedoch versucht.",
       "invalid_url": "Bitte gib eine gültige URL ein (inkl. http:// oder https://)",
       "station_not_found_warning": "⚠️ Station nicht gefunden! Bitte Schreibweise prüfen oder eine andere Datenquelle versuchen.",
       "station_invalid": "❌ Daten konnten nicht abgerufen werden: {error_detail}",
       "station_ambiguous": "⚠️ Der Stationsname ist mehrdeutig. Bitte gib den Namen genauer an oder prüfe die gewählte Datenquelle.",
-      "station_validation_failed": "Stations-Validierung fehlgeschlagen.",
-      "addon_install_error": "Das DBF (DB-Infoscreen) Add-on konnte nicht installiert werden. Bitte überprüfe die Supervisor-Protokolle."
+      "station_validation_failed": "Stations-Validierung fehlgeschlagen."
     },
     "abort": {
       "already_configured": "Diese Station ist bereits konfiguriert.",
-      "station_validation_failed": "Validierung fehlgeschlagen. Keine Abfahrtsdaten empfangen.",
-      "reconfigure_successful": "Konfiguration erfolgreich aktualisiert. Die Integration wird mit den neuen Einstellungen neu geladen.",
-      "not_supported": "Dieses Gerät oder diese Installation wird nicht unterstützt."
+      "station_validation_failed": "Validierung fehlgeschlagen. Keine Abfahrtsdaten empfangen."
     }
   },
   "options": {
@@ -148,13 +123,8 @@
         "data": {
           "next_departures": "Anzahl Abfahrten",
           "update_interval": "Aktualisierungsintervall (Minuten)",
-          "cache_ttl": "Cache-TTL (Sekunden)",
           "offset": "Versatz (HH:MM)",
-          "walk_time": "Gehzeit (Minuten)",
-          "paused": "Pausiere periodische Updates (Datenabfrage stoppen)",
-          "calendar_event_duration": "Kalender-Event-Dauer (Minuten)",
-          "calendar_only_favorites": "Kalender: Nur Favoriten-Züge anzeigen",
-          "calendar_only_delayed": "Kalender: Nur verspätete Züge anzeigen"
+          "walk_time": "Gehzeit (Minuten)"
         }
       },
       "server_options": {
@@ -201,8 +171,7 @@
           "drop_late_trains": "Verspätete Züge ausblenden",
           "past_60_minutes": "Letzte 60 Min anzeigen",
           "data_source": "Datenquelle",
-          "deduplicate_key": "Eigener Deduplizierungs-Key (z.B. ｛line｝ - Leer für Standard: ｛journeyID｝｛journeyId｝｛id｝｛key｝｛trainNumber｝)",
-          "max_size_bytes": "Maximale JSON-Größe (Bytes)"
+          "deduplicate_key": "Eigener Deduplizierungs-Key (z.B. {line} - Leer für Standard: {journeyID}{journeyId}{id}{key}{trainNumber})"
         }
       }
     }
@@ -229,27 +198,6 @@
           "init": {
             "title": "API-Fehler für {station}",
             "description": "Beim Abrufen der Daten für **{station}** sind mehrere Fehler aufgetreten:\n\n`{error}`\n\nDies könnte ein temporäres Problem sein. Du kannst es erneut versuchen oder die Datenquelle ändern.",
-            "data": {
-              "action": "Aktion"
-            }
-          },
-          "change_source": {
-            "title": "Datenquelle ändern",
-            "description": "Wähle eine andere Datenquelle für diese Station.",
-            "data": {
-              "data_source": "Datenquelle"
-            }
-          }
-        }
-      }
-    },
-    "api_error_via": {
-      "title": "API-Fehler für Station (Über-Station/Via konfiguriert)",
-      "fix_flow": {
-        "step": {
-          "init": {
-            "title": "API-Fehler für {station}",
-            "description": "Beim Abrufen der Daten für **{station}** sind mehrere Fehler aufgetreten:\n\n`{error}`\n\nℹ️ **Hinweis:** Da für diese Station eine **Über-Station (Via)** konfiguriert ist, kann es sein, dass aufgrund von **Bauarbeiten oder Fahrplanänderungen** aktuell keine durchgehenden Züge über diese Verbindung verkehren.\n\nDies könnte ein temporäres Problem sein. Du kannst es erneut versuchen oder die Datenquelle ändern.",
             "data": {
               "action": "Aktion"
             }
@@ -299,8 +247,6 @@
           "invalid_time": "Ungültige Zeit",
           "error": "Fehler",
           "s_bahn": "S-Bahn",
-          "u_bahn": "U-Bahn",
-          "tram": "Straßenbahn",
           "regional_db": "Regionalbahn (DB)",
           "regional": "Regionalbahn",
           "long_distance": "Fernverkehr (ICE/IC/EC)",
@@ -332,9 +278,6 @@
       },
       "api_connection": {
         "name": "API-Verbindung"
-      },
-      "paused": {
-        "name": "Aktualisierungsstatus"
       },
       "elevator": {
         "name": "Barrierefreiheit"
@@ -409,20 +352,6 @@
         "station": {
           "name": "Station",
           "description": "Die Station, für die der Versatz gelten soll. Leer lassen für alle Stationen."
-        }
-      }
-    },
-    "set_paused": {
-      "name": "Pausierungs-Status setzen",
-      "description": "Aktiviert oder deaktiviert die periodische Datenabfrage für eine bestimmte oder alle Stationen.",
-      "fields": {
-        "paused": {
-          "name": "Pausiert",
-          "description": "Ob die Aktualisierungen pausiert werden sollen (True = stoppen, False = fortsetzen)."
-        },
-        "station": {
-          "name": "Station",
-          "description": "Der Name der Station. Leer lassen für alle Stationen."
         }
       }
     }

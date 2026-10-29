@@ -1,8 +1,6 @@
 from unittest.mock import MagicMock, patch
-
 import pytest
 from homeassistant.util import dt as dt_util
-
 from custom_components.db_infoscreen.sensor import DBInfoScreenLeaveNowSensor
 
 

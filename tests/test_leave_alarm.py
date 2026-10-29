@@ -1,11 +1,9 @@
-from datetime import timedelta
 from unittest.mock import MagicMock, patch
-
 import pytest
-from homeassistant.util import dt as dt_util
-
-from custom_components.db_infoscreen.const import CONF_WALK_TIME
 from custom_components.db_infoscreen.sensor import DBInfoScreenLeaveNowSensor
+from custom_components.db_infoscreen.const import CONF_WALK_TIME
+from homeassistant.util import dt as dt_util
+from datetime import timedelta
 
 
 @pytest.fixture

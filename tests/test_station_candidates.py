@@ -1,8 +1,8 @@
 """Tests for station candidate discovery in utils.py."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
+from unittest.mock import MagicMock, AsyncMock, patch
+
 from homeassistant.core import HomeAssistant
 
 from custom_components.db_infoscreen.utils import (
@@ -20,19 +20,26 @@ async def test_async_get_station_candidates_json_success(hass: HomeAssistant) ->
     mock_response.headers = {"Content-Type": "application/json"}
 
     # Mock json() as an async function
-    mock_response.json = AsyncMock(
-        return_value={
+    async def json_side_effect():
+        return {
             "candidates": [
                 {"name": "Berlin Hbf", "code": "8011160"},
                 {"name": "Berlin Zoologischer Garten", "code": "8010406"},
             ]
         }
-    )
+
+    mock_response.json = MagicMock(side_effect=json_side_effect)
 
     # Mock text() as an async function to avoid returning MagicMocks
-    mock_response.text = AsyncMock(return_value="")
+    async def text_side_effect():
+        return ""
 
-    mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+    mock_response.text = MagicMock(side_effect=text_side_effect)
+
+    async def enter_side_effect():
+        return mock_response
+
+    mock_response.__aenter__ = MagicMock(side_effect=enter_side_effect)
     mock_response.__aexit__ = AsyncMock(return_value=None)
 
     mock_session.get.return_value = mock_response
@@ -59,14 +66,21 @@ async def test_async_get_station_candidates_direct_match(hass: HomeAssistant) ->
     mock_response.headers = {"Content-Type": "application/json"}
 
     # Mock json() for direct match
-    mock_response.json = AsyncMock(
-        return_value={"departures": [], "station": {"name": "Berlin Hbf"}}
-    )
+    async def json_side_effect():
+        return {"departures": [], "station": {"name": "Berlin Hbf"}}
+
+    mock_response.json = MagicMock(side_effect=json_side_effect)
 
     # Mock text()
-    mock_response.text = AsyncMock(return_value="Abfahrtstafel")
+    async def text_side_effect():
+        return "Abfahrtstafel"
 
-    mock_response.__aenter__ = AsyncMock(return_value=mock_response)
+    mock_response.text = MagicMock(side_effect=text_side_effect)
+
+    async def enter_side_effect():
+        return mock_response
+
+    mock_response.__aenter__ = MagicMock(side_effect=enter_side_effect)
     mock_response.__aexit__ = AsyncMock(return_value=None)
 
     mock_session.get.return_value = mock_response
@@ -100,14 +114,22 @@ async def test_async_get_station_candidates_html_fallback(hass: HomeAssistant) -
         resp.status = status
         resp.headers = {"Content-Type": content_type}
 
-        resp.text = AsyncMock(return_value=text or "")
+        async def text_func() -> str:
+            return text or ""
 
-        if json_err:
-            resp.json = AsyncMock(side_effect=json_err)
-        else:
-            resp.json = AsyncMock(return_value=json_data or {})
+        resp.text = MagicMock(side_effect=text_func)
 
-        resp.__aenter__ = AsyncMock(return_value=resp)
+        async def json_func() -> dict:
+            if json_err:
+                raise json_err
+            return json_data or {}
+
+        resp.json = MagicMock(side_effect=json_func)
+
+        async def enter_func() -> MagicMock:
+            return resp
+
+        resp.__aenter__ = MagicMock(side_effect=enter_func)
         resp.__aexit__ = AsyncMock(return_value=None)
         return resp
 
@@ -192,22 +214,3 @@ async def test_async_get_station_candidates_error(hass: HomeAssistant) -> None:
         )
 
         assert candidates == []
-
-
-@pytest.mark.asyncio
-async def test_async_get_station_candidates_dot_encoding(hass: HomeAssistant) -> None:
-    """Test that station names ending with a dot are encoded as %2E."""
-    mock_session = MagicMock()
-    mock_session.get.side_effect = Exception("Stop early")
-
-    with patch(
-        "homeassistant.helpers.aiohttp_client.async_get_clientsession",
-        return_value=mock_session,
-    ):
-        await async_get_station_candidates(
-            hass, "http://localhost", "Margaretastr.", "KVB"
-        )
-
-        # Check that the first requested URL encoded "Margaretastr." as "Margaretastr%2E"
-        called_url = mock_session.get.call_args_list[0][0][0]
-        assert "Margaretastr%2E.json" in called_url

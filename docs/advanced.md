@@ -139,14 +139,14 @@ If you have a high number of sensors or want maximum privacy, you can host your 
 ```yaml
 services:
   dbf:
-    image: derfnull/db-fakedisplay:latest
+    image: derf/db-fakedisplay:latest
     ports:
-      - "8092:8092"
+      - "8080:8080"
     restart: always
 ```
 
 Once running, update the **Custom API URL** in the integration settings to:
-`http://<your-ip>:8092`
+`http://<your-ip>:8080`
 
 ---
 

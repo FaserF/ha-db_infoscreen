@@ -1,12 +1,10 @@
-from datetime import timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
-
+from unittest.mock import MagicMock, patch, AsyncMock
 import pytest
+from datetime import timedelta
 from homeassistant.util import dt as dt_util
-
+from custom_components.db_infoscreen.sensor import DBInfoSensor
 from custom_components.db_infoscreen import DBInfoScreenCoordinator
 from custom_components.db_infoscreen.const import DOMAIN
-from custom_components.db_infoscreen.sensor import DBInfoSensor
 
 
 @pytest.fixture

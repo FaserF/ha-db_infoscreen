@@ -1,6 +1,6 @@
-import argparse
-import re
 import subprocess
+import re
+import argparse
 
 
 def get_commits(tag=None):
@@ -8,7 +8,7 @@ def get_commits(tag=None):
     try:
         out = subprocess.check_output(cmd, text=True).strip()
         return out.split("\n") if out else []
-    except subprocess.SubprocessError, OSError:  # noqa: BLE001
+    except Exception:
         return []
 
 

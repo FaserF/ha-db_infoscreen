@@ -4,7 +4,6 @@
   <p><strong>A comprehensive departure board integration for Home Assistant.</strong></p>
 
   [![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![Downloads (Current release)](https://img.shields.io/github/downloads/FaserF/ha-db_infoscreen/latest/db_infoscreen.zip?label=Downloads%20(Current%20release)&style=for-the-badge)](https://github.com/FaserF/ha-db_infoscreen/releases)
   [![GitHub Release](https://img.shields.io/github/v/release/FaserF/ha-db_infoscreen?style=for-the-badge)](https://github.com/FaserF/ha-db_infoscreen/releases)
   [![License](https://img.shields.io/github/license/FaserF/ha-db_infoscreen?style=for-the-badge)](LICENSE)
 </div>
@@ -26,16 +25,6 @@
 
 ---
 
-## 🔌 Recommended Hardware & Ecosystem Links
-
-| Device / Service | Integration Use Case | Link |
-| :--- | :--- | :--- |
-| **Home Assistant Green & Offizielle Smart-Home-Hardware** | Empfohlene Hardware-Basis für lokale Home Assistant Integrationen | [Offizielle Geräte-Seite →](https://fabiseitz.de/go/ha-hardware) |
-| **Home Assistant Connect ZBT-1 (Zigbee / Thread)** | Lokales Zigbee2MQTT, ZHA & Matter-over-Thread Funknetz | [Offizielle Geräte-Seite →](https://fabiseitz.de/go/ha-zigbee) |
-
-
----
-
 The `db-infoscreen` integration provides detailed **departure times** and train information for a given station directly in Home Assistant. Aggregating data from multiple sources (primarily **Deutsche Bahn IRIS-TTS**), it offers a powerful and comprehensive departure board for stations across Germany and Europe.
 
 📚 **[View the Full Documentation](https://faserf.github.io/ha-db_infoscreen/)**
@@ -44,23 +33,14 @@ The `db-infoscreen` integration provides detailed **departure times** and train 
   <img src="docs/images/sensor.png" alt="Departure Board" width="600px">
 </div>
 
-## 🐳 Self-Hosting the DBF Backend
+## 🏠 Home Assistant App (Add-on)
 
-For a reliable and unrestricted setup, it is highly recommended to host your own **DBF (DB-Fahrplan / db-fakedisplay)** backend API.
+This integration is best used with the **DBF (DB-Infoscreen) App**. While the integration can fetch data from public APIs, running your own local instance via the add-on provides more reliability and a dedicated Web UI.
 
-### Why Self-Host?
-* **No Sensor Limits**: Bypasses the default **30-sensor limit** enforced on the public API to protect public infrastructure.
-* **No Rate Limits or IP Bans**: Avoids the strict public API rate limits (30 requests/min total, 1 request/station/min).
-* **Improved Performance**: Faster updates as queries stay on your local network.
+- **[DBF Add-on Repository](https://github.com/FaserF/hassio-addons/tree/master/dbf)**
+- **Features**: Dedicated departure board UI, automated wagon order updates, and self-hosted API.
 
-### Hosting Options
-* **Home Assistant Add-on**: [DBF Add-on Repository](https://github.com/FaserF/hassio-addons/tree/master/dbf) – simple one-click install for Home Assistant OS.
-* **Docker Container**: [derf/db-fakedisplay](https://github.com/derf/db-fakedisplay) – run via Docker on Unraid, Synology, or any container host: `docker run -d -p 8092:8092 derfnull/db-fakedisplay:latest`.
-
-### Data Sources & Rate Limits
-Even when self-hosted, the backend fetches real-time train data directly from official APIs (like Deutsche Bahn IRIS-TTS and local transit HAFAS endpoints). Because these endpoints are designed to scale, a private home instance querying every few minutes will not trigger upstream rate limits or bans.
-
-For detailed setup instructions, see the **[Self-Hosting Documentation](https://faserf.github.io/ha-db_infoscreen/self-hosting/)**.
+---
 
 ## ✨ Features
 
@@ -71,8 +51,6 @@ For detailed setup instructions, see the **[Self-Hosting Documentation](https://
 | 🌍 **Wide Coverage** | Supports DB and many local transport associations (via HAFAS/EFA). |
 | ⚙️ **Highly Configurable** | Filter by direction, train type, specific platforms, and more. |
 | 💖 **Favorite Trains** | Filter for specific "Favorite Trains" (Commuter Profile). |
-| ⏸️ **Pause Updates** | Stop periodic data fetches to save API queries. Includes `is_paused` attribute and binary sensor for UI logic. |
-| 🔍 **Diagnostic Sensors** | Monitor API connection, update status, and station accessibility (elevators). |
 | ℹ️ **Detailed Attributes** | Access route info, warnings, platform changes (`changed_platform`), wagon order (`wagon_order`), wagon order summary (`wagon_order_html`), sector info (`platform_sectors`), facilities (`facilities`), real-time route progress (`route_details`), and unique trip ID (`trip_id`). |
 
 ---
@@ -104,16 +82,9 @@ This integration is available as a default repository in HACS.
 
 ## ⚙️ Configuration
 
-### 🔍 Auto-Discovery (Zeroconf / mDNS & Supervisor)
-- **Automatic Detection**: When running the official DBF Add-on (with `host_network: true`), Home Assistant will **automatically discover** the instance via Zeroconf (`_ha-db_infoscreen._tcp.local.`) and display a discovery notification in **Settings ➔ Devices & Services**.
-- **Supervisor Integration**: If discovered or added manually on a Home Assistant OS / Supervised system, the integration automatically pre-fills the local Add-on URL (`http://<host>:8092`).
-
-### ✍️ Manual Setup
-
 1.  Go to **Settings** -> **Devices & Services**.
 2.  Click **Add Integration**.
 3.  Search for **DB Infoscreen**.
-
 
 [![Add Integration](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=db_infoscreen)
 
@@ -155,7 +126,6 @@ All other settings are available via the **Configure** button on the integration
 | `custom_api_url` | - | Use a private/custom API instance. |
 | `offset` | `00:00` | Time offset for search (HH:MM or HH:MM:SS). |
 | `admode` | `departure` | Display departure or arrival times. |
-| `paused` | `False` | Pause periodic updates (Stop data fetching). |
 | `excluded_directions` | - | Exclude departures with specific direction (substring match). |
 | `ignored_train_types` | `[]` | List of train types to ignore. |
 | `enable_text_view` | `False` | Enable simplified text view for ePaper displays. |
@@ -181,8 +151,6 @@ All other settings are available via the **Configure** button on the integration
 | :--- | :--- |
 | `watch_train` | Monitor a specific train and notify on delay/platform changes. |
 | `track_connection` | Monitor a connecting train at a transfer station. |
-| `set_paused` | Toggle periodic updates for one or more stations (Smart Pausing). |
-| `set_offset` | Dynamically override the departure time offset temporarily. |
 | `refresh_departures` | Manually trigger a data update for all stations. |
 
 ---

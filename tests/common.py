@@ -1,8 +1,7 @@
 """Shared test helpers."""
 
 from contextlib import contextmanager
-from unittest.mock import AsyncMock, MagicMock, patch
-
+from unittest.mock import MagicMock, patch
 import custom_components.db_infoscreen as db_mod
 
 
@@ -14,10 +13,22 @@ def patch_session(mock_data=None, side_effect=None):
     def create_mock_response(data):
         resp = MagicMock()
         resp.status = 200
-        resp.json = AsyncMock(return_value=data)
+
+        async def json_func():
+            return data
+
+        resp.json = MagicMock(side_effect=json_func)
+
         resp.raise_for_status = MagicMock()
-        resp.__aenter__ = AsyncMock(return_value=resp)
-        resp.__aexit__ = AsyncMock(return_value=None)
+
+        async def enter_func():
+            return resp
+
+        async def exit_func(exc_type, exc, tb):
+            return None
+
+        resp.__aenter__ = MagicMock(side_effect=enter_func)
+        resp.__aexit__ = MagicMock(side_effect=exit_func)
         return resp
 
     # 2. Setup the session mock
@@ -36,10 +47,10 @@ def patch_session(mock_data=None, side_effect=None):
     mock_session.get = MagicMock(side_effect=get_side_effect)
 
     # Patch in both the component and the HA source
-    with (
-        patch.object(db_mod, "async_get_clientsession") as p1,
-        patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as p2,
-    ):
+    with patch.object(db_mod, "async_get_clientsession") as p1, patch(
+        "homeassistant.helpers.aiohttp_client.async_get_clientsession"
+    ) as p2:
+
         p1.return_value = mock_session
         p2.return_value = mock_session
 

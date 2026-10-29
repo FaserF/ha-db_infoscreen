@@ -1,6 +1,6 @@
 {
   "config": {
-    "flow_title": "{host}",
+    "flow_title": "Add Departure Board",
     "step": {
       "user": {
         "title": "Select Server",
@@ -33,8 +33,7 @@
           "next_departures": "Number of Upcoming Departures to show",
           "update_interval": "Update Interval (minutes)",
           "walk_time": "Walk Time to Station (minutes)",
-          "advanced": "Show Advanced Options (Filter Settings / Special Handling)",
-          "paused": "Pause periodic updates (Stop data fetching)"
+          "advanced": "Show Advanced Options (Filter Settings / Special Handling)"
         }
       },
       "advanced": {
@@ -58,10 +57,9 @@
           "excluded_directions": "Exclude Final Destinations",
           "ignored_train_types": "Ignored Train Types (e.g. 'ICE')",
           "show_occupancy": "Show Occupancy Information (if available)",
-          "max_size_bytes": "Maximum JSON Size (Bytes)",
           "exclude_cancelled": "Remove Cancelled Trains",
           "favorite_trains": "Multiple Favorite Trains (comma separated e.g. 'ICE 1, RE 2')",
-          "deduplicate_key": "Custom Deduplication Key (e.g. ｛line｝ - Leave empty for default: ｛journeyID｝｛journeyId｝｛id｝｛key｝｛trainNumber｝)"
+          "deduplicate_key": "Custom Deduplication Key (e.g. {line} - Leave empty for default: {journeyID}{journeyId}{id}{key}{trainNumber})"
         }
       },
       "manual_config": {
@@ -75,24 +73,6 @@
           "via_stations": "Filter by Via Stations",
           "via_stations_logic": "Via Station Search Logic"
         }
-      },
-      "hassio_confirm": {
-        "title": "Install Official Add-on",
-        "description": "Do you want to install the official DBF (DB-Infoscreen) Add-on? This is the recommended way to run a local server on Home Assistant OS."
-      },
-      "discovery_confirm": {
-        "title": "Discovered DBF (DB-Infoscreen)",
-        "description": "Discovered local DBF instance at {url}. Click Submit to proceed with station search."
-      },
-      "reconfigure": {
-        "title": "Reconfigure Departure Board",
-        "description": "Update the core settings for **{station}**. All other options (filters, display, advanced) remain unchanged and can be adjusted via the ⚙ Configure button.",
-        "data": {
-          "station": "Station Name / ID",
-          "server_type": "Server Type",
-          "server_url": "Server URL/IP",
-          "data_source": "Data Source"
-        }
       }
     },
     "error": {
@@ -100,19 +80,14 @@
       "unknown": "An unknown error occurred.",
       "no_stations_found": "No matching stations found. You can try a different search term or use Manual Entry.",
       "cannot_connect": "Could not connect to the server. Please check your internet connection.",
-      "cannot_connect_official": "Could not connect to the official server. Please note: The official server (dbf.finalrewind.org) is a privately hosted server. 24/7 availability cannot be guaranteed, but it is attempted.",
-      "cannot_connect_faserf": "Could not connect to the FaserF server. Please note: The FaserF server (dbf.fabiseitz.de) is a privately hosted server. 24/7 availability cannot be guaranteed, but it is attempted.",
       "station_not_found_warning": "⚠️ Station not found! Please verify spelling or try a different data source.",
       "station_invalid": "❌ Could not retrieve data for this station. {error_detail}",
       "station_ambiguous": "⚠️ The station name is ambiguous. Please be more specific or check the selected Data Source.",
-      "station_validation_failed": "Station validation failed. Please check your settings and try again.",
-      "addon_install_error": "Failed to install the DBF (DB-Infoscreen) Add-on. Please check the Supervisor logs."
+      "station_validation_failed": "Station validation failed. Please check your settings and try again."
     },
     "abort": {
       "already_configured": "This station is already configured.",
-      "station_validation_failed": "Could not validate the station. No departure data could be retrieved. Please check the station name and data source.",
-      "reconfigure_successful": "Configuration updated successfully. The integration will reload with the new settings.",
-      "not_supported": "This device or installation is not supported."
+      "station_validation_failed": "Could not validate the station. No departure data could be retrieved. Please check the station name and data source."
     }
   },
   "options": {
@@ -147,13 +122,8 @@
         "data": {
           "next_departures": "Number of Upcoming Departures",
           "update_interval": "Update Interval (minutes)",
-          "cache_ttl": "Cache TTL (seconds)",
           "offset": "Offset (HH:MM)",
-          "walk_time": "Walk Time to Station (minutes)",
-          "paused": "Pause periodic updates (Stop data fetching)",
-          "calendar_event_duration": "Calendar Event Duration (minutes)",
-          "calendar_only_favorites": "Calendar: Only include favorite trains",
-          "calendar_only_delayed": "Calendar: Only include delayed trains"
+          "walk_time": "Walk Time to Station (minutes)"
         }
       },
       "server_options": {
@@ -200,8 +170,7 @@
           "drop_late_trains": "Drop Late Trains",
           "past_60_minutes": "Include Past 60 Minutes",
           "data_source": "Data Source",
-          "deduplicate_key": "Custom Deduplication Key (e.g. ｛line｝ - Leave empty for default: ｛journeyID｝｛journeyId｝｛id｝｛key｝｛trainNumber｝)",
-          "max_size_bytes": "Maximum JSON Size (Bytes)"
+          "deduplicate_key": "Custom Deduplication Key (e.g. {line} - Leave empty for default: {journeyID}{journeyId}{id}{key}{trainNumber})"
         }
       }
     }
@@ -228,27 +197,6 @@
           "init": {
             "title": "API Error for {station}",
             "description": "Multiple errors occurred while fetching data for **{station}**:\n\n`{error}`\n\nThis might be a temporary issue. You can try again or change the data source.",
-            "data": {
-              "action": "Action"
-            }
-          },
-          "change_source": {
-            "title": "Change Data Source",
-            "description": "Select a different data source for this station.",
-            "data": {
-              "data_source": "Data Source"
-            }
-          }
-        }
-      }
-    },
-    "api_error_via": {
-      "title": "API error for station (Via route configured)",
-      "fix_flow": {
-        "step": {
-          "init": {
-            "title": "API Error for {station}",
-            "description": "Multiple errors occurred while fetching data for **{station}**:\n\n`{error}`\n\nℹ️ **Note:** A **via station** is configured for this station. Due to **construction works or timetable changes**, there might currently be no trains running along this route.\n\nThis might be a temporary issue. You can try again or change the data source.",
             "data": {
               "action": "Action"
             }
@@ -298,8 +246,6 @@
           "invalid_time": "Invalid Time",
           "error": "Error",
           "s_bahn": "S-Bahn",
-          "u_bahn": "U-Bahn",
-          "tram": "Tram",
           "regional_db": "Regional (DB)",
           "regional": "Regional",
           "long_distance": "Long Distance (ICE/IC/EC)",
@@ -331,9 +277,6 @@
       },
       "api_connection": {
         "name": "API Connection"
-      },
-      "paused": {
-        "name": "Update Status"
       },
       "elevator": {
         "name": "Station Accessibility"
@@ -408,20 +351,6 @@
         "station": {
           "name": "Station",
           "description": "The station name to apply the offset to. If left blank, it applies to all stations."
-        }
-      }
-    },
-    "set_paused": {
-      "name": "Set Paused State",
-      "description": "Enables or disables periodic data fetching for a specific station or all stations.",
-      "fields": {
-        "paused": {
-          "name": "Paused",
-          "description": "Whether to pause periodic updates (True = stop fetching, False = resume fetching)."
-        },
-        "station": {
-          "name": "Station",
-          "description": "The station name to apply the paused state to. If left blank, it applies to all stations."
         }
       }
     }

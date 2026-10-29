@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime, timedelta
+import logging
 from typing import Any, cast
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
@@ -84,12 +84,6 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
         )
         now = dt_util.now()
 
-        # Load options from coordinator
-        walk_time = getattr(self.coordinator, "walk_time", 0)
-        event_duration = getattr(self.coordinator, "calendar_event_duration", 5)
-        only_favorites = getattr(self.coordinator, "calendar_only_favorites", False)
-        only_delayed = getattr(self.coordinator, "calendar_only_delayed", False)
-
         for departure in departures:
             try:
                 # Extract departure time
@@ -100,15 +94,13 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
                 # Extract other fields
                 line = departure.get("line", departure.get("train", "Unknown"))
                 destination = departure.get("destination", "Unknown")
-                platform = (
-                    departure.get("platform")
-                    or departure.get("scheduledPlatform")
-                    or "?"
+                platform = departure.get(
+                    "platform", departure.get("scheduledPlatform", "?")
                 )
                 delay = departure.get("delay", departure.get("delayDeparture", 0))
                 cancelled = departure.get("is_cancelled", False)
 
-                # Parse delay
+                # Build event summary
                 try:
                     delay_int = (
                         int(delay)
@@ -116,38 +108,13 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
                         and (str(delay).isdigit() or isinstance(delay, (int, float)))
                         else 0
                     )
-                except ValueError, TypeError:
+                except (ValueError, TypeError):
                     delay_int = 0
 
-                # 1. Filter: Only Delayed Trains
-                if only_delayed and delay_int <= 0:
-                    continue
-
-                # 2. Filter: Only Favorite Trains
-                if only_favorites:
-                    train_name = departure.get("train", "")
-                    line_name = departure.get("line", "")
-                    train_num = str(departure.get("trainNumber", ""))
-                    trip_id = str(departure.get("id", ""))
-                    is_fav = False
-                    for fav in getattr(self.coordinator, "favorite_trains", []):
-                        if (
-                            (train_name and fav.lower() in train_name.lower())
-                            or (line_name and fav.lower() in line_name.lower())
-                            or (train_num and fav == train_num)
-                            or (trip_id and fav == trip_id)
-                        ):
-                            is_fav = True
-                            break
-                    if not is_fav:
-                        continue
-
                 # Account for delay in calendar event times
-                actual_departure_time = departure_time + timedelta(minutes=delay_int)
-
-                # Apply walk time buffer before start time
-                actual_start_time = actual_departure_time - timedelta(minutes=walk_time)
-                end_time = actual_departure_time + timedelta(minutes=event_duration)
+                actual_start_time = departure_time + timedelta(minutes=delay_int)
+                # Create 5-minute event duration (trains don't stay long)
+                end_time = actual_start_time + timedelta(minutes=5)
 
                 delay_str = f" (+{delay_int}min)" if delay_int > 0 else ""
                 cancelled_str = " ⚠️ CANCELLED" if cancelled else ""
@@ -161,15 +128,10 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
                     f"Station: {self.station}",
                     f"Scheduled Time: {departure_time.strftime('%H:%M')}",
                 ]
-                if walk_time > 0:
-                    description_parts.append(f"Walk Time: {walk_time} minutes")
-                    description_parts.append(
-                        f"Start walking at: {actual_start_time.strftime('%H:%M')}"
-                    )
                 if delay_int > 0:
                     description_parts.append(f"Delay: {delay_int} minutes")
                     description_parts.append(
-                        f"Estimated Departure: {actual_departure_time.strftime('%H:%M')}"
+                        f"Estimated Departure: {actual_start_time.strftime('%H:%M')}"
                     )
                 if cancelled:
                     description_parts.append("⚠️ This train has been CANCELLED")
@@ -180,33 +142,23 @@ class DBInfoScreenCalendar(DBInfoScreenBaseEntity, CalendarEntity):
                     if isinstance(route, list):
                         route_str = " → ".join([str(s) for s in route[:5]])
                         if len(route) > 5:
-                            route_str += f" ... (+{len(route) - 5} more)"
+                            route_str += f" ... (+{len(route)-5} more)"
                     else:
                         route_str = str(route)
                     description_parts.append(f"Via: {route_str}")
 
-                # 3. Add deep link
-                fetch_url = getattr(self.coordinator, "fetch_url", None)
-                if fetch_url:
-                    description_parts.append(f"Connection Details: {fetch_url}")
-
                 description = "\n".join(description_parts)
 
-                location = (
-                    f"Platform {platform}, {self.station}"
-                    if platform and platform != "?"
-                    else self.station
-                )
                 event = CalendarEvent(
                     start=actual_start_time,
                     end=end_time,
                     summary=summary,
                     description=description,
-                    location=location,
+                    location=f"Platform {platform}, {self.station}",
                 )
                 events.append(event)
 
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 _LOGGER.debug("Error parsing departure for calendar: %s", e)
                 continue
 

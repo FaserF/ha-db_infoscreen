@@ -1,7 +1,5 @@
 from unittest.mock import MagicMock
-
 import pytest
-
 from custom_components.db_infoscreen.binary_sensor import (
     DBInfoScreenElevatorBinarySensor,
 )
