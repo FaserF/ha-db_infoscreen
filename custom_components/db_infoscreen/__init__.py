@@ -1792,7 +1792,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         notify = True
                         message += f"Delay is now {delay_int} min. "
                         watch_config["last_notified_delay"] = delay_int
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 pass
 
             # 2. Check Platform
@@ -1955,7 +1955,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 if dt_obj is not None:
                     try:
                         timestamp = int(dt_obj.timestamp())
-                    except (AttributeError, OSError, OverflowError):
+                    except AttributeError, OSError, OverflowError:
                         timestamp = None
 
             history_key = (
@@ -1988,7 +1988,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     delay_val = int(match.group(1)) if match else 0
                 else:
                     delay_val = int(raw_delay) if raw_delay not in (None, "") else 0
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 delay_val = 0
 
             is_cancelled_val = bool(

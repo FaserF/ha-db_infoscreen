@@ -281,7 +281,7 @@ class DBInfoSensor(DBInfoScreenBaseEntity, SensorEntity):
                     try:
                         if int(delay) > 0:
                             delay_str = f" +{delay}"
-                    except (ValueError, TypeError):
+                    except ValueError, TypeError:
                         pass
 
                 class SafeDict(dict):
