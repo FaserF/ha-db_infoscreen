@@ -58,7 +58,7 @@ The official backend `db-fakedisplay` is available as a Docker image.
 * **GitHub Repository**: [derf/db-fakedisplay](https://github.com/derf/db-fakedisplay)
 * **Run command**:
   ```bash
-  docker run -d -p 8092:8092 derfnull/db-fakedisplay:latest
+  docker run -d -p 8092:8092 derf/db-fakedisplay:latest
   ```
 * Once running, point the **Custom API URL** in your integration configuration to `http://<your-docker-host-ip>:8092`.
 
