@@ -71,17 +71,17 @@ For detailed setup instructions, see the **[Self-Hosting Documentation](https://
 
 ### 1. Using Home Assistant Marketplace (Recommended)
 
-This integration is available natively in the Home Assistant Marketplace.
+Starting with Home Assistant 2026.11, the community integration store is natively integrated into Home Assistant as the official **Marketplace** (replacing legacy HACS).
 
 1.  Open Home Assistant and navigate to **Settings > Marketplace**.
 2.  Search for `db-infoscreen`.
-3.  Click **Install**.
-4.  Restart Home Assistant.
+3.  Click **Download / Install**.
+4.  Restart Home Assistant if prompted.
 
 [![Open Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=FaserF&repository=ha-db_infoscreen&category=integration)
 
 > [!TIP]
-> The Marketplace ensures you stay up-to-date with the latest API changes and bug fixes directly alongside standard Home Assistant system updates.
+> The Marketplace ensures you stay up-to-date with the latest API changes and bug fixes natively under **Settings > Updates** alongside standard Home Assistant system updates.
 
 ### 2. Manual Installation
 

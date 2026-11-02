@@ -4,24 +4,22 @@ You can install `ha-db_infoscreen` via **Home Assistant Marketplace** (recommend
 
 ## Option 1: Home Assistant Marketplace (Recommended)
 
-The easiest way to install and manage updates.
+Starting with Home Assistant 2026.11, the official built-in **Marketplace** (formerly HACS) provides the easiest way to install and manage community integrations:
 
 1.  Open your Home Assistant instance.
 
 2.  Go to **Settings** > **Marketplace**.
 
-3.  Click the **+ Explore & Download Repositories** button.
+3.  Search for `db-infoscreen`.
 
-4.  Search for `db-infoscreen`.
+4.  Click **Download / Install**.
 
-5.  Click **Download**.
-
-6.  **Restart** Home Assistant.
+5.  **Restart** Home Assistant if prompted.
 
 [![Open Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=FaserF&repository=ha-db_infoscreen&category=integration)
 
 !!! tip "Why Marketplace?"
-    The Marketplace handles updates for you directly alongside core updates, ensuring you always have the latest fixes (like API URL changes) and features.
+    The Marketplace handles updates natively under **Settings > Updates** directly alongside Home Assistant core updates, ensuring you always have the latest fixes (like API URL changes) and features.
 
 ## Option 2: Manual Installation
 
