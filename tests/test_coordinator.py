@@ -681,8 +681,11 @@ async def test_coordinator_gateway_error_no_repairs(hass, mock_config_entry):
         message="Bad Gateway",
     )
 
+    def _raise(*args, **kwargs):
+        raise client_response_err
+
     with (
-        patch_session(side_effect=client_response_err),
+        patch_session(side_effect=_raise),
         patch("asyncio.sleep", AsyncMock()),
         patch.object(coordinator, "_handle_update_error") as mock_handle_error,
     ):
