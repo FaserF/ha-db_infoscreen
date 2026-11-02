@@ -1,14 +1,14 @@
 # Installation
 
-You can install `ha-db_infoscreen` via **HACS** (recommended) or manually.
+You can install `ha-db_infoscreen` via **Home Assistant Marketplace** (recommended) or manually.
 
-## Option 1: HACS (Recommended)
+## Option 1: Home Assistant Marketplace (Recommended)
 
 The easiest way to install and manage updates.
 
 1.  Open your Home Assistant instance.
 
-2.  Go to **HACS** > **Integrations**.
+2.  Go to **Settings** > **Marketplace**.
 
 3.  Click the **+ Explore & Download Repositories** button.
 
@@ -18,14 +18,14 @@ The easiest way to install and manage updates.
 
 6.  **Restart** Home Assistant.
 
-[![Open HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=FaserF&repository=ha-db_infoscreen&category=integration)
+[![Open Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=FaserF&repository=ha-db_infoscreen&category=integration)
 
-!!! tip "Why HACS?"
-    HACS handles updates for you, ensuring you always have the latest fixes (like API URL changes) and features.
+!!! tip "Why Marketplace?"
+    The Marketplace handles updates for you directly alongside core updates, ensuring you always have the latest fixes (like API URL changes) and features.
 
 ## Option 2: Manual Installation
 
-If you prefer not to use HACS:
+If you prefer not to use the Marketplace:
 
 1.  Download the latest release zip from the [GitHub Releases page](https://github.com/FaserF/ha-db_infoscreen/releases).
 
@@ -44,11 +44,11 @@ If you prefer not to use HACS:
 
 Beta releases allow you to test new features or fixes before they are officially released.
 
-### Via HACS
+### Via Marketplace
 
-As of **February 2026**, HACS makes switching to beta versions very simple:
+As of **February 2026**, Marketplace makes switching to beta versions very simple:
 
-1.  Open your Home Assistant instance and navigate to **HACS**.
+1.  Open your Home Assistant instance and navigate to **Settings > Marketplace**.
 
 2.  Search for or find **db-infoscreen** in your downloaded integrations.
 

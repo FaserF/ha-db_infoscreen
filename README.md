@@ -3,7 +3,7 @@
   <h1>DB-Infoscreen for Home Assistant 🚆</h1>
   <p><strong>A comprehensive departure board integration for Home Assistant.</strong></p>
 
-  [![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+  [![Home Assistant Marketplace](https://img.shields.io/badge/Home_Assistant-Marketplace-41BDF5.svg?style=for-the-badge&logo=homeassistant&logoColor=white)](https://www.home-assistant.io)
 [![Downloads (Current release)](https://img.shields.io/github/downloads/FaserF/ha-db_infoscreen/latest/db_infoscreen.zip?label=Downloads%20(Current%20release)&style=for-the-badge)](https://github.com/FaserF/ha-db_infoscreen/releases)
   [![GitHub Release](https://img.shields.io/github/v/release/FaserF/ha-db_infoscreen?style=for-the-badge)](https://github.com/FaserF/ha-db_infoscreen/releases)
   [![License](https://img.shields.io/github/license/FaserF/ha-db_infoscreen?style=for-the-badge)](LICENSE)
@@ -69,19 +69,19 @@ For detailed setup instructions, see the **[Self-Hosting Documentation](https://
 
 ## 🛠️ Installation
 
-### 1. Using HACS (Recommended)
+### 1. Using Home Assistant Marketplace (Recommended)
 
-This integration is available as a default repository in HACS.
+This integration is available natively in the Home Assistant Marketplace.
 
-1.  Open **HACS**.
+1.  Open Home Assistant and navigate to **Settings > Marketplace**.
 2.  Search for `db-infoscreen`.
-3.  Click **Download**.
+3.  Click **Install**.
 4.  Restart Home Assistant.
 
-[![Open HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=FaserF&repository=ha-db_infoscreen&category=integration)
+[![Open Marketplace](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=FaserF&repository=ha-db_infoscreen&category=integration)
 
 > [!TIP]
-> HACS ensures you stay up-to-date with the latest API changes and bug fixes.
+> The Marketplace ensures you stay up-to-date with the latest API changes and bug fixes directly alongside standard Home Assistant system updates.
 
 ### 2. Manual Installation
 

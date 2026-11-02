@@ -5,7 +5,7 @@
 
   <p>
     <a href="https://github.com/hacs/integration">
-      <img src="https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge&logo=homeassistant" alt="HACS">
+      <img src="https://img.shields.io/badge/Home_Assistant-Marketplace-41BDF5.svg?style=for-the-badge&logo=homeassistant&logoColor=white" alt="Home Assistant Marketplace">
     </a>
     <a href="https://github.com/FaserF/ha-db_infoscreen/releases">
       <img src="https://img.shields.io/github/v/release/FaserF/ha-db_infoscreen?style=for-the-badge&logo=github&color=blue" alt="Integration Release">
@@ -108,4 +108,4 @@ This project is a bridge between the Home Assistant ecosystem and the wider open
 
 ## 🚀 Getting Started
 
-[Install with HACS](installation.md){ .md-button .md-button--primary } [Station Search Guide](station-search.md){ .md-button } [Entities Reference](entities.md){ .md-button } [Data Sources](data-sources.md){ .md-button } [View Settings](configuration.md){ .md-button } [Example Automations](automations.md){ .md-button }
+[Install with Marketplace](installation.md){ .md-button .md-button--primary } [Station Search Guide](station-search.md){ .md-button } [Entities Reference](entities.md){ .md-button } [Data Sources](data-sources.md){ .md-button } [View Settings](configuration.md){ .md-button } [Example Automations](automations.md){ .md-button }
