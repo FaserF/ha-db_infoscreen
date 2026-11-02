@@ -15,7 +15,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/labeler@v7
+      - uses: actions/labeler@v7.0.0
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
           sync-labels: true
@@ -28,7 +28,7 @@ jobs:
       issues: write
     steps:
       - name: Keyword Labeler
-        uses: actions/github-script@v9
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const title = context.payload.issue.title.toLowerCase();

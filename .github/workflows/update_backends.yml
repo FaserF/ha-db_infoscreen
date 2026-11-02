@@ -9,12 +9,12 @@ jobs:
   update-backends:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.1.0
         with:
-          python-version: '3.15'
+          python-version: '3.15.2'
 
       - name: Run update script
         run: python scripts/update_backends.py
@@ -25,7 +25,7 @@ jobs:
           ruff format custom_components/db_infoscreen/const.py README.md
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v8
+        uses: peter-evans/create-pull-request@v8.1.1
         with:
           commit-message: "chore: update supported backends from dbf.finalrewind.org"
           title: "chore: Update supported backends"
