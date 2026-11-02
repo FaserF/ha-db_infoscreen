@@ -17,7 +17,7 @@ body:
     id: integration_version
     attributes:
       label: Integration Version
-      description: Which version of ha-db_infoscreen are you running? (HACS or integration page)
+      description: Which version of ha-db_infoscreen are you running? (Marketplace or integration page)
       placeholder: e.g. v2026.10.0-dev0
     validations:
       required: true

@@ -4,7 +4,7 @@
   <img src="images/logo.png" alt="Logo" width="200px">
 
   <p>
-    <a href="https://github.com/hacs/integration">
+    <a href="https://www.home-assistant.io">
       <img src="https://img.shields.io/badge/Home_Assistant-Marketplace-41BDF5.svg?style=for-the-badge&logo=homeassistant&logoColor=white" alt="Home Assistant Marketplace">
     </a>
     <a href="https://github.com/FaserF/ha-db_infoscreen/releases">
