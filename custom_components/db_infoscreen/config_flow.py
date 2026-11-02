@@ -1138,13 +1138,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             ):
                 await self._async_prefill_addon_info(slug)
                 server_url = self.discovery_info.get(CONF_SERVER_URL)
-                if not isinstance(self.context, dict):
-                    self.context = (
-                        dict(self.context)
-                        if hasattr(self, "context") and self.context is not None
-                        else {}
-                    )
-                self.context["title_placeholders"] = {
+                ctx = getattr(self, "context", None)
+                if not isinstance(ctx, dict):
+                    self.context = {}
+                else:
+                    self.context = ctx
+                self.context["title_placeholders"] = {  # type: ignore[has-type]
                     "host": f"DBF Add-on ({slug})",
                     "url": server_url or slug,
                 }
