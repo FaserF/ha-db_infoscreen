@@ -806,6 +806,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         raise UpdateFailed(
                             f"Rate limited (429) while fetching {self.fetch_url}"
                         )
+                    if err.status in (502, 503, 504):
+                        _LOGGER.warning(
+                            "Temporary gateway error (%s) fetching %s. Retrying...",
+                            err.status,
+                            self.fetch_url,
+                        )
                     if attempt < max_retries:
                         _LOGGER.warning(
                             "Attempt %d failed fetching data from %s: %s. Retrying in %d seconds...",
@@ -817,14 +823,22 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         await asyncio.sleep(retry_delay)
                         retry_delay *= 2  # Exponential backoff
                     else:
-                        _LOGGER.error(
-                            "Failed to fetch data from %s after %d retries: %s",
-                            self.fetch_url,
-                            max_retries,
-                            err,
-                        )
-                        # Activate Repairs issue
-                        self._handle_update_error(str(err))
+                        if err.status in (502, 503, 504):
+                            _LOGGER.warning(
+                                "Failed to fetch data from %s after %d retries: %s",
+                                self.fetch_url,
+                                max_retries,
+                                err,
+                            )
+                        else:
+                            _LOGGER.error(
+                                "Failed to fetch data from %s after %d retries: %s",
+                                self.fetch_url,
+                                max_retries,
+                                err,
+                            )
+                            # Activate Repairs issue only for non-gateway errors
+                            self._handle_update_error(str(err))
                         # Throttle the next API fetch so repeated failures respect
                         # the configured interval instead of hammering the server.
                         self._last_api_fetch = now.timestamp()
@@ -839,6 +853,13 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     ValueError,
                     Exception,
                 ) as err:
+                    status_code = getattr(err, "status", None)
+                    if status_code in (502, 503, 504):
+                        _LOGGER.warning(
+                            "Temporary gateway error (%s) fetching %s. Retrying...",
+                            status_code,
+                            self.fetch_url,
+                        )
                     if attempt < max_retries:
                         _LOGGER.warning(
                             "Attempt %d failed fetching data from %s: %s. Retrying in %d seconds...",
@@ -850,14 +871,22 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                         await asyncio.sleep(retry_delay)
                         retry_delay *= 2  # Exponential backoff
                     else:
-                        _LOGGER.error(
-                            "Failed to fetch data from %s after %d retries: %s",
-                            self.fetch_url,
-                            max_retries,
-                            err,
-                        )
-                        # Activate Repairs issue
-                        self._handle_update_error(str(err))
+                        if status_code in (502, 503, 504):
+                            _LOGGER.warning(
+                                "Failed to fetch data from %s after %d retries: %s",
+                                self.fetch_url,
+                                max_retries,
+                                err,
+                            )
+                        else:
+                            _LOGGER.error(
+                                "Failed to fetch data from %s after %d retries: %s",
+                                self.fetch_url,
+                                max_retries,
+                                err,
+                            )
+                            # Activate Repairs issue only for non-gateway errors
+                            self._handle_update_error(str(err))
                         # Throttle the next API fetch so repeated failures respect
                         # the configured interval instead of hammering the server.
                         self._last_api_fetch = now.timestamp()
@@ -2055,11 +2084,18 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     self.station,
                     self.data_source,
                 )
-                _LOGGER.warning(
-                    "Station %s has failed %d times. May no longer be supported.",
-                    self.station,
-                    self._consecutive_errors,
-                )
+                if self._consecutive_errors == 30:
+                    _LOGGER.warning(
+                        "Station %s has failed %d times. May no longer be supported.",
+                        self.station,
+                        self._consecutive_errors,
+                    )
+                else:
+                    _LOGGER.debug(
+                        "Station %s has failed %d times. May no longer be supported.",
+                        self.station,
+                        self._consecutive_errors,
+                    )
             else:
                 has_via = (
                     bool(self.via_stations) if hasattr(self, "via_stations") else False

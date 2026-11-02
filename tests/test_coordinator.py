@@ -664,6 +664,37 @@ async def test_coordinator_retry_max_failure(hass, mock_config_entry):
 
 
 @pytest.mark.asyncio
+async def test_coordinator_gateway_error_no_repairs(hass, mock_config_entry):
+    """Test that 502/503/504 gateway errors do not trigger repair issues."""
+    import aiohttp
+
+    from tests.common import patch_session
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    coordinator.server_version = "test"
+    coordinator._last_valid_value = [{"train": "Cached"}]
+
+    client_response_err = aiohttp.ClientResponseError(
+        request_info=MagicMock(),
+        history=(),
+        status=502,
+        message="Bad Gateway",
+    )
+
+    with (
+        patch_session(side_effect=client_response_err),
+        patch("asyncio.sleep", AsyncMock()),
+        patch.object(coordinator, "_handle_update_error") as mock_handle_error,
+    ):
+        coordinator.async_fetch_server_version = AsyncMock()  # type: ignore[method-assign]
+        data = await coordinator._async_update_data()
+
+        assert len(data) == 1
+        assert data[0]["train"] == "Cached"
+        mock_handle_error.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_coordinator_max_size_bytes(hass, mock_config_entry):
     """Test that max_size_bytes limits the output payload size properly."""
     from custom_components.db_infoscreen.const import CONF_MAX_SIZE_BYTES
