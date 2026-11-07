@@ -27,5 +27,6 @@
       "name": "db-infoscreen*",
       "type": "_ha-db_infoscreen._tcp.local."
     }
-  ]
+  ],
+  "quality_scale": "platinum"
 }
