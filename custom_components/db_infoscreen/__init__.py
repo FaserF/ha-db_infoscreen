@@ -9,11 +9,11 @@ import asyncio
 import copy
 import json
 import logging
+import os
 import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import quote, urlencode, urlparse
-import os
 
 import async_timeout
 import homeassistant.helpers.config_validation as cv
@@ -121,8 +121,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     # This allows users to add the card via /db_infoscreen/card.js
     card_path = os.path.join(os.path.dirname(__file__), "www", "db-infoscreen-card.js")
     if await hass.async_add_executor_job(os.path.exists, card_path):
-        from homeassistant.components.http import StaticPathConfig
         from homeassistant.components.frontend import add_extra_js_url
+        from homeassistant.components.http import StaticPathConfig
 
         await hass.http.async_register_static_paths(
             [StaticPathConfig("/db_infoscreen/card.js", card_path, False)]
