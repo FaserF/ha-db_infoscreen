@@ -19,7 +19,7 @@
   "issue_tracker": "https://github.com/FaserF/ha-db_infoscreen/issues",
   "quality_scale": "platinum",
   "requirements": [],
-  "version": "2026.11.1-dev0",
+  "version": "2026.11.2-dev0",
   "zeroconf": [
     {
       "name": "dbf*",
