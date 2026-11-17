@@ -13,12 +13,15 @@ jobs:
     steps:
       - name: Generate GitHub App token for Hermes
         id: app-token
-        if: ${{ secrets.BOT_APP_ID != '' && secrets.BOT_PRIVATE_KEY != '' }}
+        env:
+          BOT_APP_ID: ${{ secrets.BOT_APP_ID }}
+          BOT_PRIVATE_KEY: ${{ secrets.BOT_PRIVATE_KEY }}
+        if: env.BOT_APP_ID != '' && env.BOT_PRIVATE_KEY != ''
         uses: actions/create-github-app-token@v3.3.0
         continue-on-error: true
         with:
-          app-id: ${{ secrets.BOT_APP_ID  }}
-          private-key: ${{ secrets.BOT_PRIVATE_KEY  }}
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_PRIVATE_KEY }}
       - name: Comment on new issue
         uses: actions/github-script@v9.0.0
         with:
