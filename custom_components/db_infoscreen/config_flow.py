@@ -201,11 +201,21 @@ async def async_validate_station_on_url(
     url = f"{server_url}/{encoded_station}.json"
 
     params: dict[str, str] = {}
-    if data_source in DATA_SOURCE_MAP:
+    normalized_ds = normalize_data_source(data_source)
+    if normalized_ds in DATA_SOURCE_MAP:
+        key, value = DATA_SOURCE_MAP[normalized_ds].split("=")
+        params[key] = value
+    elif normalized_ds == "hafas=1":
+        params["hafas"] = "1"
+    elif data_source in DATA_SOURCE_MAP:
         key, value = DATA_SOURCE_MAP[data_source].split("=")
         params[key] = value
-    elif data_source == "hafas=1":
-        params["hafas"] = "1"
+    elif "=" in str(data_source):
+        try:
+            key, value = str(data_source).split("=", 1)
+            params[key] = value
+        except ValueError:
+            pass
 
     try:
         import aiohttp
@@ -519,7 +529,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             # Extract data source from selection if present, e.g. "Dörverden (IRIS-TTS)"
             match = re.search(r"\(([^)]+)\)$", self.selected_station)
             if match:
-                self.basic_options[CONF_DATA_SOURCE] = match.group(1)
+                self.basic_options[CONF_DATA_SOURCE] = normalize_data_source(
+                    match.group(1)
+                )
 
             # Use internal code if we have one in the map
             if self.selected_station in self._station_map:
@@ -630,7 +642,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call
             # Validate station before saving
             validation_result = await self._validate_station(
                 str(entry_data.get(CONF_STATION, "")),
-                str(entry_data.get(CONF_DATA_SOURCE, "IRIS-TTS")),
+                normalize_data_source(
+                    str(entry_data.get(CONF_DATA_SOURCE, "IRIS-TTS"))
+                ),
             )
             if not validation_result["valid"]:
                 errors["base"] = (

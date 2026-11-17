@@ -103,6 +103,24 @@ async def test_coordinator_data_source_params(hass, mock_config_entry):
         or "hafas=\xc3\x96BB" in coordinator.api_url
     )
 
+    # Test VGN normalization
+    mock_config_entry.options[CONF_DATA_SOURCE] = "VGN"
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    assert "efa=VGN" in coordinator.fetch_url
+    assert "efa=VGN" in coordinator.api_url
+
+    mock_config_entry.options[CONF_DATA_SOURCE] = "efa=VGN"
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    assert "efa=VGN" in coordinator.fetch_url
+    assert "efa=VGN" in coordinator.api_url
+
+    mock_config_entry.options[CONF_DATA_SOURCE] = (
+        "VGN – Verkehrsverbund Großraum Nürnberg"
+    )
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    assert "efa=VGN" in coordinator.fetch_url
+    assert "efa=VGN" in coordinator.api_url
+
 
 @pytest.mark.asyncio
 async def test_coordinator_update_data(hass, mock_config_entry):

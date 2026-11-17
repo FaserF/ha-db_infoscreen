@@ -28,6 +28,7 @@ from .const import (
     DATA_SOURCE_OPTIONS,
     DOMAIN,
     GITHUB_ISSUES_URL,
+    normalize_data_source,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -112,7 +113,7 @@ def create_station_unsupported_issue(
         translation_key=ISSUE_STATION_UNSUPPORTED,
         translation_placeholders={
             "station": station,
-            "data_source": data_source,
+            "data_source": normalize_data_source(data_source),
         },
         learn_more_url=GITHUB_ISSUES_URL,
     )
@@ -305,7 +306,9 @@ class APIErrorRepairFlow(RepairsFlow):
             if entry:
                 new_data = {
                     **entry.data,
-                    CONF_DATA_SOURCE: user_input[CONF_DATA_SOURCE],
+                    CONF_DATA_SOURCE: normalize_data_source(
+                        user_input[CONF_DATA_SOURCE]
+                    ),
                 }
                 self.hass.config_entries.async_update_entry(entry, data=new_data)
                 ir.async_delete_issue(self.hass, DOMAIN, self._issue_id)
@@ -378,7 +381,9 @@ class StationUnsupportedRepairFlow(RepairsFlow):
                     entry.data.get(CONF_STATION, "Unknown") if entry else "Unknown"
                 ),
                 "data_source": (
-                    entry.data.get(CONF_DATA_SOURCE, "Unknown") if entry else "Unknown"
+                    normalize_data_source(entry.data.get(CONF_DATA_SOURCE, "Unknown"))
+                    if entry
+                    else "Unknown"
                 ),
                 "docs_url": GITHUB_ISSUES_URL,
             },
@@ -393,7 +398,9 @@ class StationUnsupportedRepairFlow(RepairsFlow):
             if entry:
                 new_data = {
                     **entry.data,
-                    CONF_DATA_SOURCE: user_input[CONF_DATA_SOURCE],
+                    CONF_DATA_SOURCE: normalize_data_source(
+                        user_input[CONF_DATA_SOURCE]
+                    ),
                 }
                 self.hass.config_entries.async_update_entry(entry, data=new_data)
                 ir.async_delete_issue(self.hass, DOMAIN, self._issue_id)

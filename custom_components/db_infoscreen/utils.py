@@ -350,11 +350,14 @@ async def async_get_station_candidates(
     hass: HomeAssistant, server_url: str, station: str, source: str = "IRIS-TTS"
 ) -> list[dict[str, str]]:
     """Fetch station candidates from DBF backend."""
-    from .const import DATA_SOURCE_MAP
+    from .const import DATA_SOURCE_MAP, normalize_data_source
 
-    source_param = DATA_SOURCE_MAP.get(source, source)
-    if source == "IRIS-TTS":
+    norm_source = normalize_data_source(source)
+    source_param = DATA_SOURCE_MAP.get(norm_source, source)
+    if norm_source == "IRIS-TTS" or source == "IRIS-TTS":
         source_param = ""  # Default is IRIS
+    elif "=" not in source_param and norm_source in DATA_SOURCE_MAP:
+        source_param = DATA_SOURCE_MAP[norm_source]
 
     # Normalize whitespace
     station = " ".join(str(station).split()).strip()

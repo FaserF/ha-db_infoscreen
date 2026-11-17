@@ -15,7 +15,6 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import quote, urlencode, urlparse
 
-import async_timeout
 import homeassistant.helpers.config_validation as cv
 
 try:
@@ -94,6 +93,8 @@ from .utils import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 # Key: URL, Value: (Timestamp, Data)
 RESPONSE_CACHE: dict[str, Any] = {}
@@ -398,6 +399,9 @@ async def async_migrate_entry(
 
                 d[CONF_SERVER_URL] = url
 
+            if CONF_DATA_SOURCE in d:
+                d[CONF_DATA_SOURCE] = normalize_data_source(d[CONF_DATA_SOURCE])
+
             # Clean up old key
             d.pop("custom_api_url", None)
 
@@ -552,8 +556,12 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
             fetch_params["admode"] = "dep"
 
         # Check if the data source is in the HAFAS list
-        if self.data_source == "hafas=1":
+        normalized_ds = normalize_data_source(self.data_source)
+        if normalized_ds == "hafas=1":
             fetch_params["hafas"] = "1"
+        elif normalized_ds in data_source_map:
+            key, value = data_source_map[normalized_ds].split("=")
+            fetch_params[key] = value
         elif self.data_source in data_source_map:
             key, value = data_source_map[self.data_source].split("=")
             fetch_params[key] = value
@@ -647,7 +655,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
             }
             async with (
-                async_timeout.timeout(20),
+                asyncio.timeout(20),
                 session.get(
                     about_url, headers=headers, allow_redirects=True
                 ) as response,
