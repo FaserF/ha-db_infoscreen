@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "description": "DB Infoscreen Home Assistant Sensor",
   "scripts": {
-    "lint": "eslint . --ext .ts,.tsx,.js,.jsx"
+    "lint": "eslint ."
   },
   "devDependencies": {
-    "eslint": "10.14.0",
-    "typescript": "7.0.2",
-    "@typescript-eslint/parser": "8.72.2",
-    "@typescript-eslint/eslint-plugin": "8.72.2"
+    "eslint": "10.15.0",
+    "typescript": "~5.9.3",
+    "@typescript-eslint/parser": "8.73.0",
+    "@typescript-eslint/eslint-plugin": "8.73.0"
   },
   "private": true
 }
