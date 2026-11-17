@@ -6,6 +6,9 @@
     "hassio",
     "http"
   ],
+  "categories": [
+    "vehicles_transport.public_transport"
+  ],
   "codeowners": [
     "@FaserF"
   ],
@@ -14,6 +17,7 @@
   "documentation": "https://faserf.github.io/ha-db_infoscreen/",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/FaserF/ha-db_infoscreen/issues",
+  "quality_scale": "platinum",
   "requirements": [],
   "version": "2026.11.1-dev0",
   "zeroconf": [
@@ -29,6 +33,5 @@
       "name": "db-infoscreen*",
       "type": "_ha-db_infoscreen._tcp.local."
     }
-  ],
-  "quality_scale": "platinum"
+  ]
 }
