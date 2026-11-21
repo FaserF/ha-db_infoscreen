@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 from homeassistant.util import dt as dt_util
 
-from custom_components.db_infoscreen.__init__ import DBInfoScreenCoordinator
+from custom_components.db_infoscreen import DBInfoScreenCoordinator
 from custom_components.db_infoscreen.sensor import DBInfoScreenPunctualitySensor
 
 

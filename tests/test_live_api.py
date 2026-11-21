@@ -5,7 +5,7 @@ import aiohttp
 import pytest
 from homeassistant.core import HomeAssistant
 
-from custom_components.db_infoscreen.__init__ import DBInfoScreenCoordinator
+from custom_components.db_infoscreen import DBInfoScreenCoordinator
 from custom_components.db_infoscreen.binary_sensor import (
     DBInfoScreenCancellationBinarySensor,
     DBInfoScreenDelayBinarySensor,
