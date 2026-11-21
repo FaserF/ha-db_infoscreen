@@ -18,7 +18,7 @@ body:
     attributes:
       label: Integration Version
       description: Which version of ha-db_infoscreen are you running? (Marketplace or integration page)
-      placeholder: e.g. v2026.11.1-dev0
+      placeholder: e.g. v2026.11.2-dev0
     validations:
       required: true
 
