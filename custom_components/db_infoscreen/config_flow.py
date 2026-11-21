@@ -225,7 +225,7 @@ async def async_validate_station_on_url(
             "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
         }
         async with session.get(
-            url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=30)
+            url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=45)
         ) as response:
             if response.status == 200:
                 data = await response.json()

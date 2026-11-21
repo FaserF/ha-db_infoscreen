@@ -796,3 +796,28 @@ async def test_coordinator_departures_without_platform(hass, mock_config_entry):
         assert "bus" in bus_dep["trainClasses"]
         assert bus_dep["is_replacement"] is True
         assert any(m.get("code") == "SV" for m in bus_dep.get("messages", []))
+
+
+@pytest.mark.asyncio
+async def test_coordinator_fetch_client_timeout(hass, mock_config_entry):
+    """Test that coordinator configures total timeout to 45s for slower transit backends."""
+    import aiohttp
+
+    coordinator = DBInfoScreenCoordinator(hass, mock_config_entry)
+    coordinator.server_version = "test"
+
+    with patch(
+        "custom_components.db_infoscreen.async_get_clientsession"
+    ) as mock_get_session:
+        mock_session = MagicMock()
+        mock_resp = _mock_response(200, {"departures": []})
+        mock_session.get.return_value = mock_resp
+        mock_get_session.return_value = mock_session
+
+        await coordinator._async_update_data()
+
+        assert mock_session.get.called
+        _, kwargs = mock_session.get.call_args
+        assert "timeout" in kwargs
+        assert isinstance(kwargs["timeout"], aiohttp.ClientTimeout)
+        assert kwargs["timeout"].total == 45

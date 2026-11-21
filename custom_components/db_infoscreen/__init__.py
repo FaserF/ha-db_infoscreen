@@ -655,7 +655,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                 "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
             }
             async with (
-                asyncio.timeout(20),
+                asyncio.timeout(30),
                 session.get(
                     about_url, headers=headers, allow_redirects=True
                 ) as response,
@@ -822,7 +822,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     async with session.get(
                         self.fetch_url,
                         headers=headers,
-                        timeout=aiohttp.ClientTimeout(total=30),
+                        timeout=aiohttp.ClientTimeout(total=45),
                     ) as response:
                         if response.status == 429:
                             self._last_api_fetch = now.timestamp()
@@ -1967,7 +1967,7 @@ class DBInfoScreenCoordinator(DataUpdateCoordinator[list[dict[str, Any]]]):
                     "User-Agent": "HomeAssistant-DBInfoScreen/2.0 (+https://github.com/FaserF/ha-db_infoscreen)"
                 }
                 async with session.get(
-                    url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)
+                    url, headers=headers, timeout=aiohttp.ClientTimeout(total=45)
                 ) as response:
                     # Handle both sync and async raise_for_status for better test compatibility
                     response.raise_for_status()
