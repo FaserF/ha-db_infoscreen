@@ -345,6 +345,21 @@ This example demonstrates how to filter connections from a station (e.g. Berlin 
 
 </details>
 
+### Markdown Card for Delayed Trains
+
+Use the following Markdown card to display delayed departures. Replace `sensor.your_departure_sensor` with your departure sensor entity ID.
+
+```yaml
+type: markdown
+content: |-
+  # Delayed Trains
+  {%- set connections = state_attr('sensor.your_departure_sensor', 'next_departures') -%}
+  {% for c in connections %}  {% if c.delayDeparture > 0 %}
+  **{{ c.train }}** - <font color=#FF0000>deplayed Departure at {{ c.scheduledDeparture }} </font> from platform {{ c.platform }}: <font color=#FF0000> +{{ c.delayDeparture }} </font> minutes
+  {% endif %} {% endfor %}
+  ###### last modified: {{ as_timestamp(state_attr('sensor.your_departure_sensor', 'last_updated')) | timestamp_custom('%d.%m.%Y, %H:%M') }}
+```
+
 ### JSON Data Structure
 
 The integration attributes provide data in JSON format. Use this to build your own templates.
