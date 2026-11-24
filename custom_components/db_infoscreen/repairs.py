@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 try:
     import probatio as vol
@@ -11,10 +11,13 @@ except ImportError:
     import voluptuous as vol  # type: ignore[no-redef]
 from homeassistant.components.repairs import RepairsFlow
 
-try:
+if TYPE_CHECKING:
     from homeassistant.components.repairs import RepairsFlowResult
-except ImportError:
-    from homeassistant.data_entry_flow import FlowResult as RepairsFlowResult  # type: ignore[no-redef]
+else:
+    try:
+        from homeassistant.components.repairs import RepairsFlowResult
+    except ImportError:
+        from homeassistant.data_entry_flow import FlowResult as RepairsFlowResult
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.selector import (

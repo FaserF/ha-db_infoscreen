@@ -39,6 +39,23 @@
         "patch"
       ],
       "automerge": true
+    },
+    {
+      "description": "Avoid pinning Home Assistant manifest.json requirements (Hassfest compliance)",
+      "matchFileNames": [
+        "custom_components/*/manifest.json"
+      ],
+      "rangeStrategy": "widen"
+    },
+    {
+      "description": "Do not manage Home Assistant built-in aiohttp in manifest.json",
+      "matchFileNames": [
+        "custom_components/*/manifest.json"
+      ],
+      "matchPackageNames": [
+        "aiohttp"
+      ],
+      "enabled": false
     }
   ],
   "pip_requirements": {
