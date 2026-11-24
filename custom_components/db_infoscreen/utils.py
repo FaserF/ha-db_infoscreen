@@ -30,6 +30,23 @@ def normalize_whitespace(value: Any) -> str:
     return " ".join(str(value).split()).strip()
 
 
+def _parse_hhmm(value: str, now: datetime) -> datetime | None:
+    """Parse an HH:MM(:SS) string relative to *now*, rolling across midnight."""
+    parts = value.split(":")
+    if len(parts) < 2:
+        return None
+    try:
+        hour, minute = int(parts[0]), int(parts[1])
+        parsed = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    except ValueError:
+        return None
+    if parsed < now - timedelta(hours=12):
+        return parsed + timedelta(days=1)
+    if parsed > now + timedelta(hours=12):
+        return parsed - timedelta(days=1)
+    return parsed
+
+
 def parse_datetime_flexible(value: Any, now: datetime) -> datetime | None:
     """
     Parse a datetime from various formats (timestamp, ISO, HH:MM).
@@ -47,7 +64,18 @@ def parse_datetime_flexible(value: Any, now: datetime) -> datetime | None:
         ):
             return dt_util.utc_from_timestamp(int(value)).astimezone(now.tzinfo)
 
-        # 2. ISO format or similar via HA helper
+        # 2. Fast-path pure HH:MM(:SS) strings before invoking ciso8601/regex
+        if (
+            isinstance(value, str)
+            and ":" in value
+            and "-" not in value
+            and "T" not in value
+            and " " not in value
+        ):
+            if hhmm_dt := _parse_hhmm(value, now):
+                return hhmm_dt
+
+        # 3. ISO format or similar via HA helper
         parsed_dt = dt_util.parse_datetime(str(value))
         if parsed_dt:
             if parsed_dt.tzinfo is None:
@@ -56,27 +84,9 @@ def parse_datetime_flexible(value: Any, now: datetime) -> datetime | None:
                 return parsed_dt.replace(tzinfo=now.tzinfo)
             return parsed_dt.astimezone(now.tzinfo)
 
-        # 3. Fallback for HH:MM format
+        # 4. Fallback for HH:MM format with surrounding whitespace
         if isinstance(value, str) and ":" in value:
-            parts = value.split(":")
-            if len(parts) >= 2:
-                try:
-                    hour, minute = int(parts[0]), int(parts[1])
-                    parsed_dt = now.replace(
-                        hour=hour,
-                        minute=minute,
-                        second=0,
-                        microsecond=0,
-                    )
-                    # If the parsed time is significantly in the past, it's likely tomorrow
-                    if parsed_dt < now - timedelta(hours=12):
-                        parsed_dt += timedelta(days=1)
-                    # If it's significantly in the future (e.g. 23:00 vs 01:00), it's likely yesterday
-                    elif parsed_dt > now + timedelta(hours=12):
-                        parsed_dt -= timedelta(days=1)
-                    return parsed_dt
-                except ValueError:
-                    pass
+            return _parse_hhmm(value, now)
 
     except ValueError, TypeError:
         pass
