@@ -353,11 +353,23 @@ Use the following Markdown card to display delayed departures. Replace `sensor.y
 type: markdown
 content: |-
   # Delayed Trains
-  {%- set connections = state_attr('sensor.your_departure_sensor', 'next_departures') -%}
-  {% for c in connections %}  {% if c.delayDeparture > 0 %}
-  **{{ c.train }}** - <font color=#FF0000>deplayed Departure at {{ c.scheduledDeparture }} </font> from platform {{ c.platform }}: <font color=#FF0000> +{{ c.delayDeparture }} </font> minutes
-  {% endif %} {% endfor %}
-  ###### last modified: {{ as_timestamp(state_attr('sensor.your_departure_sensor', 'last_updated')) | timestamp_custom('%d.%m.%Y, %H:%M') }}
+  {%- set connections = state_attr('sensor.your_departure_sensor', 'next_departures') or [] -%}
+  {%- set delayed = namespace(items=[]) -%}
+  {%- for c in connections -%}
+    {%- set delay = c.delay | default(0) | int -%}
+    {%- if delay > 0 -%}
+      {%- set delayed.items = delayed.items + [c] -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- if delayed.items | length > 0 -%}
+    {%- for c in delayed.items %}
+  **{{ c.train }}** - <font color=#FF0000>delayed Departure at {{ c.scheduledDeparture or c.sched_dep or c.scheduledTime }} </font> from platform {{ c.platform }}: <font color=#FF0000> +{{ c.delay | default(0) | int }} </font> minutes
+    {%- endfor -%}
+  {%- else %}
+  *No delayed trains.*
+  {%- endif %}
+  {%- set updated_ts = as_timestamp(state_attr('sensor.your_departure_sensor', 'last_updated'), none) %}
+  ###### last modified: {{ updated_ts | timestamp_custom('%d.%m.%Y, %H:%M') if updated_ts is not none else 'N/A' }}
 ```
 
 ### JSON Data Structure
